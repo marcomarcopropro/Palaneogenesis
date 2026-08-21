@@ -1,0 +1,20 @@
+{
+  "type": "palaneogenesis:ancient_extract_syringe",
+  "syringe": {
+    "item": "palaneogenesis:empty_syringe"
+  },
+  "ingredients": [
+    {
+      "type": "palaneogenesis:water_source"
+    },
+    {
+      "item": "minecraft:lapis_lazuli"
+    },
+    {
+      "item": "minecraft:blackstone"
+    },
+    {
+      "tag": "palaneogenesis:blue_hearts"
+    }
+  ]
+}
