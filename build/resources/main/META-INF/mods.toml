@@ -1,0 +1,22 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+[[mods]]
+modId="palaneogenesis"
+version="0.0.1"
+displayName="Palaneogénesis"
+authors="YourNameHere, OtherNameHere"
+description='''Example mod description.
+Newline characters can be used and will be replaced properly.'''
+[[dependencies.palaneogenesis]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.palaneogenesis]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"

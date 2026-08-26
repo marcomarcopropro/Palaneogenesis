@@ -1,5 +1,6 @@
 package com.palaneogenesis;
 
+import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.recipe.WaterIngredient;
 import com.palaneogenesis.entity.KaakTunEntity;
 import com.palaneogenesis.registry.ModAttributes;
@@ -8,6 +9,7 @@ import com.palaneogenesis.registry.ModItems;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
@@ -28,6 +30,11 @@ public class ModSetup {
         // SpawnPlacements - las entidades MobCategory.MISC (como esta, igual que el golem de
         // hierro) quedan afuera del ciclo normal de NaturalSpawner, así que ese registro nunca
         // se ejecutaba en la práctica.
+    }
+
+    @SubscribeEvent
+    public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        Capabilities.register(event);
     }
 
     @SubscribeEvent

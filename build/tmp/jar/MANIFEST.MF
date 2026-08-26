@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Specification-Title: palaneogenesis
+Specification-Vendor: YourNameHere, OtherNameHere
+Specification-Version: 1
+Implementation-Title: Palaneogénesis
+Implementation-Version: 0.0.1
+Implementation-Vendor: YourNameHere, OtherNameHere
+Implementation-Timestamp: 2026-08-26T18:20:15-0300
+
