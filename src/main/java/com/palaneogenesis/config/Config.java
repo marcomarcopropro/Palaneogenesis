@@ -9,7 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
  * registering this spec in the mod constructor.
  *
  * Design doc Section 2 ("Ataque a distancia con carga"): charge duration, damage and range for
- * the Káak Tun's beam attack must come from config, not be hardcoded.
+ * the Káak Tun's beam attack must come from config, not be hardcoded. Sección 3.4 pide lo mismo
+ * para el rayo del jugador, con sus propios valores separados de los del Kaak Tun (no reusar).
  */
 public class Config {
 
@@ -23,6 +24,9 @@ public class Config {
 		public final ForgeConfigSpec.DoubleValue kaakTunWalkAnimSpeed;
 		public final ForgeConfigSpec.IntValue kaakTunSpawnCount;
 		public final ForgeConfigSpec.IntValue blueHeartPoints;
+		public final ForgeConfigSpec.IntValue playerBeamChargeTicks;
+		public final ForgeConfigSpec.DoubleValue playerBeamDamage;
+		public final ForgeConfigSpec.DoubleValue playerBeamRange;
 
 		Common(ForgeConfigSpec.Builder builder) {
 			builder.comment("Káak Tun (entity) settings").push("kaak_tun");
@@ -83,6 +87,22 @@ public class Config {
 			blueHeartPoints = builder
 				.comment("How many points (half-hearts of absorption) each Blue Heart grants on use.")
 				.defineInRange("points", 1, 1, 60);
+
+			builder.pop();
+
+			builder.comment("Player beam ability settings (Fase 2, Sección 3.4) - balance propio, deliberadamente separado del del Kaak Tun.").push("player_beam");
+
+			playerBeamChargeTicks = builder
+				.comment("Ticks that the beam key (default H) must be held, with something in range, before it fires.")
+				.defineInRange("chargeTicks", 40, 1, 400);
+
+			playerBeamDamage = builder
+				.comment("Damage dealt by the player's beam when it fires. Deliberately weaker than the Kaak Tun's own beamDamage (45.0) per design - default is well under half.")
+				.defineInRange("damage", 18.0D, 0.0D, 100.0D);
+
+			playerBeamRange = builder
+				.comment("Maximum distance, in blocks, at which the player's beam can hit something.")
+				.defineInRange("range", 10.0D, 1.0D, 64.0D);
 
 			builder.pop();
 		}

@@ -1,6 +1,7 @@
 package com.palaneogenesis;
 
 import com.palaneogenesis.config.Config;
+import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.registry.ModAttributes;
 import com.palaneogenesis.registry.ModEntityTypes;
 import com.palaneogenesis.registry.ModItems;
@@ -23,5 +24,7 @@ public class Palaneogenesis {
         ModAttributes.register(modEventBus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
+
+        NetworkHandler.register();
     }
 }

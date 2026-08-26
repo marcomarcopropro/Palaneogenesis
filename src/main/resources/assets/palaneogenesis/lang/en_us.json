@@ -2,9 +2,11 @@
     "item.palaneogenesis.blue_heart":  "Blue Heart",
     "item.palaneogenesis.empty_syringe":  "Empty Syringe",
     "item.palaneogenesis.ancient_extract_syringe":  "Ancient Extract Syringe",
+    "item.palaneogenesis.broken_syringe":  "Broken Syringe",
     "item.palaneogenesis.kaak_tun_spawn_egg":  "Káak Tun Spawn Egg",
+    "itemGroup.palaneogenesis":  "Palaneogenesis",
     "entity.palaneogenesis.kaak_tun":  "Káak Tun",
     "attribute.palaneogenesis.blue_heart_pool":  "Blue Heart Pool",
-    "itemGroup.palaneogenesis":  "Palaneogenesis",
-    "item.palaneogenesis.broken_syringe":  "Broken Syringe"
+    "key.categories.palaneogenesis": "Palaneogénesis",
+    "key.palaneogenesis.beam": "Fire Beam"
 }

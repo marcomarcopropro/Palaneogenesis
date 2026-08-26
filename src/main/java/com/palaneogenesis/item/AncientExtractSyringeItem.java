@@ -97,6 +97,12 @@ public class AncientExtractSyringeItem extends Item {
 	 * los números no coincidan (doc Sección 2): baja MAX_HEALTH al piso del engine, otorga
 	 * Temporary Life vía BlueHeartPool, y recién ahí clampea la vida actual - en ese orden,
 	 * porque setHealth clampea contra el getMaxHealth() vigente en el momento de la llamada.
+	 *
+	 * Después de eso, Sección 3.3: aplica los efectos pasivos integrados (Speed y Attack Damage
+	 * como AttributeModifier permanente, con UUID fijo en Transformation para que
+	 * EmptySyringeItem#revert() pueda sacar exactamente ese mismo modifier más adelante).
+	 * Resistance no se toca acá - no es un modifier, se activa sola en cuanto el flag de abajo
+	 * queda en true (ver TransformationEvents#onLivingDamage).
 	 */
 	private static void transform(Player player) {
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
@@ -106,6 +112,16 @@ public class AncientExtractSyringeItem extends Item {
 
 		BlueHeartPool.set(player, TEMPORARY_LIFE_POINTS);
 		player.setHealth((float) TRANSFORMED_MAX_HEALTH);
+
+		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (movementSpeed != null && !movementSpeed.hasModifier(Transformation.SPEED_MODIFIER)) {
+			movementSpeed.addPermanentModifier(Transformation.SPEED_MODIFIER);
+		}
+
+		AttributeInstance attackDamage = player.getAttribute(Attributes.ATTACK_DAMAGE);
+		if (attackDamage != null && !attackDamage.hasModifier(Transformation.ATTACK_DAMAGE_MODIFIER)) {
+			attackDamage.addPermanentModifier(Transformation.ATTACK_DAMAGE_MODIFIER);
+		}
 
 		Transformation.set(player, true);
 	}
