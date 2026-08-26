@@ -1,0 +1,1 @@
+Este mod es propiedad intelectual de Marco Cascallares. Creador, editor y debugger del mismo. Compañia de Claude en su creación como único developer.
