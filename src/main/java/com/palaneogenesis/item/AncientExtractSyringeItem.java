@@ -25,6 +25,9 @@ import net.minecraft.world.level.Level;
  * instantáneo de un solo click que usa BlueHeartItem. El remainder (Empty Syringe) sigue
  * exactamente la lógica de PotionItem#finishUsingItem: si el stack queda vacío, el syringe vacío
  * pasa a ocupar la mano; si no, se intenta agregar a modo inventario y, si no entra, se dropea.
+ * Ese mismo Empty Syringe es, a propósito (Sección 3.5), el ítem que se necesita para revertir la
+ * transformación más adelante - ver {@link EmptySyringeItem}, que es donde ese Empty Syringe se
+ * rompe en Broken Syringe.
  */
 public class AncientExtractSyringeItem extends Item {
 

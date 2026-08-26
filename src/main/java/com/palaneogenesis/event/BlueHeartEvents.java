@@ -2,6 +2,7 @@ package com.palaneogenesis.event;
 
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.util.BlueHeartPool;
+import com.palaneogenesis.util.Transformation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
@@ -9,12 +10,6 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * Hace que el pool de Blue Heart absorba daño, y solo lo que sobra después de armadura, encantamientos
- * y la absorción real vanilla (manzana dorada, etc.) - Forge dispara LivingDamageEvent recién
- * después de que esos modificadores, incluida la absorción real, ya fueron aplicados y
- * consumidos. Por eso alcanza con restar acá: la manzana dorada ya protegió primero.
- */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID)
 public class BlueHeartEvents {
 
@@ -29,14 +24,28 @@ public class BlueHeartEvents {
 			return;
 		}
 
+		boolean transformed = Transformation.isTransformed(player);
 		int pool = BlueHeartPool.get(player);
+
 		if (pool <= 0) {
+			// Transformado y sin Temporary Life: cualquier golpe que llegue hasta acá equivale
+			// a que la vida roja "real" llegó a 0, aunque el número en pantalla diga 0.5.
+			if (transformed) {
+				event.setAmount(player.getHealth() + 1.0F);
+			}
 			return;
 		}
 
 		float absorbed = Math.min((float) pool, amount);
-		event.setAmount(amount - absorbed);
-		BlueHeartPool.set(player, pool - Mth.ceil(absorbed));
+		int newPool = pool - Mth.ceil(absorbed);
+		BlueHeartPool.set(player, newPool);
+
+		if (transformed && newPool <= 0) {
+			// Este golpe agota el pool: es el golpe que mata, no el siguiente.
+			event.setAmount(player.getHealth() + 1.0F);
+		} else {
+			event.setAmount(amount - absorbed);
+		}
 	}
 
 	@SubscribeEvent

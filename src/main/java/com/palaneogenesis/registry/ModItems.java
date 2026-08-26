@@ -2,6 +2,7 @@ package com.palaneogenesis.registry;
 
 import com.palaneogenesis.item.AncientExtractSyringeItem;
 import com.palaneogenesis.item.BlueHeartItem;
+import com.palaneogenesis.item.BrokenSyringeItem;
 import com.palaneogenesis.item.EmptySyringeItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
@@ -22,6 +23,9 @@ public class ModItems {
 
 	public static final RegistryObject<Item> ANCIENT_EXTRACT_SYRINGE =
 		ITEMS.register("ancient_extract_syringe", () -> new AncientExtractSyringeItem(new Item.Properties().stacksTo(64)));
+
+	public static final RegistryObject<Item> BROKEN_SYRINGE =
+		ITEMS.register("broken_syringe", () -> new BrokenSyringeItem(new Item.Properties().stacksTo(64)));
 
 	/**
 	 * Huevo de spawn del Káak Tun. Usa ForgeSpawnEggItem (no el SpawnEggItem vanilla, deprecado
