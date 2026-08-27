@@ -1,7 +1,8 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
-import com.palaneogenesis.util.BlueHeartPool;
+import com.palaneogenesis.util.HeartArray;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -17,11 +18,12 @@ import net.minecraft.world.level.Level;
  * de poción, no toca hambre/saturación. Deliberately NOT built on FoodProperties - this isn't
  * food.
  *
- * Usa {@link BlueHeartPool} en vez de LivingEntity#setAbsorptionAmount directamente: ese campo
- * es el mismo que usa la manzana dorada vanilla, así que compartirlo era lo que hacía que el HUD
- * mostrara corazones amarillos (o los dos superpuestos) en vez de los azules del mod. El pool
- * del mod ahora es independiente: la manzana dorada sigue dando corazones amarillos vanilla sin
- * que el mod los toque.
+ * Usa {@link HeartArray} (array unificado de corazones, ver capability.IHeartArrayData) en vez de
+ * LivingEntity#setAbsorptionAmount directamente: ese campo es el mismo que usa la manzana dorada
+ * vanilla, así que compartirlo era lo que hacía que el HUD mostrara corazones amarillos (o los
+ * dos superpuestos) en vez de los azules del mod. El array del mod es independiente: la manzana
+ * dorada sigue dando corazones amarillos vanilla sin que el mod los toque. Blue Heart es la
+ * salvaguarda básica del array - sin efecto al romperse, a propósito (ver event.HeartEvents).
  */
 public class BlueHeartItem extends Item {
 
@@ -34,7 +36,7 @@ public class BlueHeartItem extends Item {
 		ItemStack stack = player.getItemInHand(hand);
 
 		if (!level.isClientSide) {
-			BlueHeartPool.add(player, Config.COMMON.blueHeartPoints.get());
+			HeartArray.addPoints(player, HeartType.BLUE, Config.COMMON.blueHeartPoints.get());
 			// TODO: optional feedback here, e.g.
 			// level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.5F, 1.5F);
 		}

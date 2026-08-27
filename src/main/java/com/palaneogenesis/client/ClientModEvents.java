@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.registry.ModEntityTypes;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
@@ -39,13 +38,11 @@ public class ClientModEvents {
 
 	@SubscribeEvent
 	public static void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
-		event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "blue_heart_hud", BlueHeartHudOverlay.HUD);
-		// Blue_Hearts.md: Explosive/Resistance/Inverted se apilan arriba de blue_heart_hud (ver
-		// CraftedHeartsHudOverlay#currentStackHeight), así que tienen que registrarse por encima.
-		// registerAbove pide el ResourceLocation del overlay ya registrado, no su nombre en texto
-		// plano: el id real que quedó registrado es modid:nombre, es decir
-		// "palaneogenesis:blue_heart_hud" (no solo "blue_heart_hud").
-		event.registerAbove(new ResourceLocation(Palaneogenesis.MOD_ID, "blue_heart_hud"), "crafted_hearts_hud", CraftedHeartsHudOverlay.HUD);
+		// Cambio de arquitectura de corazones: BlueHeartHudOverlay + CraftedHeartsHudOverlay
+		// (2 registerAbove encadenados, uno apilado sobre el otro) se reemplazan por un único
+		// HeartHudOverlay - ya no hace falta apilar nada porque el array unificado dibuja los 4
+		// tipos en una sola fila (ver client.HeartHudOverlay).
+		event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "heart_hud", HeartHudOverlay.HUD);
 	}
 
 	@SubscribeEvent

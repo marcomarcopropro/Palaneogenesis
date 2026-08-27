@@ -1,7 +1,8 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
-import com.palaneogenesis.util.ExplosiveHeartPool;
+import com.palaneogenesis.util.HeartArray;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -12,8 +13,9 @@ import net.minecraft.world.level.Level;
 
 /**
  * Explosive Heart (Blue_Hearts.md): ½ corazón de vida. No tiene efecto activo; al romperse (ver
- * {@link com.palaneogenesis.event.CraftedHeartEvents#onLivingDamage}) genera una explosión 5×5
- * que mata enemigos sin destruir bloques. Reemplaza al antiguo "Exclusive Heart".
+ * event.HeartEvents#triggerBreak) genera una explosión que mata enemigos sin destruir bloques,
+ * radio configurable (Config.COMMON.explosiveHeartExplosionRadius). Reemplaza al antiguo
+ * "Exclusive Heart".
  */
 public class ExplosiveHeartItem extends Item {
 
@@ -26,7 +28,7 @@ public class ExplosiveHeartItem extends Item {
 		ItemStack stack = player.getItemInHand(hand);
 
 		if (!level.isClientSide) {
-			ExplosiveHeartPool.add(player, Config.COMMON.explosiveHeartPoints.get());
+			HeartArray.addPoints(player, HeartType.EXPLOSIVE, Config.COMMON.explosiveHeartPoints.get());
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));

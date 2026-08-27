@@ -14,7 +14,9 @@ import org.apache.commons.lang3.tuple.Pair;
  *
  * Blue_Hearts.md: cada corazón craftedo tiene su propio bloque de config, igual que blue_heart,
  * en vez de un solo bloque compartido - así el explosionRadius o la duración de Resistencia II se
- * pueden tunear sin tocar los otros tipos.
+ * pueden tunear sin tocar los otros tipos. Esto es independiente del cambio de arquitectura del
+ * array unificado (capability.IHeartArrayData): los 4 tipos siguen teniendo su propio bloque de
+ * config para cuántos puntos otorgan por uso, aunque en runtime ya no vivan en 4 pools separados.
  */
 public class Config {
 
@@ -37,6 +39,7 @@ public class Config {
 		public final ForgeConfigSpec.IntValue resistanceHeartPoints;
 		public final ForgeConfigSpec.IntValue resistanceHeartResistanceDurationTicks;
 		public final ForgeConfigSpec.IntValue invertedHeartPoints;
+		public final ForgeConfigSpec.DoubleValue invertedHeartExplosionRadius;
 
 		Common(ForgeConfigSpec.Builder builder) {
 			builder.comment("Káak Tun (entity) settings").push("kaak_tun");
@@ -95,9 +98,10 @@ public class Config {
 				.defineInRange("points", 1, 1, 60);
 
 			explosiveHeartExplosionRadius = builder
-				.comment("Radius, in blocks, of the explosion triggered when an Explosive Heart point breaks.",
-					"Default 2.0 = a 5x5 area centered on the player, per design doc. Never damages blocks.")
-				.defineInRange("explosionRadius", 2.0D, 0.5D, 10.0D);
+				.comment("Radius, in blocks, of the explosion triggered when an Explosive Heart point breaks,",
+					"applied symmetrically on all 6 axes (N/S/E/W/Up/Down) from the player.",
+					"Default 5.0 = an 11x11x11 cube centered on the player. Never damages blocks.")
+				.defineInRange("explosionRadius", 5.0D, 0.5D, 10.0D);
 
 			builder.pop();
 
@@ -108,16 +112,23 @@ public class Config {
 				.defineInRange("points", 1, 1, 60);
 
 			resistanceHeartResistanceDurationTicks = builder
-				.comment("Duration, in ticks (20/sec), of the Resistance II effect granted when a Resistance Heart point breaks.")
-				.defineInRange("resistanceDurationTicks", 100, 20, 1200);
+				.comment("Duration, in ticks (20/sec), of the Resistance II effect granted when a Resistance Heart",
+					"point breaks. Default 60 (3s).")
+				.defineInRange("resistanceDurationTicks", 60, 20, 1200);
 
 			builder.pop();
 
-			builder.comment("Inverted Heart (item) settings - Blue_Hearts.md. No active/break effect defined yet.").push("inverted_heart");
+			builder.comment("Inverted Heart (item) settings - Blue_Hearts.md. Break effect added this session: a much larger version of Explosive Heart's explosion.").push("inverted_heart");
 
 			invertedHeartPoints = builder
 				.comment("How many points (half-hearts of absorption) each Inverted Heart grants on use.")
 				.defineInRange("points", 1, 1, 60);
+
+			invertedHeartExplosionRadius = builder
+				.comment("Radius, in blocks, of the explosion triggered when an Inverted Heart point breaks,",
+					"same symmetric formula as explosiveHeartExplosionRadius, own independent radius.",
+					"Default 49.5 = a 100x100x100 cube centered on the player. Never damages blocks.")
+				.defineInRange("explosionRadius", 49.5D, 0.5D, 64.0D);
 
 			builder.pop();
 

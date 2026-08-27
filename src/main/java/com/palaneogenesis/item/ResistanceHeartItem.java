@@ -1,7 +1,8 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
-import com.palaneogenesis.util.ResistanceHeartPool;
+import com.palaneogenesis.util.HeartArray;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -11,10 +12,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * Resistance Heart (Blue_Hearts.md): ½ corazón de vida. Mientras el jugador tenga puntos en el
- * pool otorga Prisa Minera según la tabla del diseño (ver
- * {@link com.palaneogenesis.event.CraftedHeartEvents#onPlayerTick}); al romperse otorga
- * Resistencia II (ver {@link com.palaneogenesis.event.CraftedHeartEvents#onLivingDamage}).
+ * Resistance Heart (Blue_Hearts.md): ½ corazón de vida. Mientras el jugador tenga puntos de este
+ * tipo en el array otorga Prisa Minera según la tabla del diseño (ver
+ * event.HeartEvents#onPlayerTick); al romperse otorga Resistencia II (ver
+ * event.HeartEvents#triggerBreak).
  */
 public class ResistanceHeartItem extends Item {
 
@@ -27,7 +28,7 @@ public class ResistanceHeartItem extends Item {
 		ItemStack stack = player.getItemInHand(hand);
 
 		if (!level.isClientSide) {
-			ResistanceHeartPool.add(player, Config.COMMON.resistanceHeartPoints.get());
+			HeartArray.addPoints(player, HeartType.RESISTANCE, Config.COMMON.resistanceHeartPoints.get());
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));

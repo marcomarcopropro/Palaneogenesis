@@ -1,7 +1,8 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.registry.ModItems;
-import com.palaneogenesis.util.BlueHeartPool;
+import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
@@ -91,8 +92,8 @@ public class EmptySyringeItem extends Item {
 
 	/**
 	 * Sección 3.5: "reverting is assumed symmetric with the death case" - restaura MAX_HEALTH a
-	 * 20, saca toda la Temporary Life (BlueHeartPool a 0), apaga el flag de transformación y
-	 * remueve los efectos pasivos integrados de la Sección 3.3 (mismo AttributeModifier, mismo
+	 * 20, saca toda la Temporary Life (tipo BLUE del array unificado, ver util.HeartArray, a 0),
+	 * apaga el flag de transformación y remueve los efectos pasivos integrados de la Sección 3.3 (mismo AttributeModifier, mismo
 	 * UUID fijo, agregado en AncientExtractSyringeItem#transform()). Resistance no necesita nada
 	 * acá: se apaga sola en cuanto Transformation.set(player, false) corre, porque
 	 * TransformationEvents#onLivingDamage la gatea con isTransformed(). La vida actual se lleva
@@ -106,7 +107,7 @@ public class EmptySyringeItem extends Item {
 			maxHealth.setBaseValue(NORMAL_MAX_HEALTH);
 		}
 
-		BlueHeartPool.set(player, 0);
+		HeartArray.setPointsOfType(player, HeartType.BLUE, 0);
 		player.setHealth((float) NORMAL_MAX_HEALTH);
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);

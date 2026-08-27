@@ -1,7 +1,8 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.registry.ModItems;
-import com.palaneogenesis.util.BlueHeartPool;
+import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
@@ -32,7 +33,8 @@ import net.minecraft.world.level.Level;
 public class AncientExtractSyringeItem extends Item {
 
 	/** Dos filas completas del Blue Heart Pool ya existente de Fase 1 (10 íconos/fila × 2 puntos × 2 filas).
-	 * Decisión Sección 3.2 (consultada, opción B): Temporary Life reusa BlueHeartPool en vez de
+	 * Decisión Sección 3.2 (consultada, opción B): Temporary Life reusa el tipo BLUE del array
+	 * unificado de corazones (capability.IHeartArrayData, ver util.HeartArray) en vez de
 	 * absorción vanilla - moneda de Blue Heart y Temporary Life pasan a ser el mismo número. */
 	private static final int TEMPORARY_LIFE_POINTS = 40;
 
@@ -95,7 +97,7 @@ public class AncientExtractSyringeItem extends Item {
 	/**
 	 * Sección 3.2, los 3 pasos, todos en el mismo método/tick para que nunca haya un frame donde
 	 * los números no coincidan (doc Sección 2): baja MAX_HEALTH al piso del engine, otorga
-	 * Temporary Life vía BlueHeartPool, y recién ahí clampea la vida actual - en ese orden,
+	 * Temporary Life vía HeartArray (tipo BLUE), y recién ahí clampea la vida actual - en ese orden,
 	 * porque setHealth clampea contra el getMaxHealth() vigente en el momento de la llamada.
 	 *
 	 * Después de eso, Sección 3.3: aplica los efectos pasivos integrados (Speed y Attack Damage
@@ -110,7 +112,7 @@ public class AncientExtractSyringeItem extends Item {
 			maxHealth.setBaseValue(TRANSFORMED_MAX_HEALTH);
 		}
 
-		BlueHeartPool.set(player, TEMPORARY_LIFE_POINTS);
+		HeartArray.setPointsOfType(player, HeartType.BLUE, TEMPORARY_LIFE_POINTS);
 		player.setHealth((float) TRANSFORMED_MAX_HEALTH);
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
