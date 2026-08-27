@@ -73,6 +73,16 @@ public final class HeartArray {
 			.orElse(true);
 	}
 
+	/** Copia ordenada (más viejo primero) del array actual - lectura pura, no sincroniza nada,
+	 * mismo espíritu que #totalPointsOfType pero sin colapsar por tipo. Usado por
+	 * client.HeartHudOverlay para dibujar por posición real del array (qué tipo hay en cada
+	 * lugar), no sólo el total agregado de cada tipo. */
+	public static List<IHeartArrayData.HeartSlot> snapshot(Player player) {
+		return player.getCapability(Capabilities.HEART_ARRAY_DATA)
+			.map(IHeartArrayData::snapshot)
+			.orElse(List.of());
+	}
+
 	public static void clear(Player player) {
 		player.getCapability(Capabilities.HEART_ARRAY_DATA).ifPresent(data -> {
 			data.clear();

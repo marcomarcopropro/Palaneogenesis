@@ -14,11 +14,12 @@ import java.util.UUID;
  * También centraliza las constantes de los efectos pasivos integrados (doc Fase 2, Sección 3.3):
  * Speed y Attack Damage necesitan el mismo AttributeModifier (mismo UUID) tanto para agregarlo
  * en AncientExtractSyringeItem#transform() como para sacarlo en EmptySyringeItem#revert() - de
- * ahí que vivan acá, en un solo lugar, en vez de duplicados en cada item. Resistance no tiene
- * constante de AttributeModifier porque no es un modifier (Sección 3.3: prohibido usar
- * MobEffectInstance para estos 3 efectos) - es un multiplicador de daño aplicado directamente en
- * TransformationEvents#onLivingDamage, gateado por isTransformed(); RESISTANCE_DAMAGE_MULTIPLIER
- * es esa constante.
+ * ahí que vivan acá, en un solo lugar, en vez de duplicados en cada item.
+ *
+ * Un tercer efecto pasivo (Resistance, -20% daño entrante) estuvo documentado acá en su momento
+ * pero nunca se implementó (el multiplicador quedó definido sin que nada lo aplicara); se
+ * descarta la idea por completo por balance, no por bug - la transformación se queda en 2 efectos
+ * pasivos integrados (Speed + Attack Damage).
  */
 public final class Transformation {
 
@@ -55,11 +56,4 @@ public final class Transformation {
 	 */
 	public static final AttributeModifier ATTACK_DAMAGE_MODIFIER = new AttributeModifier(
 		ATTACK_DAMAGE_MODIFIER_ID, "palaneogenesis:transformation_attack_damage", 10.0D, AttributeModifier.Operation.ADDITION);
-
-	/**
-	 * Resistance I equivalente (Sección 3.3): -20% de daño entrante, el mismo porcentaje por
-	 * nivel que usa la Resistance vanilla, aplicado directo en el pipeline de daño (ver
-	 * TransformationEvents#onLivingDamage) - sin MobEffectInstance de ningún tipo.
-	 */
-	public static final double RESISTANCE_DAMAGE_MULTIPLIER = 0.80D;
 }

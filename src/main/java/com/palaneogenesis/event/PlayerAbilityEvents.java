@@ -33,9 +33,9 @@ import java.util.UUID;
 
 /**
  * Servidor: maneja las dos habilidades activas mientras el jugador está transformado que dependen
- * de una tecla mantenida, tick a tick, en vez del patrón de un solo paso que usan Speed/Attack/
- * Resistance (Sección 3.3) - el rayo del jugador (Sección 3.4) y la levitación leve (pedida fuera
- * del alcance original del doc, ver status update de esta sesión).
+ * de una tecla mantenida, tick a tick, en vez del patrón de un solo paso que usan Speed/Attack
+ * Damage (Sección 3.3, ver util.Transformation) - el rayo del jugador (Sección 3.4) y la
+ * levitación leve (pedida fuera del alcance original del doc, ver status update de esta sesión).
  *
  * El estado de "tecla apretada" que llega por red (BeamKeyPacket / LevitationKeyPacket) vive acá
  * en memoria, no en la capability de Transformation - es puramente transitorio, no necesita

@@ -93,13 +93,13 @@ public class EmptySyringeItem extends Item {
 	/**
 	 * Sección 3.5: "reverting is assumed symmetric with the death case" - restaura MAX_HEALTH a
 	 * 20, saca toda la Temporary Life (tipo BLUE del array unificado, ver util.HeartArray, a 0),
-	 * apaga el flag de transformación y remueve los efectos pasivos integrados de la Sección 3.3 (mismo AttributeModifier, mismo
-	 * UUID fijo, agregado en AncientExtractSyringeItem#transform()). Resistance no necesita nada
-	 * acá: se apaga sola en cuanto Transformation.set(player, false) corre, porque
-	 * TransformationEvents#onLivingDamage la gatea con isTransformed(). La vida actual se lleva
-	 * al nuevo máximo (full heal) para que el jugador no quede con 1 HP reales sobre una barra de
-	 * 20 corazones - no está escrito explícitamente en el doc, así que avisar si se prefiere otro
-	 * comportamiento (p. ej. mantener la proporción de vida actual).
+	 * apaga el flag de transformación y remueve los efectos pasivos integrados de la Sección 3.3
+	 * (mismo AttributeModifier, mismo UUID fijo, agregado en AncientExtractSyringeItem#transform()
+	 * - Speed y Attack Damage nada más, no hay un tercer efecto de Resistance, se descartó por
+	 * balance, ver util.Transformation). La vida actual se lleva al nuevo máximo (full heal) para
+	 * que el jugador no quede con 1 HP reales sobre una barra de 20 corazones - no está escrito
+	 * explícitamente en el doc, así que avisar si se prefiere otro comportamiento (p. ej. mantener
+	 * la proporción de vida actual).
 	 */
 	private static void revert(Player player) {
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);

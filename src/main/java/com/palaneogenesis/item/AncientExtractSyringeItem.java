@@ -102,9 +102,8 @@ public class AncientExtractSyringeItem extends Item {
 	 *
 	 * Después de eso, Sección 3.3: aplica los efectos pasivos integrados (Speed y Attack Damage
 	 * como AttributeModifier permanente, con UUID fijo en Transformation para que
-	 * EmptySyringeItem#revert() pueda sacar exactamente ese mismo modifier más adelante).
-	 * Resistance no se toca acá - no es un modifier, se activa sola en cuanto el flag de abajo
-	 * queda en true (ver TransformationEvents#onLivingDamage).
+	 * EmptySyringeItem#revert() pueda sacar exactamente ese mismo modifier más adelante). No hay
+	 * un tercer efecto de Resistance: se descartó por balance (ver util.Transformation).
 	 */
 	private static void transform(Player player) {
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
