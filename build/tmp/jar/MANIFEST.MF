@@ -3,7 +3,7 @@ Specification-Title: palaneogenesis
 Specification-Vendor: YourNameHere, OtherNameHere
 Specification-Version: 1
 Implementation-Title: Palaneogénesis
-Implementation-Version: 0.0.1
+Implementation-Version: 1.4.9
 Implementation-Vendor: YourNameHere, OtherNameHere
-Implementation-Timestamp: 2026-08-26T20:02:49-0300
+Implementation-Timestamp: 2026-08-26T22:42:10-0300
 

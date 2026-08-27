@@ -90,6 +90,23 @@ public final class BlueHeartHudOverlay {
 		}
 	};
 
+	/** Cuánto suben del piso (screenHeight - 39) las filas de vida+absorción vanilla MÁS las
+	 * filas de Blue Heart, ahora mismo. Usado por {@code CraftedHeartsHudOverlay} (Blue_Hearts.md)
+	 * para apilar Explosive/Resistance/Inverted arriba de todo lo anterior, con el mismo criterio
+	 * que este overlay ya usa para apilarse arriba de vida+absorción. */
+	public static int currentStackHeight(LocalPlayer player) {
+		int height = currentHealthStackHeight(player);
+		int points = BlueHeartPool.get(player);
+		if (points <= 0 || player.isCreative() || player.isSpectator()) {
+			return height;
+		}
+		int rows = rowsFor(points);
+		int rowHeight = rowHeightFor(rows);
+		// +1px extra, igual que el que este overlay ya suma en baseY para separarse de la fila
+		// de abajo.
+		return height + rows * rowHeight + (rowHeight != 10 ? 10 - rowHeight : 0) + 1;
+	}
+
 	/** Cuánto suben del piso (screenHeight - 39) las filas de vida+absorción vanilla ahora mismo:
 	 * 0 si el jugador no tiene absorción activa y su vida entra en una sola fila. */
 	private static int currentHealthStackHeight(LocalPlayer player) {
@@ -100,11 +117,13 @@ public final class BlueHeartHudOverlay {
 		return rows * rowHeight + (rowHeight != 10 ? 10 - rowHeight : 0);
 	}
 
-	private static int rowsFor(int points) {
+	// Sin "private": CraftedHeartsHudOverlay (Blue_Hearts.md) reusa la misma matemática de
+	// filas/compresión para stackear Explosive/Resistance/Inverted arriba de este overlay.
+	static int rowsFor(int points) {
 		return Math.max(1, Mth.ceil(points / 2.0F / HEARTS_PER_ROW));
 	}
 
-	private static int rowHeightFor(int rows) {
+	static int rowHeightFor(int rows) {
 		return Math.max(10 - (rows - 2), 3);
 	}
 

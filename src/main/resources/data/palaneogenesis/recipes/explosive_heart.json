@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "palaneogenesis:blue_heart" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:tnt" },
+    { "item": "minecraft:tnt" },
+    { "item": "minecraft:tnt" },
+    { "item": "minecraft:tnt" }
+  ],
+  "result": {
+    "item": "palaneogenesis:explosive_heart",
+    "count": 2
+  }
+}

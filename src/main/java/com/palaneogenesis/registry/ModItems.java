@@ -4,6 +4,9 @@ import com.palaneogenesis.item.AncientExtractSyringeItem;
 import com.palaneogenesis.item.BlueHeartItem;
 import com.palaneogenesis.item.BrokenSyringeItem;
 import com.palaneogenesis.item.EmptySyringeItem;
+import com.palaneogenesis.item.ExplosiveHeartItem;
+import com.palaneogenesis.item.InvertedHeartItem;
+import com.palaneogenesis.item.ResistanceHeartItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -26,6 +29,19 @@ public class ModItems {
 
 	public static final RegistryObject<Item> BROKEN_SYRINGE =
 		ITEMS.register("broken_syringe", () -> new BrokenSyringeItem(new Item.Properties().stacksTo(64)));
+
+	/**
+	 * Corazones craftedos (Blue_Hearts.md). Los tres requieren 1x Blue Heart + materiales propios
+	 * (ver data/palaneogenesis/recipes) y producen 2 unidades = 1 corazón completo.
+	 */
+	public static final RegistryObject<Item> EXPLOSIVE_HEART =
+		ITEMS.register("explosive_heart", () -> new ExplosiveHeartItem(new Item.Properties().stacksTo(64)));
+
+	public static final RegistryObject<Item> RESISTANCE_HEART =
+		ITEMS.register("resistance_heart", () -> new ResistanceHeartItem(new Item.Properties().stacksTo(64)));
+
+	public static final RegistryObject<Item> INVERTED_HEART =
+		ITEMS.register("inverted_heart", () -> new InvertedHeartItem(new Item.Properties().stacksTo(64)));
 
 	/**
 	 * Huevo de spawn del Káak Tun. Usa ForgeSpawnEggItem (no el SpawnEggItem vanilla, deprecado

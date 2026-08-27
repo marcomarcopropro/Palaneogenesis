@@ -42,17 +42,23 @@ public class ModSetup {
         event.put(ModEntityTypes.KAAK_TUN.get(), KaakTunEntity.createAttributes().build());
     }
 
-    /** Le agrega el atributo del pool de Blue Heart al jugador (ver ModAttributes). No es un
-     * MobEffect: es un atributo propio de la entidad, igual que max_health o armor. */
+    /** Le agrega los atributos de los pools de corazones al jugador (ver ModAttributes). No son
+     * MobEffects: son atributos propios de la entidad, igual que max_health o armor. */
     @SubscribeEvent
     public static void onEntityAttributeModification(EntityAttributeModificationEvent event) {
         event.add(EntityType.PLAYER, ModAttributes.BLUE_HEART_POOL.get());
+        event.add(EntityType.PLAYER, ModAttributes.EXPLOSIVE_HEART_POOL.get());
+        event.add(EntityType.PLAYER, ModAttributes.RESISTANCE_HEART_POOL.get());
+        event.add(EntityType.PLAYER, ModAttributes.INVERTED_HEART_POOL.get());
     }
 
     @SubscribeEvent
     public static void onBuildCreativeModeTabContents(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(ModItems.BLUE_HEART);
+            event.accept(ModItems.EXPLOSIVE_HEART);
+            event.accept(ModItems.RESISTANCE_HEART);
+            event.accept(ModItems.INVERTED_HEART);
             event.accept(ModItems.EMPTY_SYRINGE);
             event.accept(ModItems.ANCIENT_EXTRACT_SYRINGE);
         } else if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {

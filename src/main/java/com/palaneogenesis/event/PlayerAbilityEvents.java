@@ -192,7 +192,7 @@ public class PlayerAbilityEvents {
 		UUID id = player.getUUID();
 		boolean wantsToLevitate = Transformation.isTransformed(player)
 			&& LEVITATION_KEY_HELD.contains(id)
-			&& !player.onGround;
+			&& !player.onGround();
 
 		if (wantsToLevitate) {
 			double startY = LevitationState.getOrStartTracking(id, player.getY());
@@ -211,7 +211,7 @@ public class PlayerAbilityEvents {
 		if (LevitationState.isTracking(id) && player.hasEffect(MobEffects.LEVITATION)) {
 			player.removeEffect(MobEffects.LEVITATION);
 		}
-		if (player.onGround) {
+		if (player.onGround()) {
 			LevitationState.stopTracking(id);
 		}
 	}

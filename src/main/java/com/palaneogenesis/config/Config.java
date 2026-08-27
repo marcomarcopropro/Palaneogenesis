@@ -11,6 +11,10 @@ import org.apache.commons.lang3.tuple.Pair;
  * Design doc Section 2 ("Ataque a distancia con carga"): charge duration, damage and range for
  * the Káak Tun's beam attack must come from config, not be hardcoded. Sección 3.4 pide lo mismo
  * para el rayo del jugador, con sus propios valores separados de los del Kaak Tun (no reusar).
+ *
+ * Blue_Hearts.md: cada corazón craftedo tiene su propio bloque de config, igual que blue_heart,
+ * en vez de un solo bloque compartido - así el explosionRadius o la duración de Resistencia II se
+ * pueden tunear sin tocar los otros tipos.
  */
 public class Config {
 
@@ -28,6 +32,12 @@ public class Config {
 		public final ForgeConfigSpec.DoubleValue playerBeamDamage;
 		public final ForgeConfigSpec.DoubleValue playerBeamRange;
 
+		public final ForgeConfigSpec.IntValue explosiveHeartPoints;
+		public final ForgeConfigSpec.DoubleValue explosiveHeartExplosionRadius;
+		public final ForgeConfigSpec.IntValue resistanceHeartPoints;
+		public final ForgeConfigSpec.IntValue resistanceHeartResistanceDurationTicks;
+		public final ForgeConfigSpec.IntValue invertedHeartPoints;
+
 		Common(ForgeConfigSpec.Builder builder) {
 			builder.comment("Káak Tun (entity) settings").push("kaak_tun");
 
@@ -43,14 +53,6 @@ public class Config {
 				.comment("Maximum distance, in blocks, at which the Káak Tun can charge and fire its beam attack.")
 				.defineInRange("beamRange", 12.0D, 1.0D, 64.0D);
 
-			// Melee: real proximity-gated attack added to fix ESPECIAL_ATTACK being wired to the
-			// beam's own fire flag (report: the "golpe" animation played as the beam's cosmetic
-			// flash, with no actual melee hit or distance gating behind it). Kept as its own
-			// config block, separate from the beam values above, instead of reusing
-			// Attributes.ATTACK_DAMAGE (already present on the entity but never actually applied
-			// by any goal) so it stays consistent with the beam's own "must come from config, not
-			// be hardcoded" pattern and doesn't repurpose an attribute whose original intent is
-			// unclear.
 			kaakTunMeleeDamage = builder
 				.comment("Damage dealt by the melee attack. Default is deliberately higher than beamDamage's default (45.0) so melee reads as the stronger of the two attacks, per design.")
 				.defineInRange("meleeDamage", 60.0D, 0.0D, 200.0D);
@@ -63,10 +65,6 @@ public class Config {
 				.comment("Ticks to wait between melee hits once one lands (20 ticks/sec).")
 				.defineInRange("meleeCooldownTicks", 20, 0, 200);
 
-			// Pure feel/tuning value, not a correctness bug - see KaakTunModel#setupAnim. Moved
-			// here (instead of a hardcoded float in the client model) so it can be tested with a
-			// config reload instead of a full recompile - two prior guesses (2.0, then 0.5) each
-			// needed a fresh build + in-game recording to evaluate and both missed.
 			kaakTunWalkAnimSpeed = builder
 				.comment("Tunes how quickly the walk animation's leg cycle advances per block moved",
 					"(NOT a real-time duration - it's relative to actual movement, via limbSwing).",
@@ -86,6 +84,39 @@ public class Config {
 
 			blueHeartPoints = builder
 				.comment("How many points (half-hearts of absorption) each Blue Heart grants on use.")
+				.defineInRange("points", 1, 1, 60);
+
+			builder.pop();
+
+			builder.comment("Explosive Heart (item) settings - Blue_Hearts.md").push("explosive_heart");
+
+			explosiveHeartPoints = builder
+				.comment("How many points (half-hearts of absorption) each Explosive Heart grants on use.")
+				.defineInRange("points", 1, 1, 60);
+
+			explosiveHeartExplosionRadius = builder
+				.comment("Radius, in blocks, of the explosion triggered when an Explosive Heart point breaks.",
+					"Default 2.0 = a 5x5 area centered on the player, per design doc. Never damages blocks.")
+				.defineInRange("explosionRadius", 2.0D, 0.5D, 10.0D);
+
+			builder.pop();
+
+			builder.comment("Resistance Heart (item) settings - Blue_Hearts.md").push("resistance_heart");
+
+			resistanceHeartPoints = builder
+				.comment("How many points (half-hearts of absorption) each Resistance Heart grants on use.")
+				.defineInRange("points", 1, 1, 60);
+
+			resistanceHeartResistanceDurationTicks = builder
+				.comment("Duration, in ticks (20/sec), of the Resistance II effect granted when a Resistance Heart point breaks.")
+				.defineInRange("resistanceDurationTicks", 100, 20, 1200);
+
+			builder.pop();
+
+			builder.comment("Inverted Heart (item) settings - Blue_Hearts.md. No active/break effect defined yet.").push("inverted_heart");
+
+			invertedHeartPoints = builder
+				.comment("How many points (half-hearts of absorption) each Inverted Heart grants on use.")
 				.defineInRange("points", 1, 1, 60);
 
 			builder.pop();
