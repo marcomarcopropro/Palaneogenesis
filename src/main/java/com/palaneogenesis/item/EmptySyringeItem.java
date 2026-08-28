@@ -78,9 +78,14 @@ public class EmptySyringeItem extends Item {
 
 		stack.shrink(1);
 		ItemStack brokenSyringe = new ItemStack(ModItems.BROKEN_SYRINGE.get());
-		if (stack.isEmpty()) {
-			return InteractionResultHolder.sidedSuccess(brokenSyringe, level.isClientSide());
-		}
+		// FIX (bug reportado: "se crea una jeringa rota de forma individual y no como las
+		// pociones que se van acumulando"). Antes, cuando este stack quedaba en 0 (se usaba la
+		// última Empty Syringe en mano), el remainder se devolvía DIRECTO como el nuevo stack en
+		// mano (patrón vanilla de poción -> frasco vacío) sin pasar por el inventario - si el
+		// jugador ya tenía Broken Syringes en otro slot, terminaba con dos stacks separados en
+		// vez de uno acumulado. Ahora siempre se intenta primero mergear con un stack existente
+		// (o un slot libre) vía Inventory#add, igual que ya hacía la otra rama (stack.getCount()
+		// > 0 después del shrink) - sólo si el inventario está lleno se dropea en el piso.
 		if (!player.getInventory().add(brokenSyringe)) {
 			player.drop(brokenSyringe, false);
 		}

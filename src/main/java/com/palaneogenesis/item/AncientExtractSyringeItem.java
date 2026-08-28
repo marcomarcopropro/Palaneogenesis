@@ -72,9 +72,9 @@ public class AncientExtractSyringeItem extends Item {
 
 		stack.shrink(1);
 		ItemStack emptySyringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
-		if (stack.isEmpty()) {
-			return InteractionResultHolder.sidedSuccess(emptySyringe, level.isClientSide());
-		}
+		// FIX: mismo bug reportado para EmptySyringeItem#use (ver el comentario ahí) - este
+		// método usaba el mismo patrón "remainder directo a la mano si el stack queda vacío",
+		// que rompe la acumulación con Empty Syringes que el jugador ya tuviera en otro slot.
 		if (!player.getInventory().add(emptySyringe)) {
 			player.drop(emptySyringe, false);
 		}

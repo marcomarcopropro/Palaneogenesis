@@ -3,7 +3,6 @@ package com.palaneogenesis.event;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.BeamRenderStatePacket;
-import com.palaneogenesis.network.LevitationCooldownSyncPacket;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.util.LevitationState;
 import com.palaneogenesis.util.Transformation;
@@ -70,6 +69,15 @@ public class PlayerAbilityEvents {
 	 * generando un rebote infinito justo en el techo en vez de una caída limpia. */
 	private static final Set<UUID> LEVITATION_CAPPED = new HashSet<>();
 
+	/** Cuántos ticks seguidos lleva sostenida la tecla de levitación (se resetea a 0 apenas se
+	 * suelta) - FIX pedido esta sesión: antes el mega salto arrancaba en el mismo tick que se
+	 * tocaba espacio (un solo tap ya lo disparaba), y se pidió que en cambio haga falta MANTENER
+	 * la tecla 2s seguidos para recién ahí activarlo. Sólo gatea la ACTIVACIÓN de un vuelo nuevo
+	 * (mismo criterio que el enfriamiento, ver wantsToLevitate) - un vuelo que ya está en curso no
+	 * vuelve a esperar estos 2s aunque siga sosteniendo la tecla. */
+	private static final Map<UUID, Integer> LEVITATION_HOLD_TICKS = new HashMap<>();
+	private static final int LEVITATION_ACTIVATION_DELAY_TICKS = 40;
+
 	/** Amplifier 1 = Levitation Nivel II vanilla, ~0.10 bloques/tick de ascenso terminal (~2
 	 * bloques/seg) - pedido explícito de subirle un poco la velocidad al salto largo (antes
 	 * amplifier 0, ~1 bloque/seg, se sentía muy lento). Sigue siendo un salto largo asistido, no
@@ -81,10 +89,10 @@ public class PlayerAbilityEvents {
 	/** Tope pedido: 5 bloques por sobre la altura donde arrancó a levitar. */
 	private static final double LEVITATION_MAX_HEIGHT = 5.0D;
 
-	/** Enfriamiento (ajustado esta sesión: 60s -> 10s, pedido explícito "Buff al salto"). Arranca
-	 * a contar en el instante en que arranca el salto largo (no cuando se suelta la tecla ni
-	 * cuando termina de caer) - "se usa una vez y durante 10 segundos no se puede volver a usar". */
-	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 10;
+	/** Enfriamiento pedido explícitamente: una activación por minuto. Arranca a contar en el
+	 * instante en que arranca el salto largo (no cuando se suelta la tecla ni cuando termina de
+	 * caer) - "se usa una vez y durante un minuto no se puede volver a usar". */
+	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 60;
 	private static final Map<UUID, Integer> LEVITATION_COOLDOWN_TICKS = new HashMap<>();
 
 	public static void setLevitationKeyHeld(ServerPlayer player, boolean held) {
@@ -103,6 +111,7 @@ public class PlayerAbilityEvents {
 		LEVITATION_KEY_HELD.remove(id);
 		LEVITATION_CAPPED.remove(id);
 		LEVITATION_COOLDOWN_TICKS.remove(id);
+		LEVITATION_HOLD_TICKS.remove(id);
 		LevitationState.clear(id);
 	}
 
@@ -211,7 +220,17 @@ public class PlayerAbilityEvents {
 
 		// El enfriamiento corre siempre, en tiempo real, sin importar si el jugador está en el
 		// aire, transformado, o sosteniendo la tecla.
-		tickCooldown(player);
+		tickCooldown(id);
+
+		boolean keyHeld = LEVITATION_KEY_HELD.contains(id);
+
+		// Duración de hold continuo de la tecla, independiente de estar en el aire o no (así un
+		// jugador que ya venía sosteniendo espacio al despegar no tiene que volver a empezar la
+		// cuenta desde 0 en el aire). Se resetea a 0 apenas se suelta.
+		int heldTicks = keyHeld ? LEVITATION_HOLD_TICKS.merge(id, 1, Integer::sum) : 0;
+		if (!keyHeld) {
+			LEVITATION_HOLD_TICKS.remove(id);
+		}
 
 		if (player.onGround()) {
 			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
@@ -222,24 +241,16 @@ public class PlayerAbilityEvents {
 		}
 
 		boolean transformed = Transformation.isTransformed(player);
-		boolean keyHeld = LEVITATION_KEY_HELD.contains(id);
 		boolean alreadyFlying = LevitationState.isTracking(id);
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
+		// FIX pedido esta sesión: un solo tap de espacio ya no alcanza para arrancar el mega
+		// salto - hace falta sostener la tecla LEVITATION_ACTIVATION_DELAY_TICKS (2s) seguidos.
+		// Igual que el enfriamiento, esto sólo gatea una activación NUEVA: un vuelo que ya está
+		// en curso (alreadyFlying) no vuelve a esperar estos 2s.
+		boolean delayMet = heldTicks >= LEVITATION_ACTIVATION_DELAY_TICKS;
 
-		// El enfriamiento sólo bloquea ARRANCAR un salto nuevo - un vuelo que ya está en curso
-		// (alreadyFlying) sigue hasta el tope o hasta soltar la tecla, aunque el enfriamiento se
-		// haya empezado a contar en el mismo instante en que arrancó.
 		boolean wantsToLevitate = transformed && keyHeld && !LEVITATION_CAPPED.contains(id)
-			&& (alreadyFlying || !onCooldown);
-
-		// Gracia de daño de caída: mientras se sostenga la tecla en el aire, sin importar si
-		// todavía se está empujando para arriba, ya se pegó el tope y se está cayendo, o está en
-		// enfriamiento - "sin importar la altura, no recibís daño si mantenés el espacio" no tiene
-		// excepciones por tope ni por enfriamiento, sólo depende de estar transformado y sostener
-		// la tecla en el aire.
-		if (transformed && keyHeld) {
-			LevitationState.markGrace(id);
-		}
+			&& (alreadyFlying || (!onCooldown && delayMet));
 
 		if (wantsToLevitate) {
 			if (!alreadyFlying) {
@@ -251,6 +262,13 @@ public class PlayerAbilityEvents {
 			if (player.getY() - startY < LEVITATION_MAX_HEIGHT) {
 				player.addEffect(new MobEffectInstance(MobEffects.LEVITATION,
 					LEVITATION_REFRESH_DURATION_TICKS, LEVITATION_AMPLIFIER, false, false, false));
+				// FIX pedido esta sesión: la gracia de daño de caída se otorga SÓLO en los ticks
+				// en que el mega salto está efectivamente empujando al jugador para arriba (acá
+				// adentro), no en cualquier tick que esté transformado y sostenga la tecla - antes
+				// se otorgaba más arriba, ANTES de saber si wantsToLevitate se traducía en un
+				// empuje real, lo cual la dejaba activa prácticamente durante toda la
+				// transformación (cualquier salto/hop normal con la tecla de siempre).
+				LevitationState.markGrace(id);
 				return;
 			}
 			// Tope recién alcanzado este tick: se marca como capeado para que no se vuelva a
@@ -268,34 +286,16 @@ public class PlayerAbilityEvents {
 		}
 	}
 
-	/**
-	 * Pedido de esta sesión ("el temporizador del salto no se muestra"): además de descontar el
-	 * enfriamiento, empuja el valor restante al dueño vía {@link LevitationCooldownSyncPacket} en
-	 * cada tick en que cambia, mismo patrón server -> dueño que ya usan HeartArray#sync y
-	 * Transformation#sync (PacketDistributor.PLAYER, no TRACKING_ENTITY_AND_SELF - el temporizador
-	 * es un dato privado del propio jugador, no algo que otros deban ver). Se emite un último
-	 * paquete con remainingTicks=0 al terminar el enfriamiento para que el HUD lo oculte de
-	 * inmediato en vez de quedarse mostrando el último valor sincronizado.
-	 */
-	private static void tickCooldown(ServerPlayer player) {
-		UUID id = player.getUUID();
+	private static void tickCooldown(UUID id) {
 		Integer remaining = LEVITATION_COOLDOWN_TICKS.get(id);
 		if (remaining == null) {
 			return;
 		}
 		if (remaining <= 1) {
 			LEVITATION_COOLDOWN_TICKS.remove(id);
-			broadcastLevitationCooldown(player, 0);
 		} else {
-			int updated = remaining - 1;
-			LEVITATION_COOLDOWN_TICKS.put(id, updated);
-			broadcastLevitationCooldown(player, updated);
+			LEVITATION_COOLDOWN_TICKS.put(id, remaining - 1);
 		}
-	}
-
-	private static void broadcastLevitationCooldown(ServerPlayer player, int remainingTicks) {
-		NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-			new LevitationCooldownSyncPacket(remainingTicks));
 	}
 
 	@SubscribeEvent

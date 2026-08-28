@@ -52,16 +52,25 @@ public final class Transformation {
 		});
 	}
 
-	/** Empuja el flag actual al dueño únicamente (mismo rol que HeartArray#sync). No-op si
+	/** Empuja el estado actual al dueño únicamente (mismo rol que HeartArray#sync). No-op si
 	 * {@code player} no es un ServerPlayer real (ej. si algo lo llama por error del lado
-	 * cliente, o antes de que la capability exista todavía). */
+	 * cliente, o antes de que la capability exista todavía).
+	 *
+	 * FIX (bug reportado: "la mecánica visual de broken hearts no funciona"). Este paquete sólo
+	 * mandaba isTransformed() - getMaxHealthPenaltyHearts() nunca llegaba al cliente, así que
+	 * client.BrokenHeartHudOverlay (que lee ese valor de la copia CLIENTE de esta misma
+	 * capability, ver #getMaxHealthPenaltyHearts) siempre veía 0 y nunca dibujaba nada, sin
+	 * importar cuántos corazones hubiera perdido el jugador en el servidor. Ahora se manda
+	 * también ese valor, y se resincroniza cada vez que cambia porque registerToggle() (el único
+	 * lugar que lo modifica) siempre corre justo antes de un set() que ya dispara este mismo
+	 * sync() (ver EmptySyringeItem#revert / AncientExtractSyringeItem#transform). */
 	public static void sync(Player player) {
 		if (!(player instanceof ServerPlayer serverPlayer)) {
 			return;
 		}
 		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data ->
 			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
-				new TransformationSyncPacket(data.isTransformed()))
+				new TransformationSyncPacket(data.isTransformed(), data.getMaxHealthPenaltyHearts()))
 		);
 	}
 

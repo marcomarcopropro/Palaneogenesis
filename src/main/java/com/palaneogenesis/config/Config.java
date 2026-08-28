@@ -149,8 +149,11 @@ public class Config {
 				.comment("Maximum distance, in blocks, at which the player's beam can hit something.",
 					"Hard-capped at 30.0 (explicit request) - ForgeConfigSpec enforces this bound on",
 					"every load/get, so #get() can never return more than 30.0 regardless of what a",
-					"hand-edited config file says.")
-				.defineInRange("range", 10.0D, 1.0D, 30.0D);
+					"hand-edited config file says.",
+					"FIX: default was 10.0, well under the requested 30 blocks (raycastBeam already",
+					"honors whatever this returns for both the visual endpoint and the actual damage,",
+					"so with the old default neither reached past 10 blocks) - default is now 30.0.")
+				.defineInRange("range", 30.0D, 1.0D, 30.0D);
 
 			builder.pop();
 

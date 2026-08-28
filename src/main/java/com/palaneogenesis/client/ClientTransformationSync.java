@@ -15,11 +15,13 @@ public final class ClientTransformationSync {
 	private ClientTransformationSync() {
 	}
 
-	public static void apply(boolean transformed) {
+	public static void apply(boolean transformed, int maxHealthPenaltyHearts) {
 		LocalPlayer player = Minecraft.getInstance().player;
 		if (player != null) {
-			player.getCapability(Capabilities.TRANSFORMATION_DATA)
-				.ifPresent(data -> data.setTransformed(transformed));
+			player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data -> {
+				data.setTransformed(transformed);
+				data.setMaxHealthPenaltyHearts(maxHealthPenaltyHearts);
+			});
 		}
 	}
 }

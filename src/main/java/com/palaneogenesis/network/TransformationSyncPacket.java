@@ -10,7 +10,10 @@ import java.util.function.Supplier;
 
 /**
  * Server -> dueño únicamente (mismo rol que HeartArraySyncPacket, ver util.HeartArray#sync):
- * empuja el flag de transformación (capability.ITransformationData#isTransformed) al cliente.
+ * empuja el flag de transformación (capability.ITransformationData#isTransformed) y la
+ * penalización de corazones rojos (capability.ITransformationData#getMaxHealthPenaltyHearts) al
+ * cliente. El segundo campo se sumó en esta sesión (ver util.Transformation#sync) para arreglar
+ * client.BrokenHeartHudOverlay, que dependía de un valor que nunca llegaba al cliente.
  *
  * FIX (bug reportado: la Ancient Extract Syringe se podía "usar de nuevo" estando ya
  * transformado). util.Transformation#isTransformed se lee del lado cliente en varios lugares
@@ -30,23 +33,27 @@ import java.util.function.Supplier;
 public class TransformationSyncPacket {
 
 	private final boolean transformed;
+	private final int maxHealthPenaltyHearts;
 
-	public TransformationSyncPacket(boolean transformed) {
+	public TransformationSyncPacket(boolean transformed, int maxHealthPenaltyHearts) {
 		this.transformed = transformed;
+		this.maxHealthPenaltyHearts = maxHealthPenaltyHearts;
 	}
 
 	public static void encode(TransformationSyncPacket packet, FriendlyByteBuf buffer) {
 		buffer.writeBoolean(packet.transformed);
+		buffer.writeVarInt(packet.maxHealthPenaltyHearts);
 	}
 
 	public static TransformationSyncPacket decode(FriendlyByteBuf buffer) {
-		return new TransformationSyncPacket(buffer.readBoolean());
+		return new TransformationSyncPacket(buffer.readBoolean(), buffer.readVarInt());
 	}
 
 	public static void handle(TransformationSyncPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
 		NetworkEvent.Context ctx = ctxSupplier.get();
 		ctx.enqueueWork(() ->
-			DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientTransformationSync.apply(packet.transformed))
+			DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+				ClientTransformationSync.apply(packet.transformed, packet.maxHealthPenaltyHearts))
 		);
 		ctx.setPacketHandled(true);
 	}
