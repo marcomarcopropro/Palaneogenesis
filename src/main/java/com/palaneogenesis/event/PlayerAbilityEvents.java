@@ -78,11 +78,14 @@ public class PlayerAbilityEvents {
 	private static final Map<UUID, Integer> LEVITATION_HOLD_TICKS = new HashMap<>();
 	private static final int LEVITATION_ACTIVATION_DELAY_TICKS = 40;
 
-	/** Amplifier 1 = Levitation Nivel II vanilla, ~0.10 bloques/tick de ascenso terminal (~2
-	 * bloques/seg) - pedido explícito de subirle un poco la velocidad al salto largo (antes
-	 * amplifier 0, ~1 bloque/seg, se sentía muy lento). Sigue siendo un salto largo asistido, no
-	 * un vuelo real: al tope de 5 bloques (~2.5 seg a este ritmo) sigue cortando igual. */
-	private static final int LEVITATION_AMPLIFIER = 1;
+	/** Amplifier 3 = Levitation Nivel IV vanilla, ~0.20 bloques/tick de ascenso terminal (~4
+	 * bloques/seg) - pedido explícito de duplicar la velocidad respecto del valor anterior
+	 * (amplifier 1, ~0.10 bloques/tick / ~2 bloques/seg, se seguía sintiendo lento). La velocidad
+	 * terminal de Levitation en vanilla escala como 0.05*(amplifier+1) bloques/tick
+	 * (LivingEntity#aiStep), así que subir de amplifier 1 a 3 es exactamente el x2 pedido (0.10 ->
+	 * 0.20). Sigue siendo un salto largo asistido, no un vuelo real: al tope de 5 bloques (~1.25
+	 * seg a este ritmo) sigue cortando igual. */
+	private static final int LEVITATION_AMPLIFIER = 3;
 	/** Se reaplica cada tick mientras la tecla sigue sostenida, así que sólo necesita durar un
 	 * poco más que un tick para no parpadear entre refrescos. */
 	private static final int LEVITATION_REFRESH_DURATION_TICKS = 5;
@@ -233,10 +236,22 @@ public class PlayerAbilityEvents {
 		}
 
 		if (player.onGround()) {
-			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
-			// resetea acá - sigue corriendo independiente de que se haya tocado el piso o no.
+			// Piso: resetea todo para el próximo vuelo, tope y cuenta de sostenida incluidos. El
+			// enfriamiento NO se resetea acá - sigue corriendo independiente de que se haya tocado
+			// el piso o no.
+			//
+			// FIX (bug reportado: "temporizador roto" al mantener espacio sin soltar nunca): acá
+			// no se tocaba LEVITATION_HOLD_TICKS, así que sólo se reseteaba al SOLTAR la tecla
+			// (arriba). Si el jugador nunca suelta espacio entre un vuelo y el siguiente (lo
+			// normal - ni hace falta soltarla para volver a saltar), heldTicks quedaba por encima
+			// de LEVITATION_ACTIVATION_DELAY_TICKS para siempre después del primer vuelo, así que
+			// delayMet ya arrancaba en true en el próximo intento: el segundo salto (y todos los
+			// que vengan después) arrancaban instantáneos apenas se cumplía el enfriamiento, sin
+			// los 2s de espera pedidos. Tocar el piso entre vuelo y vuelo es la señal correcta de
+			// "esto es una activación nueva", no soltar la tecla.
 			LevitationState.stopTracking(id);
 			LEVITATION_CAPPED.remove(id);
+			LEVITATION_HOLD_TICKS.remove(id);
 			return;
 		}
 

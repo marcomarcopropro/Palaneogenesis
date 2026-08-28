@@ -49,10 +49,14 @@ import java.util.Map;
  *   arranca un Explosive Heart en el mismo par) toma el tipo del PRIMER punto del par (el más
  *   viejo) - elección arbitraria pero determinística; avisar si se prefiere que gane el segundo.
  *
- * ASUNCIÓN sobre el sprite (no tengo el .png a la vista): además del corazón lleno en u=0
- * (documentado ya en esta clase antes de este cambio) asumo que el mismo sheet 16x16 tiene el
- * corazón a la mitad en u=8, mismo layout que un heart.png vanilla. Si no es así, sólo hay que
- * ajustar HALF_HEART_U más abajo.
+ * BLUE HEART - TEXTURA (cambio pedido en esta sesión, a modo de prueba A/B contra la anterior):
+ * a diferencia de los otros 3 tipos (que siguen en el sheet 16x16 de siempre, corazón lleno en
+ * u=0 y medio en u=8, dibujado a 8x16), Blue Heart ahora usa DOS archivos de 9x9 cada uno
+ * (hud_blue_heart_full.png / hud_blue_heart_half.png, formato vanilla estándar - sin U/V, cada
+ * archivo es un ícono entero) en vez de un sheet compartido - ver BLUE_ICON_SIZE y drawHeart más
+ * abajo, que a Blue Heart lo trata aparte del resto por este motivo. El sheet viejo
+ * (hud_blue_hearts.png, más su backup hud_blue_hearts_legacy.png) queda en el repo sin
+ * referenciar desde código, por si se prefiere volver atrás después de probar la nueva.
  */
 public final class HeartHudOverlay {
 
@@ -82,10 +86,22 @@ public final class HeartHudOverlay {
 	 * TRANSFORMED_ROW_DROP, y sólo se aplica junto con él (nunca en estado vanilla de Steve). */
 	private static final int TRANSFORMED_ROW_HEIGHT_FIX = 1;
 
+	/** Ver el comentario "BLUE HEART - TEXTURA" de la clase: Blue Heart ya no vive en el sheet
+	 * 16x16 compartido, tiene sus 2 archivos propios de 9x9 (formato vanilla estándar). */
+	private static final ResourceLocation BLUE_FULL = rl("hud_blue_heart_full");
+	private static final ResourceLocation BLUE_HALF = rl("hud_blue_heart_half");
+	private static final int BLUE_ICON_SIZE = 9;
+	/** Centra verticalmente el ícono de 9px de Blue Heart dentro de la misma franja de 16px
+	 * (ICON_HEIGHT) que ocupan los otros 3 tipos, para que una fila con tipos mezclados no quede
+	 * con Blue Heart descolgado - (ICON_HEIGHT - BLUE_ICON_SIZE) / 2. El arte visible del sheet
+	 * viejo (no transparente) ya caía centrado dentro de esa franja de 16px, así que esto
+	 * mantiene el mismo centro visual que tenía antes, sólo con el sprite nuevo. */
+	private static final int BLUE_Y_OFFSET = (ICON_HEIGHT - BLUE_ICON_SIZE) / 2;
+
 	private static final Map<HeartType, ResourceLocation> ICONS = new EnumMap<>(HeartType.class);
 
 	static {
-		ICONS.put(HeartType.BLUE, rl("hud_blue_hearts"));
+		// BLUE se maneja aparte en drawHeart (ver BLUE_FULL/BLUE_HALF) - no vive acá.
 		ICONS.put(HeartType.EXPLOSIVE, rl("hud_explosive_heart"));
 		ICONS.put(HeartType.RESISTANCE, rl("hud_resistance_heart"));
 		ICONS.put(HeartType.INVERTED, rl("hud_inverted_heart"));
@@ -195,6 +211,12 @@ public final class HeartHudOverlay {
 	};
 
 	private static void drawHeart(GuiGraphics guiGraphics, DisplayHeart heart, int x, int y) {
+		if (heart.type() == HeartType.BLUE) {
+			ResourceLocation icon = heart.half() ? BLUE_HALF : BLUE_FULL;
+			guiGraphics.blit(icon, x, y + BLUE_Y_OFFSET, 0.0F, 0.0F,
+				BLUE_ICON_SIZE, BLUE_ICON_SIZE, BLUE_ICON_SIZE, BLUE_ICON_SIZE);
+			return;
+		}
 		ResourceLocation icon = ICONS.get(heart.type());
 		int u = heart.half() ? HALF_HEART_U : FULL_HEART_U;
 		guiGraphics.blit(icon, x, y, (float) u, 0.0F, ICON_WIDTH, ICON_HEIGHT, SHEET_SIZE, SHEET_SIZE);
