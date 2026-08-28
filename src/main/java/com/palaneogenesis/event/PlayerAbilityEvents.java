@@ -236,22 +236,34 @@ public class PlayerAbilityEvents {
 		}
 
 		if (player.onGround()) {
-			// Piso: resetea todo para el próximo vuelo, tope y cuenta de sostenida incluidos. El
-			// enfriamiento NO se resetea acá - sigue corriendo independiente de que se haya tocado
-			// el piso o no.
+			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
+			// resetea acá - sigue corriendo independiente de que se haya tocado el piso o no.
 			//
-			// FIX (bug reportado: "temporizador roto" al mantener espacio sin soltar nunca): acá
-			// no se tocaba LEVITATION_HOLD_TICKS, así que sólo se reseteaba al SOLTAR la tecla
-			// (arriba). Si el jugador nunca suelta espacio entre un vuelo y el siguiente (lo
-			// normal - ni hace falta soltarla para volver a saltar), heldTicks quedaba por encima
-			// de LEVITATION_ACTIVATION_DELAY_TICKS para siempre después del primer vuelo, así que
-			// delayMet ya arrancaba en true en el próximo intento: el segundo salto (y todos los
-			// que vengan después) arrancaban instantáneos apenas se cumplía el enfriamiento, sin
-			// los 2s de espera pedidos. Tocar el piso entre vuelo y vuelo es la señal correcta de
-			// "esto es una activación nueva", no soltar la tecla.
+			// FIX (bug reportado: "temporizador roto" al mantener espacio sin soltar nunca): un
+			// vuelo YA en curso (alreadyFlying, ver más abajo - achequeado ACÁ vía
+			// LevitationState.isTracking antes de llamar a stopTracking) que aterriza SÍ resetea
+			// heldTicks, para que el próximo vuelo pida sus 2s de espera de nuevo (antes no se
+			// tocaba nunca, así que sólo se reseteaba al SOLTAR la tecla - si el jugador nunca
+			// suelta espacio entre un vuelo y el siguiente, heldTicks quedaba por encima del
+			// umbral para siempre después del primer vuelo, y todos los vuelos siguientes
+			// arrancaban instantáneos apenas se cumplía el enfriamiento).
+			//
+			// OJO, esto no es "resetear en cualquier contacto con el piso": sostener espacio
+			// parado en el piso auto-saltea en bucle en vanilla (cada salto dura bien menos que
+			// LEVITATION_ACTIVATION_DELAY_TICKS), y esos aterrizajes NO son el final de un vuelo
+			// real - son ruido normal del auto-salto mientras el jugador recién está sosteniendo
+			// la tecla parado, antes de que arranque nada. Resetear ahí también (mi primer intento
+			// de este fix) hacía que heldTicks nunca llegara a 40 en ese caso: cada auto-salto lo
+			// volvía a poner en 0 antes de acumular lo suficiente, y el mega salto directamente no
+			// arrancaba nunca. El chequeo de isTracking distingue exactamente eso: sólo es true
+			// mientras hay un vuelo real en curso (lo puso getOrStartTracking cuando
+			// wantsToLevitate empujó al jugador para arriba de verdad), no en un salto vanilla
+			// común.
+			if (LevitationState.isTracking(id)) {
+				LEVITATION_HOLD_TICKS.remove(id);
+			}
 			LevitationState.stopTracking(id);
 			LEVITATION_CAPPED.remove(id);
-			LEVITATION_HOLD_TICKS.remove(id);
 			return;
 		}
 

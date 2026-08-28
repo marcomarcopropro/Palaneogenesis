@@ -33,21 +33,30 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * No se dibuja mientras el jugador está transformado: en ese estado la fila vanilla entera queda
  * oculta (ver client.TransformedHealthHudEvents) y este ícono no tendría a qué pegarse - se apaga
  * junto con ella en vez de quedar flotando solo donde la fila vanilla ya no se ve.
+ *
+ * TEXTURA (cambio pedido en esta sesión, mismo criterio ya aplicado a Blue Heart en
+ * client.HeartHudOverlay - ver el comentario "BLUE HEART - TEXTURA" ahí): en vez del sheet
+ * compartido de 16x8 (hud_broken_heart.png, un cuadro lleno + un cuadro sin usar), Broken Heart
+ * ahora usa DOS archivos de 9x9 (hud_broken_heart_full.png / hud_broken_heart_half.png, formato
+ * vanilla estándar - sin U/V, cada archivo es un ícono entero). El sheet viejo queda en el repo
+ * sin referenciar desde código, como hud_broken_heart_legacy.png (mismo criterio que
+ * hud_blue_hearts_legacy.png), por si se prefiere volver atrás después de probar el nuevo.
+ *
+ * La penalización sigue restando siempre corazones ENTEROS (ver util.Transformation -
+ * getMaxHealthPenaltyHearts/registerToggle no cambiaron en este commit), así que HALF por ahora
+ * no se dibuja desde acá - queda cargado y listo por si hiciera falta más adelante, igual que ya
+ * pasaba con el segundo cuadro del sheet viejo.
  */
 public final class BrokenHeartHudOverlay {
 
-	private static final ResourceLocation ICON = new ResourceLocation(
-		Palaneogenesis.MOD_ID, "textures/gui/hud_broken_heart.png");
+	private static final ResourceLocation FULL = new ResourceLocation(
+		Palaneogenesis.MOD_ID, "textures/gui/hud_broken_heart_full.png");
+	private static final ResourceLocation HALF = new ResourceLocation(
+		Palaneogenesis.MOD_ID, "textures/gui/hud_broken_heart_half.png");
 
-	/** Sheet de 16x8 provisto: 2 cuadros de 8x8 (mismo layout de "lleno / segundo cuadro" que ya
-	 * usa HeartHudOverlay, ahí a otra escala). Sólo se usa el primer cuadro (u=0): la penalización
-	 * siempre resta corazones ENTEROS, nunca hay un "medio corazón roto" que mostrar con el
-	 * segundo cuadro - queda la constante lista por si hiciera falta más adelante. */
-	private static final int ICON_WIDTH = 8;
-	private static final int ICON_HEIGHT = 8;
-	private static final int SHEET_WIDTH = 16;
-	private static final int SHEET_HEIGHT = 8;
-	private static final int FULL_U = 0;
+	/** Ver el comentario de la clase: mismo formato vanilla de 9x9 que usa Blue Heart, sin
+	 * sheet/U-V. */
+	private static final int ICON_SIZE = 9;
 
 	private static final int HEART_STEP = 8;
 	/** Corazones totales de la fila vanilla sin penalización (NORMAL_MAX_HEALTH / 2). */
@@ -93,7 +102,9 @@ public final class BrokenHeartHudOverlay {
 
 		RenderSystem.enableBlend();
 		for (int i = 0; i < brokenToDraw; i++) {
-			guiGraphics.blit(ICON, x, y, (float) FULL_U, 0.0F, ICON_WIDTH, ICON_HEIGHT, SHEET_WIDTH, SHEET_HEIGHT);
+			// Ver el comentario de la clase: siempre FULL (nunca hay medio corazón roto que
+			// mostrar), mismo blit de 9x9 sin U/V que usa Blue Heart en HeartHudOverlay#drawHeart.
+			guiGraphics.blit(FULL, x, y, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 			x += HEART_STEP;
 		}
 	};
