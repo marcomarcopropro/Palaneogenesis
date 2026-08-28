@@ -3,6 +3,7 @@ package com.palaneogenesis.event;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.BeamRenderStatePacket;
+import com.palaneogenesis.network.LevitationCooldownSyncPacket;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.util.LevitationState;
 import com.palaneogenesis.util.Transformation;
@@ -72,11 +73,13 @@ public class PlayerAbilityEvents {
 	/** Cuántos ticks seguidos lleva sostenida la tecla de levitación (se resetea a 0 apenas se
 	 * suelta) - FIX pedido esta sesión: antes el mega salto arrancaba en el mismo tick que se
 	 * tocaba espacio (un solo tap ya lo disparaba), y se pidió que en cambio haga falta MANTENER
-	 * la tecla 2s seguidos para recién ahí activarlo. Sólo gatea la ACTIVACIÓN de un vuelo nuevo
+	 * la tecla 1s seguido para recién ahí activarlo. Sólo gatea la ACTIVACIÓN de un vuelo nuevo
 	 * (mismo criterio que el enfriamiento, ver wantsToLevitate) - un vuelo que ya está en curso no
-	 * vuelve a esperar estos 2s aunque siga sosteniendo la tecla. */
+	 * vuelve a esperar este 1s aunque siga sosteniendo la tecla. */
 	private static final Map<UUID, Integer> LEVITATION_HOLD_TICKS = new HashMap<>();
-	private static final int LEVITATION_ACTIVATION_DELAY_TICKS = 40;
+	/** Bajado de 40 (2s) a 20 (1s) - pedido explícito de esta sesión: 2s se sentía demasiado largo
+	 * para la ventana de espera antes de que arranque el mega salto. */
+	private static final int LEVITATION_ACTIVATION_DELAY_TICKS = 20;
 
 	/** Amplifier 3 = Levitation Nivel IV vanilla, ~0.20 bloques/tick de ascenso terminal (~4
 	 * bloques/seg) - pedido explícito de duplicar la velocidad respecto del valor anterior
@@ -223,7 +226,7 @@ public class PlayerAbilityEvents {
 
 		// El enfriamiento corre siempre, en tiempo real, sin importar si el jugador está en el
 		// aire, transformado, o sosteniendo la tecla.
-		tickCooldown(id);
+		tickCooldown(player);
 
 		boolean keyHeld = LEVITATION_KEY_HELD.contains(id);
 
@@ -242,7 +245,7 @@ public class PlayerAbilityEvents {
 			// FIX (bug reportado: "temporizador roto" al mantener espacio sin soltar nunca): un
 			// vuelo YA en curso (alreadyFlying, ver más abajo - achequeado ACÁ vía
 			// LevitationState.isTracking antes de llamar a stopTracking) que aterriza SÍ resetea
-			// heldTicks, para que el próximo vuelo pida sus 2s de espera de nuevo (antes no se
+			// heldTicks, para que el próximo vuelo pida su 1s de espera de nuevo (antes no se
 			// tocaba nunca, así que sólo se reseteaba al SOLTAR la tecla - si el jugador nunca
 			// suelta espacio entre un vuelo y el siguiente, heldTicks quedaba por encima del
 			// umbral para siempre después del primer vuelo, y todos los vuelos siguientes
@@ -271,9 +274,9 @@ public class PlayerAbilityEvents {
 		boolean alreadyFlying = LevitationState.isTracking(id);
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
 		// FIX pedido esta sesión: un solo tap de espacio ya no alcanza para arrancar el mega
-		// salto - hace falta sostener la tecla LEVITATION_ACTIVATION_DELAY_TICKS (2s) seguidos.
+		// salto - hace falta sostener la tecla LEVITATION_ACTIVATION_DELAY_TICKS (1s) seguido.
 		// Igual que el enfriamiento, esto sólo gatea una activación NUEVA: un vuelo que ya está
-		// en curso (alreadyFlying) no vuelve a esperar estos 2s.
+		// en curso (alreadyFlying) no vuelve a esperar este 1s.
 		boolean delayMet = heldTicks >= LEVITATION_ACTIVATION_DELAY_TICKS;
 
 		boolean wantsToLevitate = transformed && keyHeld && !LEVITATION_CAPPED.contains(id)
@@ -313,16 +316,40 @@ public class PlayerAbilityEvents {
 		}
 	}
 
-	private static void tickCooldown(UUID id) {
+	/**
+	 * FIX (bug reportado: "el temporizador del salto no se muestra"). La causa NO estaba en
+	 * LevitationCooldownHudOverlay (ese overlay siempre estuvo bien, ver su propia clase) ni en
+	 * ClientLevitationCooldownSync - estaba acá: nada en todo el mod llamaba jamás a
+	 * NetworkHandler.CHANNEL.send(...) con un LevitationCooldownSyncPacket. El método
+	 * "broadcastLevitationCooldown" ya se mencionaba en los comentarios de
+	 * network.LevitationCooldownSyncPacket y client.LevitationCooldownHudOverlay como si
+	 * existiera, pero nunca se llegó a escribir - LEVITATION_COOLDOWN_TICKS se actualizaba
+	 * perfectamente del lado servidor (tickLevitation/#onCooldown ya lo leían bien), pero ese
+	 * valor jamás salía del servidor, así que ClientLevitationCooldownSync#remainingTicks se
+	 * quedaba en 0 para siempre y el overlay nunca pasaba del chequeo remainingTicks<=0. Ahora se
+	 * manda el valor restante al dueño cada tick que el enfriamiento está activo (mismo criterio
+	 * en tiempo real que ya tenía este método), y una vez más con 0 exactamente en el tick que
+	 * termina, para que el overlay lo oculte de inmediato en vez de quedarse pegado en "1".
+	 */
+	private static void tickCooldown(ServerPlayer player) {
+		UUID id = player.getUUID();
 		Integer remaining = LEVITATION_COOLDOWN_TICKS.get(id);
 		if (remaining == null) {
 			return;
 		}
 		if (remaining <= 1) {
 			LEVITATION_COOLDOWN_TICKS.remove(id);
+			broadcastLevitationCooldown(player, 0);
 		} else {
-			LEVITATION_COOLDOWN_TICKS.put(id, remaining - 1);
+			int next = remaining - 1;
+			LEVITATION_COOLDOWN_TICKS.put(id, next);
+			broadcastLevitationCooldown(player, next);
 		}
+	}
+
+	private static void broadcastLevitationCooldown(ServerPlayer player, int remainingTicks) {
+		NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+			new LevitationCooldownSyncPacket(remainingTicks));
 	}
 
 	@SubscribeEvent

@@ -72,9 +72,18 @@ public class AncientExtractSyringeItem extends Item {
 
 		stack.shrink(1);
 		ItemStack emptySyringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
-		// FIX: mismo bug reportado para EmptySyringeItem#use (ver el comentario ahí) - este
-		// método usaba el mismo patrón "remainder directo a la mano si el stack queda vacío",
-		// que rompe la acumulación con Empty Syringes que el jugador ya tuviera en otro slot.
+
+		// FIX (mismo bug reportado en item.EmptySyringeItem#use para la Broken Syringe, ver el
+		// comentario completo ahí): si el shrink deja el stack de Ancient Extract Syringe en 0
+		// (última unidad en mano), Inventory#add podía insertar el Empty Syringe recién creado en
+		// ese mismo slot que se acaba de vaciar - y el setItemInHand que hace el motor vanilla
+		// justo después de que use() retorna (porque el count cambió) pisaba ese slot con el
+		// `stack` viejo ya vacío, borrando el Empty Syringe que se acababa de otorgar. Igual que
+		// ahí: si el stack quedó vacío, el remainder se devuelve DIRECTO como resultado de use()
+		// en vez de pasar por Inventory#add.
+		if (stack.isEmpty()) {
+			return InteractionResultHolder.sidedSuccess(emptySyringe, level.isClientSide());
+		}
 		if (!player.getInventory().add(emptySyringe)) {
 			player.drop(emptySyringe, false);
 		}
