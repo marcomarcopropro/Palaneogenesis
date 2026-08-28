@@ -62,14 +62,29 @@ public class PlayerAbilityEvents {
 
 	private static final Set<UUID> LEVITATION_KEY_HELD = new HashSet<>();
 
-	/** Amplifier 0 = Levitation Nivel I vanilla, ~0.05 bloques/tick de ascenso terminal
-	 * (~1 bloque/seg) - lo bastante suave para leer como "levita levemente". */
-	private static final int LEVITATION_AMPLIFIER = 0;
+	/** Jugadores que ya pegaron el tope de 5 bloques en el vuelo actual - hasta que no toquen el
+	 * piso (que resetea junto con LevitationState) no vuelven a levitar, aunque sigan sosteniendo
+	 * la tecla y sigan en el aire cayendo. Sin esto, en el mismo tick que se corta el efecto la
+	 * altura ya bajó lo suficiente para volver a estar bajo el tope y se re-engancha solo,
+	 * generando un rebote infinito justo en el techo en vez de una caída limpia. */
+	private static final Set<UUID> LEVITATION_CAPPED = new HashSet<>();
+
+	/** Amplifier 1 = Levitation Nivel II vanilla, ~0.10 bloques/tick de ascenso terminal (~2
+	 * bloques/seg) - pedido explícito de subirle un poco la velocidad al salto largo (antes
+	 * amplifier 0, ~1 bloque/seg, se sentía muy lento). Sigue siendo un salto largo asistido, no
+	 * un vuelo real: al tope de 5 bloques (~2.5 seg a este ritmo) sigue cortando igual. */
+	private static final int LEVITATION_AMPLIFIER = 1;
 	/** Se reaplica cada tick mientras la tecla sigue sostenida, así que sólo necesita durar un
 	 * poco más que un tick para no parpadear entre refrescos. */
 	private static final int LEVITATION_REFRESH_DURATION_TICKS = 5;
 	/** Tope pedido: 5 bloques por sobre la altura donde arrancó a levitar. */
 	private static final double LEVITATION_MAX_HEIGHT = 5.0D;
+
+	/** Enfriamiento pedido explícitamente: una activación por minuto. Arranca a contar en el
+	 * instante en que arranca el salto largo (no cuando se suelta la tecla ni cuando termina de
+	 * caer) - "se usa una vez y durante un minuto no se puede volver a usar". */
+	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 60;
+	private static final Map<UUID, Integer> LEVITATION_COOLDOWN_TICKS = new HashMap<>();
 
 	public static void setLevitationKeyHeld(ServerPlayer player, boolean held) {
 		if (held) {
@@ -85,6 +100,8 @@ public class PlayerAbilityEvents {
 		BEAM_KEY_HELD.remove(id);
 		BEAM_CHARGE_TICKS.remove(id);
 		LEVITATION_KEY_HELD.remove(id);
+		LEVITATION_CAPPED.remove(id);
+		LEVITATION_COOLDOWN_TICKS.remove(id);
 		LevitationState.clear(id);
 	}
 
@@ -190,29 +207,75 @@ public class PlayerAbilityEvents {
 
 	private static void tickLevitation(ServerPlayer player) {
 		UUID id = player.getUUID();
-		boolean wantsToLevitate = Transformation.isTransformed(player)
-			&& LEVITATION_KEY_HELD.contains(id)
-			&& !player.onGround();
+
+		// El enfriamiento corre siempre, en tiempo real, sin importar si el jugador está en el
+		// aire, transformado, o sosteniendo la tecla.
+		tickCooldown(id);
+
+		if (player.onGround()) {
+			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
+			// resetea acá - sigue corriendo independiente de que se haya tocado el piso o no.
+			LevitationState.stopTracking(id);
+			LEVITATION_CAPPED.remove(id);
+			return;
+		}
+
+		boolean transformed = Transformation.isTransformed(player);
+		boolean keyHeld = LEVITATION_KEY_HELD.contains(id);
+		boolean alreadyFlying = LevitationState.isTracking(id);
+		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
+
+		// El enfriamiento sólo bloquea ARRANCAR un salto nuevo - un vuelo que ya está en curso
+		// (alreadyFlying) sigue hasta el tope o hasta soltar la tecla, aunque el enfriamiento se
+		// haya empezado a contar en el mismo instante en que arrancó.
+		boolean wantsToLevitate = transformed && keyHeld && !LEVITATION_CAPPED.contains(id)
+			&& (alreadyFlying || !onCooldown);
+
+		// Gracia de daño de caída: mientras se sostenga la tecla en el aire, sin importar si
+		// todavía se está empujando para arriba, ya se pegó el tope y se está cayendo, o está en
+		// enfriamiento - "sin importar la altura, no recibís daño si mantenés el espacio" no tiene
+		// excepciones por tope ni por enfriamiento, sólo depende de estar transformado y sostener
+		// la tecla en el aire.
+		if (transformed && keyHeld) {
+			LevitationState.markGrace(id);
+		}
 
 		if (wantsToLevitate) {
+			if (!alreadyFlying) {
+				// Activación nueva: arranca el enfriamiento ya mismo, sin importar cuánto dure
+				// este vuelo en particular.
+				LEVITATION_COOLDOWN_TICKS.put(id, LEVITATION_COOLDOWN_DURATION_TICKS);
+			}
 			double startY = LevitationState.getOrStartTracking(id, player.getY());
 			if (player.getY() - startY < LEVITATION_MAX_HEIGHT) {
 				player.addEffect(new MobEffectInstance(MobEffects.LEVITATION,
 					LEVITATION_REFRESH_DURATION_TICKS, LEVITATION_AMPLIFIER, false, false, false));
-				LevitationState.markGrace(id);
 				return;
 			}
+			// Tope recién alcanzado este tick: se marca como capeado para que no se vuelva a
+			// enganchar hasta tocar el piso, sin importar que la altura vuelva a bajar del tope
+			// en cuanto empiece a caer.
+			LEVITATION_CAPPED.add(id);
 		}
 
-		// Tecla soltada, tope alcanzado, o no está levitando: no seguir empujando para arriba. Se
-		// corta el efecto ya mismo (en vez de dejar que sus pocos ticks de duración se agoten
-		// solos) para que la caída empiece en el instante que se suelta la tecla o se llega al
-		// tope, no unos ticks después.
-		if (LevitationState.isTracking(id) && player.hasEffect(MobEffects.LEVITATION)) {
+		// Tecla soltada, capeado, en enfriamiento, o transformación perdida: no seguir empujando
+		// para arriba. Se corta el efecto ya mismo (en vez de dejar que sus pocos ticks de
+		// duración se agoten solos) para que la caída empiece en el instante que corresponde, no
+		// unos ticks después.
+		if (player.hasEffect(MobEffects.LEVITATION)) {
 			player.removeEffect(MobEffects.LEVITATION);
 		}
-		if (player.onGround()) {
-			LevitationState.stopTracking(id);
+	}
+
+	private static void tickCooldown(UUID id) {
+		Integer remaining = LEVITATION_COOLDOWN_TICKS.get(id);
+		if (remaining == null) {
+			return;
+		}
+		if (remaining <= 1) {
+			LEVITATION_COOLDOWN_TICKS.remove(id);
+		} else {
+			LEVITATION_COOLDOWN_TICKS.put(id, remaining - 1);
 		}
 	}
 

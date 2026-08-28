@@ -150,9 +150,19 @@ public final class HeartHudOverlay {
 		}
 
 		// ×N sólo desde 2 grupos completos de 10 - un ×1 sería redundante con la fila que ya se
-		// ve completa.
+		// ve completa. A mitad de tamaño (pedido explícito): el texto a full scale quedaba
+		// demasiado grande al lado de los íconos de 8x16.
 		if (tens >= 2) {
-			guiGraphics.drawString(font, "\u00d7" + tens, x + 2, baseY + 4, TEXT_COLOR, true);
+			String text = "\u00d7" + tens;
+			float scale = 0.5F;
+			float textX = x + 2;
+			float textY = baseY + 4;
+
+			guiGraphics.pose().pushPose();
+			guiGraphics.pose().translate(textX, textY, 0.0F);
+			guiGraphics.pose().scale(scale, scale, 1.0F);
+			guiGraphics.drawString(font, text, 0, 0, TEXT_COLOR, true);
+			guiGraphics.pose().popPose();
 		}
 	};
 

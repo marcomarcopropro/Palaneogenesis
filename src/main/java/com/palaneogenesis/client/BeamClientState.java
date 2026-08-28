@@ -3,6 +3,7 @@ package com.palaneogenesis.client;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Caché cliente del estado del rayo de cada jugador transformado cercano, mantenida al día por
@@ -37,5 +38,18 @@ public final class BeamClientState {
 
 	public static State get(int shooterId) {
 		return STATES.get(shooterId);
+	}
+
+	/** Vista de sólo lectura de todos los rayos activos ahora mismo (cualquier jugador cercano,
+	 * no sólo el local) - la usa PlayerBeamRenderEvents para dibujar en espacio de mundo en vez de
+	 * depender de que el juego renderice la entidad de cada jugador (ver esa clase para el porqué).
+	 * ConcurrentHashMap#entrySet() es seguro para iterar mientras otro hilo escribe (weakly
+	 * consistent), no hace falta copiar. */
+	public static Set<Map.Entry<Integer, State>> entries() {
+		return STATES.entrySet();
+	}
+
+	public static boolean isEmpty() {
+		return STATES.isEmpty();
 	}
 }
