@@ -43,6 +43,11 @@ public class ClientModEvents {
 		// HeartHudOverlay - ya no hace falta apilar nada porque el array unificado dibuja los 4
 		// tipos en una sola fila (ver client.HeartHudOverlay).
 		event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "heart_hud", HeartHudOverlay.HUD);
+
+		// Broken Heart (pedido de esta sesión): se ancla arriba de PLAYER_HEALTH nada más porque
+		// dibuja sobre esa misma fila (ver client.BrokenHeartHudOverlay) - no tiene relación con
+		// heart_hud/EXPERIENCE_BAR de la línea de arriba.
+		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "broken_heart_hud", BrokenHeartHudOverlay.HUD);
 	}
 
 	@SubscribeEvent

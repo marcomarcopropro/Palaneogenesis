@@ -3,8 +3,12 @@ package com.palaneogenesis.util;
 import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.capability.ITransformationData;
 import com.palaneogenesis.config.Config;
+import com.palaneogenesis.network.NetworkHandler;
+import com.palaneogenesis.network.TransformationSyncPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -22,6 +26,13 @@ import java.util.UUID;
  * pero nunca se implementó (el multiplicador quedó definido sin que nada lo aplicara); se
  * descarta la idea por completo por balance, no por bug - la transformación se queda en 2 efectos
  * pasivos integrados (Speed + Attack Damage).
+ *
+ * FIX: el flag de transformación SÍ necesita llegar al cliente (a diferencia de lo que decía este
+ * comentario antes) - se lee del lado cliente en item.AncientExtractSyringeItem#use,
+ * item.EmptySyringeItem#use y client.HeartHudOverlay, y esos tres necesitan ver el mismo valor
+ * que el servidor o el cliente predice mal (ver network.TransformationSyncPacket para el detalle
+ * del bug que esto causaba). Por eso, igual que HeartArray#sync para el array de corazones,
+ * #set() ahora empuja el nuevo valor al dueño cada vez que cambia.
  */
 public final class Transformation {
 
@@ -35,8 +46,23 @@ public final class Transformation {
 	}
 
 	public static void set(Player player, boolean transformed) {
-		player.getCapability(Capabilities.TRANSFORMATION_DATA)
-			.ifPresent(data -> data.setTransformed(transformed));
+		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data -> {
+			data.setTransformed(transformed);
+			sync(player);
+		});
+	}
+
+	/** Empuja el flag actual al dueño únicamente (mismo rol que HeartArray#sync). No-op si
+	 * {@code player} no es un ServerPlayer real (ej. si algo lo llama por error del lado
+	 * cliente, o antes de que la capability exista todavía). */
+	public static void sync(Player player) {
+		if (!(player instanceof ServerPlayer serverPlayer)) {
+			return;
+		}
+		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data ->
+			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
+				new TransformationSyncPacket(data.isTransformed()))
+		);
 	}
 
 	// --- Fase 3: penalización por abuso de la mecánica ---

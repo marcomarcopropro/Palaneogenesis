@@ -7,14 +7,11 @@ import com.palaneogenesis.util.Transformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUtils;
-import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
 /**
@@ -27,10 +24,21 @@ import net.minecraft.world.level.Level;
  * de Item por defecto, {@code use()} cae a {@code InteractionResultHolder.pass}) - sigue siendo
  * "solo" el componente de crafteo que ya era en Fase 1.
  *
- * Mismo patrón de animación que Ancient Extract Syringe (DRINK/32, ItemUtils.startUsingInstantly,
- * el trabajo real en finishUsingItem) por consistencia y porque la Sección 3.5 lo describe como
- * el mismo patrón de remainder que las pociones vanilla. Exactamente 1 unidad se consume del
- * stack sin importar su tamaño, igual que Ancient Extract Syringe.
+ * FIX (bug reportado en video: la racha de Fase 3 nunca gatillaba). Este ítem había quedado con
+ * el viejo patrón DRINK/32 (ItemUtils.startUsingInstantly + finishUsingItem) que Ancient Extract
+ * Syringe tenía ANTES de que se le sacara el gesto de "tomar la jeringa" (ver el CAMBIO
+ * documentado en AncientExtractSyringeItem) - ese cambio nunca se replicó acá. Con esa animación,
+ * cada revert() real necesitaba 32 ticks (1.6s) sostenidos de click; sólo 5 reverts ya suman 160
+ * ticks, más que transformationAbuseWindowTicks entero (100 ticks / 5s por default) - así que la
+ * racha de util.Transformation#registerToggle nunca llegaba a juntar 5 toggles dentro de la
+ * ventana sin importar qué tan rápido clickeara el jugador (confirmado en el video: el contador
+ * de Broken Syringe sube varias veces seguidas y la vida máxima nunca baja). Ahora sigue
+ * exactamente el mismo patrón instantáneo de un solo click que ya usa AncientExtractSyringeItem:
+ * sin getUseAnimation/getUseDuration (el default de Item ya es UseAnim.NONE / duración 0), todo
+ * el trabajo pasa a use() y finishUsingItem desaparece. El resto de la lógica (revert(), el
+ * manejo del remainder Broken Syringe, awardStat y shrink) es exactamente la misma que tenía
+ * finishUsingItem antes de este cambio - sólo se movió de lugar y de disparador. Exactamente 1
+ * unidad se consume del stack sin importar su tamaño, igual que Ancient Extract Syringe.
  */
 public class EmptySyringeItem extends Item {
 
@@ -49,52 +57,34 @@ public class EmptySyringeItem extends Item {
 	}
 
 	@Override
-	public UseAnim getUseAnimation(ItemStack stack) {
-		return UseAnim.DRINK;
-	}
-
-	@Override
-	public int getUseDuration(ItemStack stack) {
-		return 32; // mismo tiempo que Ancient Extract Syringe / una poción vanilla
-	}
-
-	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+
 		// No transformado: el Empty Syringe no tiene nada que hacer acá, es solo el componente de
-		// crafteo de Fase 1. Se corta antes de arrancar la animación de uso.
+		// crafteo de Fase 1 (mismo corte que tenía use() antes de este cambio).
 		if (!Transformation.isTransformed(player)) {
-			return InteractionResultHolder.pass(player.getItemInHand(hand));
+			return InteractionResultHolder.pass(stack);
 		}
-		return ItemUtils.startUsingInstantly(level, player, hand);
-	}
 
-	@Override
-	public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
-		Player player = livingEntity instanceof Player ? (Player) livingEntity : null;
-
-		if (player != null && !level.isClientSide && Transformation.isTransformed(player)) {
+		if (!level.isClientSide) {
 			revert(player);
 		}
 
-		if (player != null) {
-			player.awardStat(Stats.ITEM_USED.get(this));
+		player.awardStat(Stats.ITEM_USED.get(this));
+
+		if (player.getAbilities().instabuild) {
+			return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 		}
 
-		if (player == null || !player.getAbilities().instabuild) {
-			stack.shrink(1);
+		stack.shrink(1);
+		ItemStack brokenSyringe = new ItemStack(ModItems.BROKEN_SYRINGE.get());
+		if (stack.isEmpty()) {
+			return InteractionResultHolder.sidedSuccess(brokenSyringe, level.isClientSide());
 		}
-
-		if (player == null || !player.getAbilities().instabuild) {
-			ItemStack brokenSyringe = new ItemStack(ModItems.BROKEN_SYRINGE.get());
-			if (stack.isEmpty()) {
-				return brokenSyringe;
-			}
-			if (player != null && !player.getInventory().add(brokenSyringe)) {
-				player.drop(brokenSyringe, false);
-			}
+		if (!player.getInventory().add(brokenSyringe)) {
+			player.drop(brokenSyringe, false);
 		}
-
-		return stack;
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 	}
 
 	/**

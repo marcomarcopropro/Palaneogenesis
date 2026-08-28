@@ -39,5 +39,9 @@ public final class NetworkHandler {
 		// util.HeartArray#sync / capability.IHeartArrayData.
 		CHANNEL.registerMessage(id(), HeartArraySyncPacket.class,
 			HeartArraySyncPacket::encode, HeartArraySyncPacket::decode, HeartArraySyncPacket::handle);
+		// Nuevo (fix bug: jeringa de transformación usable estando ya transformado): server ->
+		// dueño, ver util.Transformation#sync / capability.ITransformationData.
+		CHANNEL.registerMessage(id(), TransformationSyncPacket.class,
+			TransformationSyncPacket::encode, TransformationSyncPacket::decode, TransformationSyncPacket::handle);
 	}
 }

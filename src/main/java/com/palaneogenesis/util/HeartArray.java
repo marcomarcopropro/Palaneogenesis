@@ -16,8 +16,8 @@ import java.util.List;
  * {@link Transformation} tiene para el flag de transformación: el resto del mod no debería llamar
  * a {@code player.getCapability(...)} directamente para esto, sino pasar por acá.
  *
- * A diferencia de {@link Transformation#isTransformed} (que sólo se usa server-side, ver
- * event.TransformationEvents), este array SÍ necesita llegar al cliente para el HUD
+ * Mismo motivo que {@link Transformation#sync} tiene para el flag de transformación (ver el FIX
+ * documentado ahí): este array SÍ necesita llegar al cliente para el HUD
  * (client.HeartHudOverlay). El viejo diseño con 4 atributos (*HeartPool, ver ModAttributes ya
  * eliminado) se sincronizaba gratis porque Forge sincroniza atributos de entidad
  * automáticamente; una capability no tiene ese beneficio, así que cada método que MUTA el array
