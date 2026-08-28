@@ -5,6 +5,7 @@ import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.capability.IHeartArrayData;
 import com.palaneogenesis.util.HeartArray;
+import com.palaneogenesis.util.Transformation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -66,6 +67,14 @@ public final class HeartHudOverlay {
 	private static final int HEART_STEP = ICON_WIDTH;
 	/** Cuánto sube la fila extra (el resto no múltiplo de 10) por sobre la fila principal. */
 	private static final int EXTRA_ROW_OFFSET = 10;
+	/** Fase 3, pedido explícito: sólo mientras el jugador está transformado, la fila de corazones
+	 * azules baja "la distancia de un corazón" para quedar justo por encima del medio corazón rojo
+	 * (toda la vida vanilla que le queda a un jugador transformado, ver
+	 * item.AncientExtractSyringeItem#TRANSFORMED_MAX_HEALTH). Mismo valor que EXTRA_ROW_OFFSET
+	 * (la distancia entre dos filas de corazones) pero como constante propia a propósito: son dos
+	 * ajustes conceptualmente distintos y no deberían quedar acoplados si alguno cambia después.
+	 * No toca nada más (ni X, ni visibilidad) y no aplica si el jugador NO está transformado. */
+	private static final int TRANSFORMED_ROW_DROP = 10;
 
 	private static final Map<HeartType, ResourceLocation> ICONS = new EnumMap<>(HeartType.class);
 
@@ -130,6 +139,12 @@ public final class HeartHudOverlay {
 		// +1px extra de aire entre el techo de la vida/absorción y la fila de corazones del mod,
 		// igual que tenía la versión anterior de este overlay.
 		int baseY = screenHeight - 39 - currentHealthStackHeight(player) - 1;
+		// Fase 3: sólo durante la transformación, baja toda la fila (y la extra, si existe, que
+		// se calcula a partir de baseY más abajo) la distancia de un corazón - ver
+		// TRANSFORMED_ROW_DROP. Nunca se aplica en estado vanilla de Steve.
+		if (Transformation.isTransformed(player)) {
+			baseY += TRANSFORMED_ROW_DROP;
+		}
 
 		RenderSystem.enableBlend();
 		Font font = Minecraft.getInstance().font;

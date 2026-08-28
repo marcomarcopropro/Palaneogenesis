@@ -1,6 +1,8 @@
 package com.palaneogenesis.util;
 
 import com.palaneogenesis.capability.Capabilities;
+import com.palaneogenesis.capability.ITransformationData;
+import com.palaneogenesis.config.Config;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 
@@ -35,6 +37,49 @@ public final class Transformation {
 	public static void set(Player player, boolean transformed) {
 		player.getCapability(Capabilities.TRANSFORMATION_DATA)
 			.ifPresent(data -> data.setTransformed(transformed));
+	}
+
+	// --- Fase 3: penalización por abuso de la mecánica ---
+
+	/**
+	 * Registra un toggle (una llamada a transform() o a revert(), da igual cuál de los dos: el
+	 * pedido es "se transforma Y destransforma muchas veces seguidas", así que ambas acciones
+	 * cuentan para el mismo contador). Tiene que llamarse ANTES de que transform()/revert() fijen
+	 * MAX_HEALTH, para que un revert() que dispare la penalización en esta misma llamada ya vea
+	 * el nuevo valor de getMaxHealthPenaltyHearts() al calcular la salud máxima efectiva.
+	 *
+	 * Usa player.tickCount (mismo campo que ya usa event.HeartEvents para su propio chequeo
+	 * periódico) en vez de level().getGameTime(): sólo hace falta medir una ventana corta relativa
+	 * al propio jugador, no un reloj global del mundo.
+	 */
+	public static void registerToggle(Player player) {
+		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data -> {
+			int now = player.tickCount;
+			int windowTicks = Config.COMMON.transformationAbuseWindowTicks.get();
+
+			boolean withinWindow = data.getLastToggleTick() != Integer.MIN_VALUE
+				&& now - data.getLastToggleTick() <= windowTicks;
+			int count = withinWindow ? data.getRecentToggleCount() + 1 : 1;
+
+			data.setRecentToggleCount(count);
+			data.setLastToggleTick(now);
+
+			int threshold = Config.COMMON.transformationAbuseToggleThreshold.get();
+			if (count >= threshold) {
+				data.setMaxHealthPenaltyHearts(data.getMaxHealthPenaltyHearts() + 1);
+				// Reinicia el contador para que la penalización no se repita en cada toggle
+				// subsiguiente, sólo cada vez que se vuelve a juntar otra racha completa.
+				data.setRecentToggleCount(0);
+			}
+		});
+	}
+
+	/** Corazones rojos de salud máxima perdidos permanentemente por abuso (ver registerToggle()).
+	 * 0 si el jugador nunca gatilló la penalización. */
+	public static int getMaxHealthPenaltyHearts(Player player) {
+		return player.getCapability(Capabilities.TRANSFORMATION_DATA)
+			.map(ITransformationData::getMaxHealthPenaltyHearts)
+			.orElse(0);
 	}
 
 	// --- Efectos pasivos integrados (Sección 3.3) ---

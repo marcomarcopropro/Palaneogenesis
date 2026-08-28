@@ -93,6 +93,12 @@ public class AncientExtractSyringeItem extends Item {
 	 * un tercer efecto de Resistance: se descartó por balance (ver util.Transformation).
 	 */
 	private static void transform(Player player) {
+		// Fase 3: cuenta como un toggle para la penalización por abuso (ver
+		// util.Transformation#registerToggle) - tiene que ir antes de tocar MAX_HEALTH nada más
+		// por consistencia con EmptySyringeItem#revert(), aunque acá no cambia el resultado
+		// inmediato: TRANSFORMED_MAX_HEALTH es un piso fijo, no depende de la penalización.
+		Transformation.registerToggle(player);
+
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 		if (maxHealth != null) {
 			maxHealth.setBaseValue(TRANSFORMED_MAX_HEALTH);

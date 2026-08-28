@@ -41,6 +41,9 @@ public class Config {
 		public final ForgeConfigSpec.IntValue invertedHeartPoints;
 		public final ForgeConfigSpec.DoubleValue invertedHeartExplosionRadius;
 
+		public final ForgeConfigSpec.IntValue transformationAbuseToggleThreshold;
+		public final ForgeConfigSpec.IntValue transformationAbuseWindowTicks;
+
 		Common(ForgeConfigSpec.Builder builder) {
 			builder.comment("Káak Tun (entity) settings").push("kaak_tun");
 
@@ -148,6 +151,23 @@ public class Config {
 					"every load/get, so #get() can never return more than 30.0 regardless of what a",
 					"hand-edited config file says.")
 				.defineInRange("range", 10.0D, 1.0D, 30.0D);
+
+			builder.pop();
+
+			builder.comment("Transformation abuse penalty (Fase 3): castigo por transformarse/destransformarse muchas veces seguidas.").push("transformation_abuse");
+
+			transformationAbuseToggleThreshold = builder
+				.comment("Cuántas transformaciones/destransformaciones seguidas (cada una dentro de",
+					"transformationAbuseWindowTicks respecto de la anterior) hacen falta para activar la",
+					"penalización de perder un corazón rojo de salud máxima permanente. Default 5.")
+				.defineInRange("toggleThreshold", 5, 2, 100);
+
+			transformationAbuseWindowTicks = builder
+				.comment("Ventana, en ticks (20/seg), dentro de la cual dos transformaciones/destransformaciones",
+					"consecutivas cuentan como 'seguidas' para transformationAbuseToggleThreshold. Si pasa",
+					"más tiempo que esto entre una y la siguiente, el contador se reinicia en vez de sumar.",
+					"Default 100 (5s).")
+				.defineInRange("windowTicks", 100, 1, 12000);
 
 			builder.pop();
 		}

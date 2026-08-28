@@ -28,11 +28,15 @@ public class TransformationProvider implements ICapabilitySerializable<CompoundT
 	public CompoundTag serializeNBT() {
 		CompoundTag tag = new CompoundTag();
 		tag.putBoolean("Transformed", data.isTransformed());
+		// Sólo el castigo permanente de Fase 3 se persiste - recentToggleCount/lastToggleTick son
+		// un timer de corto plazo (ver ITransformationData) y se quedan siempre en su default.
+		tag.putInt("MaxHealthPenaltyHearts", data.getMaxHealthPenaltyHearts());
 		return tag;
 	}
 
 	@Override
 	public void deserializeNBT(CompoundTag tag) {
 		data.setTransformed(tag.getBoolean("Transformed"));
+		data.setMaxHealthPenaltyHearts(tag.getInt("MaxHealthPenaltyHearts"));
 	}
 }

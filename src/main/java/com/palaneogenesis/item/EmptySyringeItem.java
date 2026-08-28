@@ -37,6 +37,13 @@ public class EmptySyringeItem extends Item {
 	/** Vanilla default (doc Sección 3.5: "max health restored to 20"). */
 	private static final double NORMAL_MAX_HEALTH = 20.0D;
 
+	/** Piso de la penalización por abuso (Fase 3, util.Transformation#registerToggle): por más
+	 * corazones rojos que se hayan perdido, la salud máxima nunca baja de 1 corazón entero (2.0).
+	 * No estaba especificado qué hacer si la penalización vacía la barra entera, así que se avisa
+	 * acá el criterio elegido por si se prefiere otro (ej. dejarlo caer hasta el mismo piso de
+	 * medio corazón que usa la transformación, TRANSFORMED_MAX_HEALTH = 1.0). */
+	private static final double MIN_MAX_HEALTH_AFTER_PENALTY = 2.0D;
+
 	public EmptySyringeItem(Properties properties) {
 		super(properties);
 	}
@@ -92,7 +99,9 @@ public class EmptySyringeItem extends Item {
 
 	/**
 	 * Sección 3.5: "reverting is assumed symmetric with the death case" - restaura MAX_HEALTH a
-	 * 20, saca toda la Temporary Life (tipo BLUE del array unificado, ver util.HeartArray, a 0),
+	 * 20 (o menos, si el jugador ya perdió corazones rojos por abuso de la mecánica - Fase 3, ver
+	 * util.Transformation#registerToggle/getMaxHealthPenaltyHearts), saca toda la Temporary Life
+	 * (tipo BLUE del array unificado, ver util.HeartArray, a 0),
 	 * apaga el flag de transformación y remueve los efectos pasivos integrados de la Sección 3.3
 	 * (mismo AttributeModifier, mismo UUID fijo, agregado en AncientExtractSyringeItem#transform()
 	 * - Speed y Attack Damage nada más, no hay un tercer efecto de Resistance, se descartó por
@@ -102,13 +111,23 @@ public class EmptySyringeItem extends Item {
 	 * la proporción de vida actual).
 	 */
 	private static void revert(Player player) {
+		// Fase 3: cuenta como toggle para la penalización por abuso ANTES de calcular la salud
+		// máxima efectiva de acá abajo, para que un revert() que justo complete la racha ya
+		// aplique el nuevo corazón perdido en esta misma llamada (ver
+		// util.Transformation#registerToggle).
+		Transformation.registerToggle(player);
+
+		double effectiveMaxHealth = Math.max(
+			MIN_MAX_HEALTH_AFTER_PENALTY,
+			NORMAL_MAX_HEALTH - Transformation.getMaxHealthPenaltyHearts(player) * 2.0D);
+
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 		if (maxHealth != null) {
-			maxHealth.setBaseValue(NORMAL_MAX_HEALTH);
+			maxHealth.setBaseValue(effectiveMaxHealth);
 		}
 
 		HeartArray.setPointsOfType(player, HeartType.BLUE, 0);
-		player.setHealth((float) NORMAL_MAX_HEALTH);
+		player.setHealth((float) effectiveMaxHealth);
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (movementSpeed != null) {

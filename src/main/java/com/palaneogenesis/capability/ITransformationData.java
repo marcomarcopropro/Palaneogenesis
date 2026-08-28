@@ -15,4 +15,28 @@ public interface ITransformationData {
 	boolean isTransformed();
 
 	void setTransformed(boolean transformed);
+
+	// --- Fase 3: penalización por abuso (transformarse/destransformarse muchas veces seguidas) ---
+
+	/** Cuántos toggles (transform o revert) seguidos van acumulados, sin resetear todavía por
+	 * exceder la ventana de tiempo (Config.COMMON.transformationAbuseWindowTicks). No se persiste
+	 * a NBT a propósito: es sólo un timer anti-abuso de corto plazo, no un estado permanente -
+	 * perderlo al relog es aceptable e incluso deseable (nadie debería arrastrar un contador de
+	 * hace sesiones). */
+	int getRecentToggleCount();
+
+	void setRecentToggleCount(int count);
+
+	/** player.tickCount del último toggle (transform o revert), para medir la ventana anterior.
+	 * Tampoco se persiste a NBT, mismo motivo que getRecentToggleCount(). */
+	int getLastToggleTick();
+
+	void setLastToggleTick(int tick);
+
+	/** Corazones rojos de salud máxima perdidos permanentemente por abuso. A diferencia de los dos
+	 * anteriores, ESTO sí se persiste a NBT (ver TransformationProvider): es el castigo real y
+	 * tiene que sobrevivir un relog, no sólo la sesión actual. */
+	int getMaxHealthPenaltyHearts();
+
+	void setMaxHealthPenaltyHearts(int hearts);
 }
