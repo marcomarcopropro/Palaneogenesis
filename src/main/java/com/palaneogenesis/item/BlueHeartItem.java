@@ -3,6 +3,7 @@ package com.palaneogenesis.item;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
+import com.palaneogenesis.util.Transformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -34,6 +35,16 @@ public class BlueHeartItem extends Item {
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
+
+		// Restricción pedida explícitamente: el array de corazones del mod (ver
+		// client.HeartHudOverlay) sólo tiene sentido mientras el jugador está transformado -
+		// bloqueado por completo en estado vanilla de Steve, sin gastar el ítem ni otorgar
+		// puntos. Mismo chequeo, sin diferenciar cliente/servidor, que ya usa
+		// item.AncientExtractSyringeItem#use: Transformation.isTransformed lee de una capability
+		// propia del jugador, disponible igual en ambos lados para su propia instancia.
+		if (!Transformation.isTransformed(player)) {
+			return InteractionResultHolder.fail(stack);
+		}
 
 		if (!level.isClientSide) {
 			HeartArray.addPoints(player, HeartType.BLUE, Config.COMMON.blueHeartPoints.get());

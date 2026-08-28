@@ -7,28 +7,33 @@ import com.palaneogenesis.util.Transformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUtils;
-import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
 /**
  * Ancient Extract Syringe - dispara la transformación (doc de Fase 2, Sección 3.2).
  *
- * Sigue el mismo patrón que las pociones vanilla (getUseAnimation/getUseDuration = DRINK/32,
- * use() vía ItemUtils.startUsingInstantly, el trabajo real en finishUsingItem), tal como pide la
- * Sección 3.2 ("mirrors vanilla's own potion → glass bottle behavior"), en vez del patrón
- * instantáneo de un solo click que usa BlueHeartItem. El remainder (Empty Syringe) sigue
- * exactamente la lógica de PotionItem#finishUsingItem: si el stack queda vacío, el syringe vacío
- * pasa a ocupar la mano; si no, se intenta agregar a modo inventario y, si no entra, se dropea.
- * Ese mismo Empty Syringe es, a propósito (Sección 3.5), el ítem que se necesita para revertir la
- * transformación más adelante - ver {@link EmptySyringeItem}, que es donde ese Empty Syringe se
- * rompe en Broken Syringe.
+ * CAMBIO (pedido explícito, aislado - "eliminar el gesto de tomar una jeringa"): antes seguía el
+ * mismo patrón que las pociones vanilla (getUseAnimation/getUseDuration = DRINK/32, use() vía
+ * ItemUtils.startUsingInstantly, el trabajo real en finishUsingItem, Sección 3.2 "mirrors
+ * vanilla's own potion → glass bottle behavior") - eso hacía que el jugador levantara el brazo en
+ * un gesto de "beber/inyectarse" (UseAnim.DRINK) durante esos 32 ticks de carga, que es el único
+ * gesto de transformación que existe en todo el mod (TransformationEvents sólo cuelga la
+ * capability, no anima nada). No hay ambigüedad sobre cuál era: es este.
+ *
+ * Ahora sigue el mismo patrón de un solo click instantáneo que ya usaba BlueHeartItem: sin
+ * getUseAnimation/getUseDuration (el default de Item ya es UseAnim.NONE / duración 0, no hace
+ * falta declararlo), todo el trabajo pasa a use() y finishUsingItem desaparece porque ya no hay
+ * ítem "en uso" que completar. El resto de la lógica es exactamente la misma que tenía
+ * finishUsingItem antes de este cambio - transform(), el manejo del Empty Syringe remanente
+ * (mismo comportamiento: si el stack queda vacío el Empty Syringe pasa a ocupar la mano, si no se
+ * intenta agregar al inventario y si no entra se dropea, sigue siendo, a propósito - Sección 3.5 -
+ * el ítem que se necesita para revertir la transformación más adelante, ver EmptySyringeItem),
+ * awardStat y shrink - sólo se movió de lugar y de disparador, no se tocó.
  */
 public class AncientExtractSyringeItem extends Item {
 
@@ -46,52 +51,34 @@ public class AncientExtractSyringeItem extends Item {
 	}
 
 	@Override
-	public UseAnim getUseAnimation(ItemStack stack) {
-		return UseAnim.DRINK;
-	}
-
-	@Override
-	public int getUseDuration(ItemStack stack) {
-		return 32; // mismo tiempo que una poción vanilla
-	}
-
-	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-		// Ya transformado: no tiene sentido re-inyectarse. Se corta acá, antes de arrancar la
-		// animación de uso, en vez de dejar que finishUsingItem lo descarte más tarde.
+		ItemStack stack = player.getItemInHand(hand);
+
+		// Ya transformado: no tiene sentido re-inyectarse (mismo corte que tenía use() antes de
+		// este cambio, ahora es el único lugar que lo necesita).
 		if (Transformation.isTransformed(player)) {
-			return InteractionResultHolder.pass(player.getItemInHand(hand));
+			return InteractionResultHolder.pass(stack);
 		}
-		return ItemUtils.startUsingInstantly(level, player, hand);
-	}
 
-	@Override
-	public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity livingEntity) {
-		Player player = livingEntity instanceof Player ? (Player) livingEntity : null;
-
-		if (player != null && !level.isClientSide && !Transformation.isTransformed(player)) {
+		if (!level.isClientSide) {
 			transform(player);
 		}
 
-		if (player != null) {
-			player.awardStat(Stats.ITEM_USED.get(this));
+		player.awardStat(Stats.ITEM_USED.get(this));
+
+		if (player.getAbilities().instabuild) {
+			return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 		}
 
-		if (player == null || !player.getAbilities().instabuild) {
-			stack.shrink(1);
+		stack.shrink(1);
+		ItemStack emptySyringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
+		if (stack.isEmpty()) {
+			return InteractionResultHolder.sidedSuccess(emptySyringe, level.isClientSide());
 		}
-
-		if (player == null || !player.getAbilities().instabuild) {
-			ItemStack emptySyringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
-			if (stack.isEmpty()) {
-				return emptySyringe;
-			}
-			if (player != null && !player.getInventory().add(emptySyringe)) {
-				player.drop(emptySyringe, false);
-			}
+		if (!player.getInventory().add(emptySyringe)) {
+			player.drop(emptySyringe, false);
 		}
-
-		return stack;
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 	}
 
 	/**

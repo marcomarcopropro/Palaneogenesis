@@ -51,9 +51,17 @@ public final class Transformation {
 		SPEED_MODIFIER_ID, "palaneogenesis:transformation_speed", 0.30D, AttributeModifier.Operation.MULTIPLY_TOTAL);
 
 	/**
-	 * +10 daño de ataque plano. Sección 3.3: "Strength III o IV" equivale a +9 a +12 flat; 10.0
-	 * elegido dentro de ese rango - ajustar acá si se prefiere otro valor puntual.
+	 * +5 daño de ataque plano.
+	 *
+	 * RECALIBRADO (pedido explícito, reemplaza el valor anterior de +10 de la Sección 3.3): el
+	 * valor viejo dejaba el puño limpio transformado en 1.0 (ATTACK_DAMAGE base del jugador
+	 * vanilla, sin herramienta) + 10.0 = 11.0, suficiente para matar a un cerdo (10 HP vanilla)
+	 * de un solo golpe - exactamente el one-shot que se pidió evitar. El pedido puntual es que un
+	 * golpe reste el 60% de la vida de un cerdo: 10 HP × 0.6 = 6.0 de daño, así que el modificador
+	 * queda en 6.0 - 1.0 (base) = 5.0, y hace falta un segundo golpe (6.0 + 6.0 = 12.0 > 10.0)
+	 * para matarlo. Sigue siendo un AttributeModifier sobre ATTACK_DAMAGE en general (no sólo
+	 * puño limpio) - mismo alcance que ya tenía este modificador, sólo se ajustó la magnitud.
 	 */
 	public static final AttributeModifier ATTACK_DAMAGE_MODIFIER = new AttributeModifier(
-		ATTACK_DAMAGE_MODIFIER_ID, "palaneogenesis:transformation_attack_damage", 10.0D, AttributeModifier.Operation.ADDITION);
+		ATTACK_DAMAGE_MODIFIER_ID, "palaneogenesis:transformation_attack_damage", 5.0D, AttributeModifier.Operation.ADDITION);
 }

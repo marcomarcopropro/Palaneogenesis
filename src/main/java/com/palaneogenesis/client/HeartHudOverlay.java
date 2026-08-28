@@ -152,11 +152,17 @@ public final class HeartHudOverlay {
 		// ×N sólo desde 2 grupos completos de 10 - un ×1 sería redundante con la fila que ya se
 		// ve completa. A mitad de tamaño (pedido explícito): el texto a full scale quedaba
 		// demasiado grande al lado de los íconos de 8x16.
+		//
+		// FIX (alineación pedida explícitamente): el ícono mide ICON_HEIGHT=16px y arranca en
+		// baseY, así que su centro vertical real está en baseY+8. El texto, a scale=0.5, mide
+		// 8px*0.5=4px de alto y su origen (textY) es su borde superior - con textY=baseY+4 el
+		// centro del texto quedaba en baseY+6, 2px arriba del centro del ícono. baseY+6 pone el
+		// centro del texto exactamente en baseY+8, alineado con el centro del corazón.
 		if (tens >= 2) {
 			String text = "\u00d7" + tens;
 			float scale = 0.5F;
 			float textX = x + 2;
-			float textY = baseY + 4;
+			float textY = baseY + 6;
 
 			guiGraphics.pose().pushPose();
 			guiGraphics.pose().translate(textX, textY, 0.0F);

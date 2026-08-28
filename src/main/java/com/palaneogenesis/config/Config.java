@@ -143,8 +143,11 @@ public class Config {
 				.defineInRange("damage", 18.0D, 0.0D, 100.0D);
 
 			playerBeamRange = builder
-				.comment("Maximum distance, in blocks, at which the player's beam can hit something.")
-				.defineInRange("range", 10.0D, 1.0D, 64.0D);
+				.comment("Maximum distance, in blocks, at which the player's beam can hit something.",
+					"Hard-capped at 30.0 (explicit request) - ForgeConfigSpec enforces this bound on",
+					"every load/get, so #get() can never return more than 30.0 regardless of what a",
+					"hand-edited config file says.")
+				.defineInRange("range", 10.0D, 1.0D, 30.0D);
 
 			builder.pop();
 		}
