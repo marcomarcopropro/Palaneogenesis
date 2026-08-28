@@ -48,6 +48,11 @@ public class ClientModEvents {
 		// dibuja sobre esa misma fila (ver client.BrokenHeartHudOverlay) - no tiene relación con
 		// heart_hud/EXPERIENCE_BAR de la línea de arriba.
 		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "broken_heart_hud", BrokenHeartHudOverlay.HUD);
+
+		// Temporizador del salto (pedido de esta sesión): mismo motivo de anclaje que broken_heart_hud
+		// (se ancla arriba de PLAYER_HEALTH sólo por orden de registro Forge, no por relación real -
+		// ver client.LevitationCooldownHudOverlay, que calcula su propia posición absoluta).
+		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "levitation_cooldown_hud", LevitationCooldownHudOverlay.HUD);
 	}
 
 	@SubscribeEvent

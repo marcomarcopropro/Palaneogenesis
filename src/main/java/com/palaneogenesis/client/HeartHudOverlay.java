@@ -75,6 +75,12 @@ public final class HeartHudOverlay {
 	 * ajustes conceptualmente distintos y no deberían quedar acoplados si alguno cambia después.
 	 * No toca nada más (ni X, ni visibilidad) y no aplica si el jugador NO está transformado. */
 	private static final int TRANSFORMED_ROW_DROP = 10;
+	/** Ajuste fino pedido esta sesión ("los corazones azules rozan la barra de experiencia"): con
+	 * TRANSFORMED_ROW_DROP tal cual, la fila baja lo suficiente para solaparse con la barra de XP.
+	 * Pedido explícito: mantener el drop de arriba intacto ("la posición bajada de dos lugares que
+	 * ya existe") y sólo subir el resultado final 1px - constante propia, no se toca
+	 * TRANSFORMED_ROW_DROP, y sólo se aplica junto con él (nunca en estado vanilla de Steve). */
+	private static final int TRANSFORMED_ROW_HEIGHT_FIX = 1;
 
 	private static final Map<HeartType, ResourceLocation> ICONS = new EnumMap<>(HeartType.class);
 
@@ -144,6 +150,7 @@ public final class HeartHudOverlay {
 		// TRANSFORMED_ROW_DROP. Nunca se aplica en estado vanilla de Steve.
 		if (Transformation.isTransformed(player)) {
 			baseY += TRANSFORMED_ROW_DROP;
+			baseY -= TRANSFORMED_ROW_HEIGHT_FIX;
 		}
 
 		RenderSystem.enableBlend();

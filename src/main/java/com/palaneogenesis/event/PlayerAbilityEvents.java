@@ -3,6 +3,7 @@ package com.palaneogenesis.event;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.BeamRenderStatePacket;
+import com.palaneogenesis.network.LevitationCooldownSyncPacket;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.util.LevitationState;
 import com.palaneogenesis.util.Transformation;
@@ -80,10 +81,10 @@ public class PlayerAbilityEvents {
 	/** Tope pedido: 5 bloques por sobre la altura donde arrancó a levitar. */
 	private static final double LEVITATION_MAX_HEIGHT = 5.0D;
 
-	/** Enfriamiento pedido explícitamente: una activación por minuto. Arranca a contar en el
-	 * instante en que arranca el salto largo (no cuando se suelta la tecla ni cuando termina de
-	 * caer) - "se usa una vez y durante un minuto no se puede volver a usar". */
-	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 60;
+	/** Enfriamiento (ajustado esta sesión: 60s -> 10s, pedido explícito "Buff al salto"). Arranca
+	 * a contar en el instante en que arranca el salto largo (no cuando se suelta la tecla ni
+	 * cuando termina de caer) - "se usa una vez y durante 10 segundos no se puede volver a usar". */
+	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 10;
 	private static final Map<UUID, Integer> LEVITATION_COOLDOWN_TICKS = new HashMap<>();
 
 	public static void setLevitationKeyHeld(ServerPlayer player, boolean held) {
@@ -210,7 +211,7 @@ public class PlayerAbilityEvents {
 
 		// El enfriamiento corre siempre, en tiempo real, sin importar si el jugador está en el
 		// aire, transformado, o sosteniendo la tecla.
-		tickCooldown(id);
+		tickCooldown(player);
 
 		if (player.onGround()) {
 			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
@@ -267,16 +268,34 @@ public class PlayerAbilityEvents {
 		}
 	}
 
-	private static void tickCooldown(UUID id) {
+	/**
+	 * Pedido de esta sesión ("el temporizador del salto no se muestra"): además de descontar el
+	 * enfriamiento, empuja el valor restante al dueño vía {@link LevitationCooldownSyncPacket} en
+	 * cada tick en que cambia, mismo patrón server -> dueño que ya usan HeartArray#sync y
+	 * Transformation#sync (PacketDistributor.PLAYER, no TRACKING_ENTITY_AND_SELF - el temporizador
+	 * es un dato privado del propio jugador, no algo que otros deban ver). Se emite un último
+	 * paquete con remainingTicks=0 al terminar el enfriamiento para que el HUD lo oculte de
+	 * inmediato en vez de quedarse mostrando el último valor sincronizado.
+	 */
+	private static void tickCooldown(ServerPlayer player) {
+		UUID id = player.getUUID();
 		Integer remaining = LEVITATION_COOLDOWN_TICKS.get(id);
 		if (remaining == null) {
 			return;
 		}
 		if (remaining <= 1) {
 			LEVITATION_COOLDOWN_TICKS.remove(id);
+			broadcastLevitationCooldown(player, 0);
 		} else {
-			LEVITATION_COOLDOWN_TICKS.put(id, remaining - 1);
+			int updated = remaining - 1;
+			LEVITATION_COOLDOWN_TICKS.put(id, updated);
+			broadcastLevitationCooldown(player, updated);
 		}
+	}
+
+	private static void broadcastLevitationCooldown(ServerPlayer player, int remainingTicks) {
+		NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+			new LevitationCooldownSyncPacket(remainingTicks));
 	}
 
 	@SubscribeEvent

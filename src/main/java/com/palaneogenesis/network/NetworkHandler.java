@@ -43,5 +43,9 @@ public final class NetworkHandler {
 		// dueño, ver util.Transformation#sync / capability.ITransformationData.
 		CHANNEL.registerMessage(id(), TransformationSyncPacket.class,
 			TransformationSyncPacket::encode, TransformationSyncPacket::decode, TransformationSyncPacket::handle);
+		// Nuevo (HUD del temporizador del salto): server -> dueño, ver
+		// event.PlayerAbilityEvents#broadcastLevitationCooldown / client.LevitationCooldownHudOverlay.
+		CHANNEL.registerMessage(id(), LevitationCooldownSyncPacket.class,
+			LevitationCooldownSyncPacket::encode, LevitationCooldownSyncPacket::decode, LevitationCooldownSyncPacket::handle);
 	}
 }
