@@ -117,6 +117,15 @@ public final class Transformation {
 			.orElse(0);
 	}
 
+	/** Mini-Patch (Broken Hearts auto-repair): borra el contador de penalización entero. Sólo
+	 * toca ese contador - a propósito NO toca MAX_HEALTH acá (event.TransformationEvents es quien
+	 * decide si corresponde restaurarla ya mismo, según si el jugador está transformado o no en
+	 * ese momento). */
+	public static void clearMaxHealthPenalty(Player player) {
+		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data ->
+			data.setMaxHealthPenaltyHearts(0));
+	}
+
 	// --- Efectos pasivos integrados (Sección 3.3) ---
 
 	private static final UUID SPEED_MODIFIER_ID = UUID.fromString("6b3e4a70-27f0-4c1a-9d3b-1a29a3d0e2a1");

@@ -81,24 +81,25 @@ public class PlayerAbilityEvents {
 	 * para la ventana de espera antes de que arranque el mega salto. */
 	private static final int LEVITATION_ACTIVATION_DELAY_TICKS = 20;
 
-	/** Amplifier 3 = Levitation Nivel IV vanilla, ~0.20 bloques/tick de ascenso terminal (~4
-	 * bloques/seg) - pedido explícito de duplicar la velocidad respecto del valor anterior
-	 * (amplifier 1, ~0.10 bloques/tick / ~2 bloques/seg, se seguía sintiendo lento). La velocidad
+	/** Amplifier 9 = ~0.50 bloques/tick de ascenso terminal (~10 bloques/seg) - Mini-Patch pedido
+	 * esta sesión ("el salto se siente clunky y se traba, ajustar el valor a 0.5 para que sea
+	 * fluido sostenido"), subido desde el amplifier 3 anterior (~0.20 bloques/tick). La velocidad
 	 * terminal de Levitation en vanilla escala como 0.05*(amplifier+1) bloques/tick
-	 * (LivingEntity#aiStep), así que subir de amplifier 1 a 3 es exactamente el x2 pedido (0.10 ->
-	 * 0.20). Sigue siendo un salto largo asistido, no un vuelo real: al tope de 5 bloques (~1.25
-	 * seg a este ritmo) sigue cortando igual. */
-	private static final int LEVITATION_AMPLIFIER = 3;
+	 * (LivingEntity#aiStep), así que amplifier 9 da exactamente los 0.5 bloques/tick pedidos
+	 * (0.05*10 = 0.50). Sigue siendo un salto largo asistido, no un vuelo real: al tope de 5
+	 * bloques (~0.5 seg a este ritmo, más rápido que antes) sigue cortando igual. */
+	private static final int LEVITATION_AMPLIFIER = 9;
 	/** Se reaplica cada tick mientras la tecla sigue sostenida, así que sólo necesita durar un
 	 * poco más que un tick para no parpadear entre refrescos. */
 	private static final int LEVITATION_REFRESH_DURATION_TICKS = 5;
 	/** Tope pedido: 5 bloques por sobre la altura donde arrancó a levitar. */
 	private static final double LEVITATION_MAX_HEIGHT = 5.0D;
 
-	/** Enfriamiento pedido explícitamente: una activación por minuto. Arranca a contar en el
-	 * instante en que arranca el salto largo (no cuando se suelta la tecla ni cuando termina de
-	 * caer) - "se usa una vez y durante un minuto no se puede volver a usar". */
-	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 60;
+	/** Mini-Patch pedido esta sesión ("nerfear el timer de enfriamiento de 60s a exactamente 10s"):
+	 * bajado de 20*60 (1 min) a 20*10. Sigue siendo "una activación y después no se puede volver a
+	 * usar hasta que se cumpla esto" - arranca en el instante en que arranca el salto largo, no
+	 * cuando se suelta la tecla ni cuando termina de caer. */
+	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 10;
 	private static final Map<UUID, Integer> LEVITATION_COOLDOWN_TICKS = new HashMap<>();
 
 	public static void setLevitationKeyHeld(ServerPlayer player, boolean held) {

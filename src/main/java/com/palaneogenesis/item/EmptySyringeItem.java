@@ -76,35 +76,30 @@ public class EmptySyringeItem extends Item {
 			return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 		}
 
-		stack.shrink(1);
 		ItemStack brokenSyringe = new ItemStack(ModItems.BROKEN_SYRINGE.get());
 
-		// FIX (bug reportado: "al destransformarse con la ÚLTIMA Empty Syringe del stack,
-		// desaparecen tanto la Empty Syringe como la Broken Syringe"). La rama de abajo (mergear
-		// vía Inventory#add) fue en su momento el fix correcto para el bug VIEJO ("se crea una
-		// jeringa rota de forma individual y no como las pociones que se van acumulando"), pero
-		// sólo es segura cuando el stack en mano SIGUE teniendo algo después del shrink. Cuando
-		// el shrink lo deja en 0 (stack.isEmpty()), ese slot de la mano queda libre justo ANTES
-		// de llamar a Inventory#add(-1, ...) - y ese método busca el primer slot libre/mergeable
-		// SIN excluir el que el jugador tiene seleccionado, así que la Broken Syringe recién
-		// creada puede terminar cayendo exactamente en ese mismo slot. El problema es el paso
-		// siguiente: el motor vanilla, apenas use() retorna, compara el count devuelto contra el
-		// que tenía antes de entrar acá y, si cambió (shrink SIEMPRE lo cambia), hace
-		// player.setItemInHand(hand, <lo que devolvimos>) - pisando ese slot con el `stack` viejo
-		// (ya vacío) sin importar qué haya puesto Inventory#add ahí un instante antes. Resultado
-		// visible: ni la Empty Syringe ni la Broken Syringe quedan en ese slot.
+		// FIX (Mini-Patch pedido: "Broken Syringe glitchea en vez de apilarse normalmente" -
+		// confirmado en video, cada uso deja una Broken Syringe nueva en un slot propio en vez de
+		// juntarse en una sola pila). La causa era el orden de operaciones: el fix anterior de
+		// este método (ver historial) shrinkeaba `stack` PRIMERO y recién ahí intentaba
+		// Inventory#add - cuando ese shrink dejaba el stack de la mano en 0, ese slot quedaba
+		// libre ANTES del add(), así que el propio Inventory#add podía terminar poniendo la
+		// Broken Syringe recién creada en ese mismo slot para que, un instante después, el
+		// motor vanilla lo pisara con el `stack` viejo (ya vacío) - de ahí la rama especial que
+		// devolvía brokenSyringe DIRECTO como resultado de use(), sin pasar por Inventory#add en
+		// absoluto: cada Broken Syringe terminaba siendo su propia pila nueva en la mano en vez
+		// de mergearse con las que ya hubiera en el inventario.
 		//
-		// Mismo criterio que ItemUtils.createFilledResult de vanilla (poción -> frasco vacío):
-		// si el stack original quedó vacío, el remainder se devuelve DIRECTO como resultado de
-		// use() - así el motor lo coloca él mismo en la mano, sin competir con Inventory#add por
-		// el mismo slot. Sólo cuando sobra Empty Syringe en el stack (rama de abajo, el slot de
-		// la mano NO queda libre) hace falta intentar acumularlo en el inventario o dropearlo.
-		if (stack.isEmpty()) {
-			return InteractionResultHolder.sidedSuccess(brokenSyringe, level.isClientSide());
-		}
+		// Ahora el add() corre ANTES del shrink, mientras `stack` todavía tiene al menos 1 unidad
+		// (el slot de la mano nunca está libre durante Inventory#add), así que ya no hace falta
+		// la rama especial de "devolver directo": Inventory#add siempre encuentra y mergea con
+		// cualquier Broken Syringe existente en el inventario (o abre un slot nuevo si no hay
+		// ninguna todavía), igual que cualquier otro ítem stackeable.
 		if (!player.getInventory().add(brokenSyringe)) {
 			player.drop(brokenSyringe, false);
 		}
+
+		stack.shrink(1);
 		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 	}
 

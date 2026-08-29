@@ -30,7 +30,11 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  */
 public final class LevitationCooldownHudOverlay {
 
-	private static final int TEXT_COLOR = 0xFFFFFF;
+	/** Mini-Patch pedido esta sesión ("cambiar el color del efecto a un cian azulado oscuro, no
+	 * celeste/cian claro"): antes blanco (0xFFFFFF). Cian oscuro (Material Design "Cyan 900"),
+	 * claramente oscuro para no caer en el celeste/cian claro que el pedido pide evitar
+	 * explícitamente. */
+	private static final int TEXT_COLOR = 0x006064;
 	private static final float TEXT_SCALE = 0.5F;
 	/** Misma fila vanilla vida/hambre que usan HeartHudOverlay y BrokenHeartHudOverlay
 	 * (screenHeight - 39). */
