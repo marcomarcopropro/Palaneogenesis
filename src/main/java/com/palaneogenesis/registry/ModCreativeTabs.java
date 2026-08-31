@@ -4,7 +4,6 @@ import com.palaneogenesis.Palaneogenesis;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -27,6 +26,22 @@ import net.minecraftforge.registries.RegistryObject;
  *
  * ÍCONO: Blue Heart, el primer item de la lista y la "moneda universal" del mod (ver
  * item.BlueHeartItem) - el más reconocible de un vistazo en la barra de pestañas.
+ *
+ * FIX (crash al arrancar: "net.minecraftforge.fml.loading.toposort.CyclePresentException: Cycles
+ * present in graph" en CreativeModeTabRegistry.sortTabs, apenas se agregó esta pestaña): esta
+ * clase tenía ".withTabsAfter(CreativeModeTabs.SPAWN_EGGS)", que a primera vista parecía la forma
+ * obvia de pedir "aparecé después de Spawn Eggs" - pero generaba un ciclo de 2 nodos contra esa
+ * misma pestaña. Motivo (visto en el fuente real de CreativeModeTabRegistry#sortTabs): Spawn Eggs
+ * es la última de las 10 pestañas "vanilla" que Forge reconoce por posición fija y, como ella
+ * misma no declara ningún orden propio, Forge YA le agrega automáticamente un edge implícito
+ * hacia la pestaña modded que quede registrada justo a continuación (en este mod, la única
+ * pestaña modded, así que ese lugar lo ocupa esta) - básicamente "Spawn Eggs va antes que la
+ * siguiente pestaña". Agregar encima ".withTabsAfter(SPAWN_EGGS)" desde acá creaba el edge
+ * inverso ("esta pestaña va después de Spawn Eggs") - ambos edges válidos por separado, pero
+ * juntos arman el ciclo A→B→A que tira el CyclePresentException. Con NINGÚN orden explícito
+ * declarado (como quedó ahora), esta pestaña cae sola en esa misma regla implícita de Forge
+ * ("después de la última pestaña vanilla" = después de Spawn Eggs) - mismo resultado visual que
+ * se buscaba con withTabsAfter, sin el edge duplicado/contradictorio que lo rompía.
  */
 public class ModCreativeTabs {
 
@@ -36,7 +51,6 @@ public class ModCreativeTabs {
 	public static final RegistryObject<CreativeModeTab> PALANEOGENESIS_TAB = CREATIVE_MODE_TABS.register(
 		"palaneogenesis_tab",
 		() -> CreativeModeTab.builder()
-			.withTabsAfter(CreativeModeTabs.SPAWN_EGGS)
 			.icon(() -> new ItemStack(ModItems.BLUE_HEART.get()))
 			.title(Component.translatable("itemGroup.palaneogenesis"))
 			.displayItems((parameters, output) -> {
