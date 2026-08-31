@@ -4,12 +4,9 @@ import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.recipe.WaterIngredient;
 import com.palaneogenesis.entity.KaakTunEntity;
 import com.palaneogenesis.registry.ModEntityTypes;
-import com.palaneogenesis.registry.ModItems;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -44,17 +41,8 @@ public class ModSetup {
     // (ModAttributes, también eliminado) ahora son un único array vía capability
     // (capability.IHeartArrayData, colgado por event.HeartArrayEvents en vez de por acá).
 
-    @SubscribeEvent
-    public static void onBuildCreativeModeTabContents(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
-            event.accept(ModItems.BLUE_HEART);
-            event.accept(ModItems.EXPLOSIVE_HEART);
-            event.accept(ModItems.RESISTANCE_HEART);
-            event.accept(ModItems.INVERTED_HEART);
-            event.accept(ModItems.EMPTY_SYRINGE);
-            event.accept(ModItems.ANCIENT_EXTRACT_SYRINGE);
-        } else if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
-            event.accept(ModItems.KAAK_TUN_SPAWN_EGG);
-        }
-    }
+    // onBuildCreativeModeTabContents (que metía los items del mod en CreativeModeTabs.INGREDIENTS/
+    // SPAWN_EGGS) se eliminó esta sesión: "Custom Creative Tab" pedía sacar los items de las
+    // pestañas vanilla, no sumarlos ahí también - ver registry.ModCreativeTabs, que ahora los
+    // registra todos (mismo set, mismo orden) en su propia pestaña.
 }

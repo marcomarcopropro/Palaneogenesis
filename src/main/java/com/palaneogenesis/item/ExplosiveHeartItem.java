@@ -4,6 +4,8 @@ import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -22,6 +24,15 @@ public class ExplosiveHeartItem extends Item {
 
 	public ExplosiveHeartItem(Properties properties) {
 		super(properties);
+	}
+
+	/** Pulido pedido esta sesión: nombre en juego en amarillo (antes se veía sin color, blanco
+	 * default) - mismo criterio que Resistance/Inverted Heart (ver sus respectivos getName), cada
+	 * uno con su propio color. No toca el lang key (item.palaneogenesis.explosive_heart), sólo el
+	 * estilo con el que se renderiza. */
+	@Override
+	public Component getName(ItemStack stack) {
+		return super.getName(stack).copy().withStyle(ChatFormatting.YELLOW);
 	}
 
 	@Override

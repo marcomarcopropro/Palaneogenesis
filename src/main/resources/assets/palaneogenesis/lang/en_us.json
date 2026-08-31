@@ -4,9 +4,15 @@
     "item.palaneogenesis.ancient_extract_syringe":  "Ancient Extract Syringe",
     "item.palaneogenesis.broken_syringe":  "Broken Syringe",
     "item.palaneogenesis.kaak_tun_spawn_egg":  "Káak Tun Spawn Egg",
+    "item.palaneogenesis.explosive_heart": "Explosive Heart",
+    "item.palaneogenesis.resistance_heart": "Resistance Heart",
+    "item.palaneogenesis.inverted_heart": "Inverted Heart",
     "itemGroup.palaneogenesis":  "Palaneogenesis",
     "entity.palaneogenesis.kaak_tun":  "Káak Tun",
     "attribute.palaneogenesis.blue_heart_pool":  "Blue Heart Pool",
+    "attribute.palaneogenesis.explosive_heart_pool": "Explosive Heart Pool",
+    "attribute.palaneogenesis.resistance_heart_pool": "Resistance Heart Pool",
+    "attribute.palaneogenesis.inverted_heart_pool": "Inverted Heart Pool",
     "key.categories.palaneogenesis": "Palaneogénesis",
     "key.palaneogenesis.beam": "Fire Beam"
 }

@@ -49,26 +49,29 @@ import java.util.Map;
  *   arranca un Explosive Heart en el mismo par) toma el tipo del PRIMER punto del par (el más
  *   viejo) - elección arbitraria pero determinística; avisar si se prefiere que gane el segundo.
  *
- * BLUE HEART - TEXTURA (cambio pedido en esta sesión, a modo de prueba A/B contra la anterior):
- * a diferencia de los otros 3 tipos (que siguen en el sheet 16x16 de siempre, corazón lleno en
- * u=0 y medio en u=8, dibujado a 8x16), Blue Heart ahora usa DOS archivos de 9x9 cada uno
- * (hud_blue_heart_full.png / hud_blue_heart_half.png, formato vanilla estándar - sin U/V, cada
- * archivo es un ícono entero) en vez de un sheet compartido - ver BLUE_ICON_SIZE y drawHeart más
- * abajo, que a Blue Heart lo trata aparte del resto por este motivo. El sheet viejo
- * (hud_blue_hearts.png, más su backup hud_blue_hearts_legacy.png) queda en el repo sin
- * referenciar desde código, por si se prefiere volver atrás después de probar la nueva.
+ * FORMATO "DOUBLE HUD" (completado esta sesión - "Update HUD Sprites"): los 4 tipos (Blue,
+ * Explosive, Resistance, Inverted) usan ahora DOS archivos propios de 9x9 cada uno
+ * (hud_[tipo]_heart_full.png / hud_[tipo]_heart_half.png, formato vanilla estándar - sin U/V,
+ * cada archivo es un ícono entero) en vez de un sheet compartido. Blue Heart ya había migrado a
+ * este formato en una sesión anterior (quedó documentado acá mismo, ver historial); esta sesión
+ * migró los otros 3, que hasta ahora seguían en el sheet 16x16 viejo (corazón lleno en u=0 y
+ * medio en u=8, dibujado a 8x16) - ver ICON_SIZE/FULL_ICONS/HALF_ICONS y drawHeart más abajo, que
+ * ya no necesita distinguir a Blue Heart del resto porque los 4 comparten el mismo camino ahora.
+ * Los sheets viejos de Explosive/Resistance/Inverted (hud_explosive_heart.png,
+ * hud_resistance_heart.png, hud_inverted_heart.png) se borraron del repo al dejar de
+ * referenciarse - a diferencia del sheet viejo de Blue Heart (dejado sin referenciar "por si se
+ * prefiere volver atrás"), acá no quedó ambigüedad de si conservarlos: el pedido explícito de
+ * esta sesión fue "actualizar todos los HUD restantes al formato double", sin mención de guardar
+ * un fallback.
  */
 public final class HeartHudOverlay {
 
-	private static final int SHEET_SIZE = 16;
-	private static final int ICON_WIDTH = 8;
-	private static final int ICON_HEIGHT = 16;
-	private static final int FULL_HEART_U = 0;
-	private static final int HALF_HEART_U = 8;
 	private static final int TEXT_COLOR = 0xFFFFFF;
 	private static final int HEARTS_PER_ROW = 10;
-	/** Avance horizontal de un corazón al siguiente dentro de la misma fila. */
-	private static final int HEART_STEP = ICON_WIDTH;
+	/** Avance horizontal de un corazón al siguiente dentro de la misma fila - mismo valor que ya
+	 * usaba la fila vanilla (8px) y que usaba el sheet viejo, independiente del tamaño real del
+	 * sprite (ver ICON_SIZE) para que la fila no cambie de ancho respecto de antes. */
+	private static final int HEART_STEP = 8;
 	/** Cuánto sube la fila extra (el resto no múltiplo de 10) por sobre la fila principal. */
 	private static final int EXTRA_ROW_OFFSET = 10;
 	/** Fase 3, pedido explícito: sólo mientras el jugador está transformado, la fila de corazones
@@ -86,25 +89,33 @@ public final class HeartHudOverlay {
 	 * TRANSFORMED_ROW_DROP, y sólo se aplica junto con él (nunca en estado vanilla de Steve). */
 	private static final int TRANSFORMED_ROW_HEIGHT_FIX = 1;
 
-	/** Ver el comentario "BLUE HEART - TEXTURA" de la clase: Blue Heart ya no vive en el sheet
-	 * 16x16 compartido, tiene sus 2 archivos propios de 9x9 (formato vanilla estándar). */
-	private static final ResourceLocation BLUE_FULL = rl("hud_blue_heart_full");
-	private static final ResourceLocation BLUE_HALF = rl("hud_blue_heart_half");
-	private static final int BLUE_ICON_SIZE = 9;
-	/** Centra verticalmente el ícono de 9px de Blue Heart dentro de la misma franja de 16px
-	 * (ICON_HEIGHT) que ocupan los otros 3 tipos, para que una fila con tipos mezclados no quede
-	 * con Blue Heart descolgado - (ICON_HEIGHT - BLUE_ICON_SIZE) / 2. El arte visible del sheet
-	 * viejo (no transparente) ya caía centrado dentro de esa franja de 16px, así que esto
-	 * mantiene el mismo centro visual que tenía antes, sólo con el sprite nuevo. */
-	private static final int BLUE_Y_OFFSET = (ICON_HEIGHT - BLUE_ICON_SIZE) / 2;
+	/** Ver el comentario "FORMATO DOUBLE HUD" de la clase: ningún tipo vive ya en un sheet
+	 * compartido, los 4 tienen sus 2 archivos propios de 9x9 (formato vanilla estándar). */
+	private static final int ICON_SIZE = 9;
+	/** Alto de la franja de 16px donde vivía el sheet viejo (8x16 por ícono) - ya no queda ningún
+	 * sprite de ese tamaño, pero la franja se mantiene como referencia de centrado vertical para
+	 * que la fila no cambie de altura visual respecto de antes. */
+	private static final int ICON_LANE_HEIGHT = 16;
+	/** Centra verticalmente el ícono de 9px dentro de la franja de 16px (ICON_LANE_HEIGHT), para
+	 * que una fila con tipos mezclados no quede con ninguno descolgado - (ICON_LANE_HEIGHT -
+	 * ICON_SIZE) / 2. El arte visible del sheet viejo (no transparente) ya caía centrado dentro
+	 * de esa franja de 16px, así que esto mantiene el mismo centro visual que tenía antes, sólo
+	 * con los sprites nuevos. Mismo valor que ya usaba Blue Heart en solitario (BLUE_Y_OFFSET,
+	 * eliminado en este cambio) - ahora compartido por los 4 tipos. */
+	private static final int ICON_Y_OFFSET = (ICON_LANE_HEIGHT - ICON_SIZE) / 2;
 
-	private static final Map<HeartType, ResourceLocation> ICONS = new EnumMap<>(HeartType.class);
+	private static final Map<HeartType, ResourceLocation> FULL_ICONS = new EnumMap<>(HeartType.class);
+	private static final Map<HeartType, ResourceLocation> HALF_ICONS = new EnumMap<>(HeartType.class);
 
 	static {
-		// BLUE se maneja aparte en drawHeart (ver BLUE_FULL/BLUE_HALF) - no vive acá.
-		ICONS.put(HeartType.EXPLOSIVE, rl("hud_explosive_heart"));
-		ICONS.put(HeartType.RESISTANCE, rl("hud_resistance_heart"));
-		ICONS.put(HeartType.INVERTED, rl("hud_inverted_heart"));
+		FULL_ICONS.put(HeartType.BLUE, rl("hud_blue_heart_full"));
+		HALF_ICONS.put(HeartType.BLUE, rl("hud_blue_heart_half"));
+		FULL_ICONS.put(HeartType.EXPLOSIVE, rl("hud_explosive_heart_full"));
+		HALF_ICONS.put(HeartType.EXPLOSIVE, rl("hud_explosive_heart_half"));
+		FULL_ICONS.put(HeartType.RESISTANCE, rl("hud_resistance_heart_full"));
+		HALF_ICONS.put(HeartType.RESISTANCE, rl("hud_resistance_heart_half"));
+		FULL_ICONS.put(HeartType.INVERTED, rl("hud_inverted_heart_full"));
+		HALF_ICONS.put(HeartType.INVERTED, rl("hud_inverted_heart_half"));
 	}
 
 	private HeartHudOverlay() {
@@ -191,11 +202,13 @@ public final class HeartHudOverlay {
 		// ve completa. A mitad de tamaño (pedido explícito): el texto a full scale quedaba
 		// demasiado grande al lado de los íconos de 8x16.
 		//
-		// FIX (alineación pedida explícitamente): el ícono mide ICON_HEIGHT=16px y arranca en
-		// baseY, así que su centro vertical real está en baseY+8. El texto, a scale=0.5, mide
-		// 8px*0.5=4px de alto y su origen (textY) es su borde superior - con textY=baseY+4 el
-		// centro del texto quedaba en baseY+6, 2px arriba del centro del ícono. baseY+6 pone el
-		// centro del texto exactamente en baseY+8, alineado con el centro del corazón.
+		// FIX (alineación pedida explícitamente): la fila ocupa una franja de ICON_LANE_HEIGHT=16px
+		// que arranca en baseY, así que su centro vertical real está en baseY+8 (el ícono de 9px
+		// se dibuja centrado dentro de esa franja, ver ICON_Y_OFFSET, pero el centro de la franja
+		// no cambia). El texto, a scale=0.5, mide 8px*0.5=4px de alto y su origen (textY) es su
+		// borde superior - con textY=baseY+4 el centro del texto quedaba en baseY+6, 2px arriba
+		// del centro de la franja. baseY+6 pone el centro del texto exactamente en baseY+8,
+		// alineado con el centro del corazón.
 		if (tens >= 2) {
 			String text = "\u00d7" + tens;
 			float scale = 0.5F;
@@ -211,15 +224,8 @@ public final class HeartHudOverlay {
 	};
 
 	private static void drawHeart(GuiGraphics guiGraphics, DisplayHeart heart, int x, int y) {
-		if (heart.type() == HeartType.BLUE) {
-			ResourceLocation icon = heart.half() ? BLUE_HALF : BLUE_FULL;
-			guiGraphics.blit(icon, x, y + BLUE_Y_OFFSET, 0.0F, 0.0F,
-				BLUE_ICON_SIZE, BLUE_ICON_SIZE, BLUE_ICON_SIZE, BLUE_ICON_SIZE);
-			return;
-		}
-		ResourceLocation icon = ICONS.get(heart.type());
-		int u = heart.half() ? HALF_HEART_U : FULL_HEART_U;
-		guiGraphics.blit(icon, x, y, (float) u, 0.0F, ICON_WIDTH, ICON_HEIGHT, SHEET_SIZE, SHEET_SIZE);
+		ResourceLocation icon = (heart.half() ? HALF_ICONS : FULL_ICONS).get(heart.type());
+		guiGraphics.blit(icon, x, y + ICON_Y_OFFSET, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 	}
 
 	/** Empareja una lista plana de puntos (tipo por punto, en orden) en corazones de a 2; si sobra

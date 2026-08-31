@@ -4,6 +4,8 @@ import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -23,6 +25,16 @@ public class InvertedHeartItem extends Item {
 
 	public InvertedHeartItem(Properties properties) {
 		super(properties);
+	}
+
+	/** Pulido pedido esta sesión: nombre en juego en "morado oscuro / casi negro" (mismo criterio
+	 * que Explosive/Resistance Heart, ver sus getName). Se usa ChatFormatting.DARK_PURPLE, el
+	 * único código de formato vanilla que coincide con "dark purple" tal cual se pidió - si en
+	 * cambio se quería un tono más cercano a negro puro que a púrpura, avisar y se cambia esto por
+	 * un TextColor a medida (Style.EMPTY.withColor(0x...)) en vez del ChatFormatting fijo. */
+	@Override
+	public Component getName(ItemStack stack) {
+		return super.getName(stack).copy().withStyle(ChatFormatting.DARK_PURPLE);
 	}
 
 	@Override

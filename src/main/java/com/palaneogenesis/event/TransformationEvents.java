@@ -69,9 +69,11 @@ public class TransformationEvents {
 	 * precisamente volver a este número, no una recalculación parcial. */
 	private static final double NORMAL_MAX_HEALTH = 20.0D;
 
-	/** Pedido explícito del Mini-Patch: "después de exactamente 1 minuto" desde el último corazón
-	 * roto ganado. */
-	private static final int BROKEN_HEART_REPAIR_TICKS = 20 * 60;
+	/** Pedido explícito del Mini-Patch original: "después de exactamente 1 minuto" desde el
+	 * último corazón roto ganado. Ajuste pedido esta sesión ("Adjust Timers"): subido de 1 minuto
+	 * (20*60) a 2 minutos (20*120) - mismo mecanismo de countdown de más abajo, sólo cambia cuánto
+	 * tarda. */
+	private static final int BROKEN_HEART_REPAIR_TICKS = 20 * 120;
 
 	/** Ticks restantes de reparación por jugador. Estado puramente transitorio en memoria, mismo
 	 * criterio que PlayerAbilityEvents#LEVITATION_COOLDOWN_TICKS - no necesita sobrevivir un
@@ -79,7 +81,7 @@ public class TransformationEvents {
 	private static final Map<UUID, Integer> REPAIR_TICKS_REMAINING = new HashMap<>();
 
 	/** Último valor de penaltyHearts visto por jugador, para poder detectar un corazón roto
-	 * NUEVO (que reinicia el timer a los 60s completos) contra un simple tick de cuenta regresiva
+	 * NUEVO (que reinicia el timer a los 120s completos) contra un simple tick de cuenta regresiva
 	 * del mismo timer ya en curso. */
 	private static final Map<UUID, Integer> LAST_SEEN_PENALTY = new HashMap<>();
 
@@ -126,7 +128,7 @@ public class TransformationEvents {
 			return;
 		}
 
-		// 1 minuto cumplido sin un corazón roto nuevo: repara TODO de una, según pide el
+		// 2 minutos cumplidos sin un corazón roto nuevo: repara TODO de una, según pide el
 		// Mini-Patch ("las hearts deben empezar a repararse automáticamente de vuelta a la vida
 		// máxima, limpiando el estado de broken heart").
 		REPAIR_TICKS_REMAINING.remove(id);

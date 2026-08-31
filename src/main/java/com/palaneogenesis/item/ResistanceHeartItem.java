@@ -4,6 +4,8 @@ import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -22,6 +24,15 @@ public class ResistanceHeartItem extends Item {
 
 	public ResistanceHeartItem(Properties properties) {
 		super(properties);
+	}
+
+	/** Pulido pedido esta sesión: nombre en juego en blanco (mismo criterio que Explosive/Inverted
+	 * Heart, ver sus getName) - a diferencia de esos dos, WHITE es el color default de un item sin
+	 * estilo, pero se fija explícito igual para que quede consistente con el resto (y no dependa
+	 * de que nadie lo pise más adelante, p. ej. con un ítem encantado). */
+	@Override
+	public Component getName(ItemStack stack) {
+		return super.getName(stack).copy().withStyle(ChatFormatting.WHITE);
 	}
 
 	@Override
