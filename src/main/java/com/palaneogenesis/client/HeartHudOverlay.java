@@ -26,6 +26,14 @@ import java.util.Map;
  * del array, sólo el total de cada uno. Ver la conversación: la vida depende del LUGAR, no sólo del
  * total por tipo.
  *
+ * GATE DE TRANSFORMACIÓN (pedido explícito, bug reportado: "los corazones especiales funcionan
+ * todavía cuando estás en la forma vanilla"): esta clase entera no dibuja NADA si el jugador no
+ * está transformado (ver el corte temprano al principio del HUD, junto al de creativo/espectador).
+ * En forma vanilla (Steve normal) sólo se ve la vida roja de siempre, sin mezcla de tipos ni fila
+ * extra, sin importar qué haya en el array. El array (util.HeartArray) NO se vacía ni se bloquea
+ * por este corte - sigue absorbiendo daño igual que antes si corresponde; el gate es puramente
+ * visual, de qué dibuja ESTA clase, no del array en sí.
+ *
  * REGLAS DE CONTEO (documentadas para poder ajustarlas fácil si no es exactamente lo que se pidió):
  * - Recorriendo el array de puntos en orden (más viejo primero), 2 puntos CONSECUTIVOS DEL MISMO
  *   TIPO forman 1 corazón lleno de ese tipo. Si el punto en el que estamos parados no tiene un
@@ -157,6 +165,20 @@ public final class HeartHudOverlay {
 			return;
 		}
 
+		// Los corazones especiales (todo lo que sale de HeartArray - Blue/Explosive/Resistance/
+		// Inverted) sólo existen visualmente mientras el jugador está TRANSFORMADO. En forma
+		// vanilla (Steve normal) este overlay no dibuja nada y se ve únicamente la vida roja de
+		// siempre - antes de este corte, un jugador podía tener corazones especiales en el array
+		// (ej. guardados de una transformación anterior, o juntados sin transformarse todavía) y
+		// se seguían mostrando/mezclando en la fila de vida incluso en forma vanilla, que es
+		// justamente el bug reportado ("los corazones especiales funcionan todavía cuando estás
+		// en la forma vanilla"). El array en sí (HeartArray) no se toca acá - sigue existiendo y
+		// absorbiendo daño igual que antes si corresponde; este corte es puramente de qué dibuja
+		// ESTA clase.
+		if (!Transformation.isTransformed(player)) {
+			return;
+		}
+
 		List<IHeartArrayData.HeartSlot> slots = HeartArray.snapshot(player);
 		int totalPoints = 0;
 		for (IHeartArrayData.HeartSlot slot : slots) {
@@ -193,13 +215,12 @@ public final class HeartHudOverlay {
 		// +1px extra de aire entre el techo de la vida/absorción y la fila de corazones del mod,
 		// igual que tenía la versión anterior de este overlay.
 		int baseY = screenHeight - 39 - currentHealthStackHeight(player) - 1;
-		// Fase 3: sólo durante la transformación, baja toda la fila (y la extra, si existe, que
-		// se calcula a partir de baseY más abajo) la distancia de un corazón - ver
-		// TRANSFORMED_ROW_DROP. Nunca se aplica en estado vanilla de Steve.
-		if (Transformation.isTransformed(player)) {
-			baseY += TRANSFORMED_ROW_DROP;
-			baseY -= TRANSFORMED_ROW_HEIGHT_FIX;
-		}
+		// Fase 3: siempre se aplica acá abajo - a esta altura del método ya se confirmó que el
+		// jugador está transformado (ver el corte temprano más arriba), así que ya no hace falta
+		// re-preguntar. Baja toda la fila (y la extra, si existe, que se calcula a partir de
+		// baseY más abajo) la distancia de un corazón - ver TRANSFORMED_ROW_DROP.
+		baseY += TRANSFORMED_ROW_DROP;
+		baseY -= TRANSFORMED_ROW_HEIGHT_FIX;
 
 		RenderSystem.enableBlend();
 		Font font = Minecraft.getInstance().font;
