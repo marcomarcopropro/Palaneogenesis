@@ -14,9 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -29,25 +27,34 @@ import java.util.Map;
  * total por tipo.
  *
  * REGLAS DE CONTEO (documentadas para poder ajustarlas fácil si no es exactamente lo que se pidió):
- * - 2 puntos del array = 1 corazón lleno en el HUD, igual que la vida vanilla (1 punto suelto al
- *   final = medio corazón). De acá sale, por ejemplo, que la Temporary Life de la Ancient Extract
- *   Syringe (40 puntos, ver item.AncientExtractSyringeItem#TEMPORARY_LIFE_POINTS, comentario "10
- *   íconos/fila × 2 puntos × 2 filas") se vea como 20 corazones llenos, no 40 - coincide con "se
- *   reemplazan los 10 corazones rojos por 20 corazones azules" de la transformación.
- * - Fila principal (abajo, pegada a la vida/absorción vanilla): los primeros 10 corazones del
- *   array, más viejo primero (mismo orden de consumo que util.HeartArray#absorbDamage), sin
- *   importar el tipo de cada uno - ACÁ es donde se ve la mezcla real de tipos por posición.
+ * - Recorriendo el array de puntos en orden (más viejo primero), 2 puntos CONSECUTIVOS DEL MISMO
+ *   TIPO forman 1 corazón lleno de ese tipo. Si el punto en el que estamos parados no tiene un
+ *   compañero del mismo tipo justo después (porque el que sigue es de otro tipo, o porque es el
+ *   último punto de todo el array), ese punto se muestra SOLO, como medio corazón de su propio
+ *   tipo, y se sigue evaluando desde el punto siguiente - nunca se combinan dos puntos de tipos
+ *   distintos en un mismo corazón (ver pairPoints). Ej.: array [Blue, Blue, Explosive, Blue] da
+ *   3 corazones: Blue lleno, Explosive medio, Blue medio - no "2 corazones Blue llenos". Esto
+ *   además implica que la cantidad de corazones a mostrar (heartCount) NO es simplemente
+ *   ceil(totalPoints/2): un tramo con muchos cambios de tipo consecutivos ocupa más íconos que la
+ *   misma cantidad de puntos de un solo tipo, así que heartCount se calcula DESPUÉS de emparejar,
+ *   nunca antes (ver el uso de pairPoints en HUD más abajo).
+ * - De la regla de arriba sale, por ejemplo, que la Temporary Life de la Ancient Extract Syringe
+ *   (40 puntos de un único tipo, ver item.AncientExtractSyringeItem#TEMPORARY_LIFE_POINTS,
+ *   comentario "10 íconos/fila × 2 puntos × 2 filas") se siga viendo como 20 corazones llenos -
+ *   coincide con "se reemplazan los 10 corazones rojos por 20 corazones azules" de la
+ *   transformación, porque al ser todos del mismo tipo cada par sí se combina.
+ * - Fila principal (abajo, pegada a la vida/absorción vanilla): los primeros 10 corazones YA
+ *   EMPAREJADOS (no los primeros 20 puntos - ver arriba, no es lo mismo), más viejo primero (mismo
+ *   orden de consumo que util.HeartArray#absorbDamage) - ACÁ es donde se ve la mezcla real de
+ *   tipos por posición.
  * - Si hay más de 10 corazones: en vez de apilar fila tras fila, todo lo que sea "grupos completos
- *   de 10" se colapsa en un multiplicador "×N" al lado de la fila principal (N = total de
- *   corazones / 10). El multiplicador NO se muestra si N es 1 (redundante con la fila que ya se ve
- *   completa) - recién se muestra desde ×2.
- * - Si el total no es múltiplo de 10, el resto (lo que no entra en un grupo completo) se dibuja en
- *   una fila EXTRA arriba de la principal, con los corazones más nuevos del array - así no se
- *   pierde información sólo por prolijidad. Ej: 25 corazones = fila de 10 + "×2" + fila extra de 5
- *   arriba; mismo patrón para 35, 33, 32, 31, 41, 11, 13, etc.
- * - Un corazón "de borde" cuyos 2 puntos vienen de slots distintos (ej. se termina un Blue Heart y
- *   arranca un Explosive Heart en el mismo par) toma el tipo del PRIMER punto del par (el más
- *   viejo) - elección arbitraria pero determinística; avisar si se prefiere que gane el segundo.
+ *   de 10" se colapsa en un multiplicador "×N" al lado de la fila principal (N = heartCount / 10).
+ *   El multiplicador NO se muestra si N es 1 (redundante con la fila que ya se ve completa) - recién
+ *   se muestra desde ×2.
+ * - Si heartCount no es múltiplo de 10, el resto (lo que no entra en un grupo completo) se dibuja
+ *   en una fila EXTRA arriba de la principal, con los corazones más nuevos - así no se pierde
+ *   información sólo por prolijidad. Ej: 25 corazones ya emparejados = fila de 10 + "×2" + fila
+ *   extra de 5 arriba; mismo patrón para 35, 33, 32, 31, 41, 11, 13, etc.
  *
  * FORMATO "DOUBLE HUD" (completado esta sesión - "Update HUD Sprites"): los 4 tipos (Blue,
  * Explosive, Resistance, Inverted) usan ahora DOS archivos propios de 9x9 cada uno
@@ -72,15 +79,21 @@ public final class HeartHudOverlay {
 	 * usaba la fila vanilla (8px) y que usaba el sheet viejo, independiente del tamaño real del
 	 * sprite (ver ICON_SIZE) para que la fila no cambie de ancho respecto de antes. */
 	private static final int HEART_STEP = 8;
-	/** Cuánto sube la fila extra (el resto no múltiplo de 10) por sobre la fila principal. */
-	private static final int EXTRA_ROW_OFFSET = 10;
+	/** Cuánto sube la fila extra (el resto no múltiplo de 10) por sobre la fila principal.
+	 * Con ICON_SIZE=9 e ICON_Y_OFFSET=3, el gap real entre filas queda en (EXTRA_ROW_OFFSET - 9)
+	 * píxeles (extraY+12 vs baseY+3). El valor original, 10, dejaba sólo 1px - casi sin separación
+	 * visible, sobre todo con tipos sin borde propio (Blue). Pedido explícito de ajuste fino tras
+	 * probar 15 (6px, "enorme, gris, horrible"): volver a un gap chico pero perceptible, "como
+	 * estaba antes pero sumale un pixel" → gap de 2px → 11. */
+	private static final int EXTRA_ROW_OFFSET = 11;
 	/** Fase 3, pedido explícito: sólo mientras el jugador está transformado, la fila de corazones
 	 * azules baja "la distancia de un corazón" para quedar justo por encima del medio corazón rojo
 	 * (toda la vida vanilla que le queda a un jugador transformado, ver
-	 * item.AncientExtractSyringeItem#TRANSFORMED_MAX_HEALTH). Mismo valor que EXTRA_ROW_OFFSET
-	 * (la distancia entre dos filas de corazones) pero como constante propia a propósito: son dos
-	 * ajustes conceptualmente distintos y no deberían quedar acoplados si alguno cambia después.
-	 * No toca nada más (ni X, ni visibilidad) y no aplica si el jugador NO está transformado. */
+	 * item.AncientExtractSyringeItem#TRANSFORMED_MAX_HEALTH). Constante propia a propósito, ya
+	 * desacoplada de EXTRA_ROW_OFFSET (antes coincidían en 10, casualidad de cuando se escribió
+	 * esto - el fix del gap entre filas subió EXTRA_ROW_OFFSET a 15 y este valor no tenía por qué
+	 * seguirlo, son dos ajustes conceptualmente distintos). No toca nada más (ni X, ni
+	 * visibilidad) y no aplica si el jugador NO está transformado. */
 	private static final int TRANSFORMED_ROW_DROP = 10;
 	/** Ajuste fino pedido esta sesión ("los corazones azules rozan la barra de experiencia"): con
 	 * TRANSFORMED_ROW_DROP tal cual, la fila baja lo suficiente para solaparse con la barra de XP.
@@ -125,8 +138,10 @@ public final class HeartHudOverlay {
 		return new ResourceLocation(Palaneogenesis.MOD_ID, "textures/gui/" + path + ".png");
 	}
 
-	/** Un corazón ya "emparejado" (2 puntos del array) listo para dibujar: su tipo y si le falta
-	 * el segundo punto (medio corazón, sólo puede pasar en el último corazón de todo el array). */
+	/** Un corazón ya "resuelto" por pairPoints, listo para dibujar: su tipo y si quedó como medio
+	 * corazón. A diferencia de la versión anterior, "medio" ya NO implica que sea el último corazón
+	 * de todo el array - también pasa cada vez que un punto no encuentra a otro del mismo tipo justo
+	 * después (cambio de tipo en el medio del array), ver la regla en el javadoc de la clase. */
 	private record DisplayHeart(HeartType type, boolean half) {
 	}
 
@@ -151,21 +166,27 @@ public final class HeartHudOverlay {
 			return;
 		}
 
-		int heartCount = (totalPoints + 1) / 2; // ceil(totalPoints / 2), 2 puntos = 1 corazón
+		// Emparejar TODO el array de una sola vez, en orden - ver la regla de "mismo tipo
+		// consecutivo" en el javadoc de la clase. Ya no se puede cortar el array en trozos ANTES
+		// de emparejar (ni "primeros N puntos" para la fila principal ni "últimos N puntos" para
+		// la extra): cortar a ciegas por cantidad de PUNTOS podía partir un par válido del mismo
+		// tipo justo en el límite del corte, o - peor - dos slices emparejados por separado no
+		// necesariamente coinciden con emparejar el array completo una vez (el resultado depende
+		// de qué punto quedó "suelto" antes del corte). Emparejar una única vez y después cortar
+		// por CANTIDAD DE CORAZONES ya resueltos evita ambos problemas.
+		List<DisplayHeart> allHearts = pairPoints(firstPoints(slots, totalPoints));
+		int heartCount = allHearts.size();
 		int tens = heartCount / HEARTS_PER_ROW;
 		int remainder = heartCount % HEARTS_PER_ROW;
 		int mainRowCount = Math.min(heartCount, HEARTS_PER_ROW);
 
-		List<DisplayHeart> mainRow = pairPoints(firstPoints(slots, mainRowCount * 2));
+		List<DisplayHeart> mainRow = allHearts.subList(0, mainRowCount);
 
 		List<DisplayHeart> extraRow = List.of();
 		if (heartCount > HEARTS_PER_ROW && remainder > 0) {
-			// Puntos que quedan afuera de los `tens` grupos completos de 10 (no sólo de la fila
-			// principal, que siempre muestra un único grupo) - con tens=1 esto coincide con
-			// "totalPoints - 20", pero con tens>=2 hay que descontar los grupos colapsados en el
-			// multiplicador también, o el resto queda mal calculado.
-			int remainderPoints = totalPoints - tens * HEARTS_PER_ROW * 2;
-			extraRow = pairPoints(lastPoints(slots, remainderPoints));
+			// Los últimos `remainder` corazones ya emparejados (los más nuevos) - lo que sobra
+			// después de los `tens` grupos completos de 10 que colapsa el multiplicador ×N.
+			extraRow = allHearts.subList(heartCount - remainder, heartCount);
 		}
 
 		int baseX = screenWidth / 2 - 91;
@@ -228,13 +249,26 @@ public final class HeartHudOverlay {
 		guiGraphics.blit(icon, x, y + ICON_Y_OFFSET, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 	}
 
-	/** Empareja una lista plana de puntos (tipo por punto, en orden) en corazones de a 2; si sobra
-	 * un punto suelto al final, ese último corazón queda marcado como medio. */
+	/** Empareja una lista plana de puntos (tipo por punto, en orden) en corazones, sin mezclar
+	 * tipos - ver la regla en el javadoc de la clase. Recorre el array evaluando de a un punto: si
+	 * el punto actual y el siguiente son del MISMO tipo, se combinan en un corazón lleno de ese
+	 * tipo y se avanzan los dos; si no (tipo distinto, o no hay siguiente porque es el último punto
+	 * del array), el punto actual queda solo como medio corazón de su propio tipo y se avanza sólo
+	 * uno, para seguir evaluando desde ahí - así un corazón nunca termina mostrando ni sumando el
+	 * tipo equivocado sólo por caer al lado de otro en el array. */
 	private static List<DisplayHeart> pairPoints(List<HeartType> points) {
-		List<DisplayHeart> hearts = new ArrayList<>((points.size() + 1) / 2);
-		for (int i = 0; i < points.size(); i += 2) {
-			boolean half = i + 1 >= points.size();
-			hearts.add(new DisplayHeart(points.get(i), half));
+		List<DisplayHeart> hearts = new ArrayList<>(points.size());
+		int i = 0;
+		while (i < points.size()) {
+			HeartType type = points.get(i);
+			boolean sameTypeFollows = i + 1 < points.size() && points.get(i + 1) == type;
+			if (sameTypeFollows) {
+				hearts.add(new DisplayHeart(type, false));
+				i += 2;
+			} else {
+				hearts.add(new DisplayHeart(type, true));
+				i += 1;
+			}
 		}
 		return hearts;
 	}
@@ -252,24 +286,6 @@ public final class HeartHudOverlay {
 			}
 		}
 		return out;
-	}
-
-	/** Los últimos {@code max} puntos del array (los más nuevos), preservando su orden real -
-	 * ventana deslizante de tamaño {@code max} sobre el array completo. */
-	private static List<HeartType> lastPoints(List<IHeartArrayData.HeartSlot> slots, int max) {
-		if (max <= 0) {
-			return List.of();
-		}
-		Deque<HeartType> window = new ArrayDeque<>(max);
-		for (IHeartArrayData.HeartSlot slot : slots) {
-			for (int i = 0; i < slot.points(); i++) {
-				if (window.size() == max) {
-					window.removeFirst();
-				}
-				window.addLast(slot.type());
-			}
-		}
-		return new ArrayList<>(window);
 	}
 
 	/** Cuánto suben del piso (screenHeight - 39) las filas de vida+absorción vanilla ahora mismo:
