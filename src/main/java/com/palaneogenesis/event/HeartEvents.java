@@ -6,9 +6,12 @@ import com.palaneogenesis.capability.IHeartArrayData;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -142,7 +145,7 @@ public class HeartEvents {
 	private static void triggerBreak(Player player, HeartType type) {
 		switch (type) {
 			case EXPLOSIVE -> triggerExplosion(player, Config.COMMON.explosiveHeartExplosionRadius.get());
-			case INVERTED -> triggerExplosion(player, Config.COMMON.invertedHeartExplosionRadius.get());
+			case INVERTED -> triggerLifeDrain(player, Config.COMMON.invertedHeartExplosionRadius.get());
 			case RESISTANCE -> {
 				triggerResistanceBreak(player);
 				if (hasteLevel(HeartArray.totalPointsOfType(player, HeartType.RESISTANCE)) <= 0) {
@@ -157,8 +160,11 @@ public class HeartEvents {
 		}
 	}
 
-	/** Explosión "mata hostiles sin tocar bloques", compartida por Explosive Heart y (desde esta
-	 * sesión) Inverted Heart - misma fórmula simétrica, cada uno con su propio radio de config. */
+	/** Explosión "mata hostiles sin tocar bloques" de Explosive Heart (radio propio de config,
+	 * Config.COMMON.explosiveHeartExplosionRadius). Hasta la sesión anterior este mismo método
+	 * también lo usaba Inverted Heart con su propio radio; desde esta sesión Inverted Heart usa en
+	 * cambio #triggerLifeDrain (sin onda expansiva visible, mata via daño real en vez de kill()
+	 * incondicional) - ver ese método para el pedido/razón del cambio. */
 	private static void triggerExplosion(Player player, double radius) {
 		Level level = player.level();
 
@@ -174,6 +180,60 @@ public class HeartEvents {
 			// kill() en vez de hurt(...) con daño enorme: mata garantizado ("mata enemigos" del
 			// diseño) sin depender de resistencias/armaduras.
 			victim.kill();
+		}
+	}
+
+	/** Efecto "al romperse" de Inverted Heart (pedido revisado esta sesión: antes reusaba
+	 * #triggerExplosion con un radio propio más grande, "como el Explosive pero más grande" - eso
+	 * es justo lo que se pidió dejar de hacer). Radio: mismo Config.COMMON.invertedHeartExplosionRadius
+	 * de antes (el nombre del campo quedó igual a propósito, ver su comentario en Config). Cambios
+	 * respecto al viejo triggerExplosion:
+	 * - Nada de level.explode(): sin onda expansiva ni sonido de explosión ("que actuara de una
+	 *   forma más fría" / "que no se vea como el explosive").
+	 * - victim.hurt(damageSources().magic(), Config.COMMON.invertedHeartDamage) en vez de
+	 *   victim.kill(): "que le saquen la vida" en vez de una muerte forzada e incondicional. El
+	 *   default (500) es la vida del Warden (verificado: 500 HP / 250 corazones), así que en la
+	 *   práctica sigue siendo un kill garantizado contra cualquier hostil vanilla - la diferencia
+	 *   con kill() sólo importaría ante un mob modded con más vida o resistencia/inmunidad a daño
+	 *   mágico, caso border que no aplica a mobs vanilla.
+	 * - Excepción explícita: la Ender Dragon. En vanilla EnderDragon SÍ es instanceof Enemy (mismo
+	 *   filtro que ya usaba triggerExplosion), así que sin este chequeo explícito moriría igual que
+	 *   cualquier otro hostil - de ahí que haga falta excluirla a mano y no alcance con el filtro
+	 *   heredado.
+	 * - Visual "chasquido de Thanos" pedido: estallido de partículas ASH+SOUL por víctima (en vez
+	 *   de la explosión). No se agregó sonido propio esta sesión - evitar poner un SoundEvents sin
+	 *   poder confirmarlo contra una fuente autoritativa; es trivial agregar uno después si se pide
+	 *   con un nombre concreto. */
+	private static void triggerLifeDrain(Player player, double radius) {
+		if (!(player.level() instanceof ServerLevel serverLevel)) {
+			// triggerBreak() sólo se llama desde onLivingDamage, que ya cortó antes en
+			// player.level().isClientSide - esto nunca debería pasar en la práctica, es una guarda
+			// defensiva (evitar un cast inseguro), no lógica de negocio nueva.
+			return;
+		}
+
+		AABB area = new AABB(
+			player.getX() - radius, player.getY() - radius, player.getZ() - radius,
+			player.getX() + radius, player.getY() + radius, player.getZ() + radius
+		);
+		List<LivingEntity> victims = serverLevel.getEntitiesOfClass(LivingEntity.class, area,
+			e -> e instanceof Enemy && e.isAlive() && !(e instanceof EnderDragon));
+
+		float damage = Config.COMMON.invertedHeartDamage.get().floatValue();
+		for (LivingEntity victim : victims) {
+			double x = victim.getX();
+			double y = victim.getY() + victim.getBbHeight() / 2.0D;
+			double z = victim.getZ();
+			// Radio de dispersión de partículas ajustado al tamaño de la víctima (más ancho que un
+			// zombie para un Warden, por ejemplo), + un margen fijo para que no queden "pegadas" al
+			// modelo.
+			double spreadX = victim.getBbWidth() / 2.0D + 0.2D;
+			double spreadY = victim.getBbHeight() / 2.0D + 0.2D;
+
+			serverLevel.sendParticles(ParticleTypes.ASH, x, y, z, 16, spreadX, spreadY, spreadX, 0.05D);
+			serverLevel.sendParticles(ParticleTypes.SOUL, x, y, z, 10, spreadX, spreadY, spreadX, 0.05D);
+
+			victim.hurt(serverLevel.damageSources().magic(), damage);
 		}
 	}
 

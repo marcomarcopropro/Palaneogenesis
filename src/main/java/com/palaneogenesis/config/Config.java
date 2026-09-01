@@ -40,6 +40,7 @@ public class Config {
 		public final ForgeConfigSpec.IntValue resistanceHeartResistanceDurationTicks;
 		public final ForgeConfigSpec.IntValue invertedHeartPoints;
 		public final ForgeConfigSpec.DoubleValue invertedHeartExplosionRadius;
+		public final ForgeConfigSpec.DoubleValue invertedHeartDamage;
 
 		public final ForgeConfigSpec.IntValue transformationAbuseToggleThreshold;
 		public final ForgeConfigSpec.IntValue transformationAbuseWindowTicks;
@@ -121,17 +122,30 @@ public class Config {
 
 			builder.pop();
 
-			builder.comment("Inverted Heart (item) settings - Blue_Hearts.md. Break effect added this session: a much larger version of Explosive Heart's explosion.").push("inverted_heart");
+			builder.comment("Inverted Heart (item) settings - Blue_Hearts.md. Break effect revised this",
+				"session: no longer an explosion (see explosionRadius/damage below) - it drains life",
+				"from nearby hostiles instead, sparing the Ender Dragon.").push("inverted_heart");
 
 			invertedHeartPoints = builder
 				.comment("How many points (half-hearts of absorption) each Inverted Heart grants on use.")
 				.defineInRange("points", 1, 1, 60);
 
 			invertedHeartExplosionRadius = builder
-				.comment("Radius, in blocks, of the explosion triggered when an Inverted Heart point breaks,",
-					"same symmetric formula as explosiveHeartExplosionRadius, own independent radius.",
-					"Default 49.5 = a 100x100x100 cube centered on the player. Never damages blocks.")
+				.comment("Radius, in blocks, of the life-drain effect triggered when an Inverted Heart point",
+					"breaks, applied symmetrically on all 6 axes (N/S/E/W/Up/Down) from the player.",
+					"Default 49.5 = a 100x100x100 cube centered on the player. Despite the field/key name",
+					"(kept unchanged so existing configs don't reset), this is no longer a literal",
+					"explosion as of this session - see invertedHeartDamage and",
+					"event.HeartEvents#triggerLifeDrain. Never damages blocks, same as before.")
 				.defineInRange("explosionRadius", 49.5D, 0.5D, 64.0D);
+
+			invertedHeartDamage = builder
+				.comment("Damage dealt to each hostile entity via event.HeartEvents#triggerLifeDrain when an",
+					"Inverted Heart point breaks - a real hurt() call, not an unconditional kill(). Default",
+					"500.0 = the Warden's own health (500 HP / 250 hearts), so by design this guarantees a",
+					"kill against any vanilla hostile; a modded mob with more health, armor, or damage",
+					"resistance/immunity to magic damage could in theory survive or take reduced damage.")
+				.defineInRange("damage", 500.0D, 1.0D, 5000.0D);
 
 			builder.pop();
 

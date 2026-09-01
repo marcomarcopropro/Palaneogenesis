@@ -101,7 +101,11 @@ public final class Transformation {
 
 			int threshold = Config.COMMON.transformationAbuseToggleThreshold.get();
 			if (count >= threshold) {
-				data.setMaxHealthPenaltyHearts(data.getMaxHealthPenaltyHearts() + 1);
+				// NERF (pedido explícito): la racha completa ahora cuesta 2 corazones de vida
+				// máxima en vez de 1 - único número que cambia, todo lo demás (NBT, red, HUD de
+				// Broken Hearts, el clamp de EmptySyringeItem#revert) lee este contador como
+				// fuente única de verdad y ya sigue el valor nuevo sin tocar nada más.
+				data.setMaxHealthPenaltyHearts(data.getMaxHealthPenaltyHearts() + 2);
 				// Reinicia el contador para que la penalización no se repita en cada toggle
 				// subsiguiente, sólo cada vez que se vuelve a juntar otra racha completa.
 				data.setRecentToggleCount(0);

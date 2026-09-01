@@ -16,11 +16,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * Inverted Heart (Blue_Hearts.md): ½ corazón de vida, sin efecto activo. Desde esta sesión SÍ
- * tiene efecto al romperse (ver event.HeartEvents#triggerBreak): la misma explosión "mata
- * hostiles sin tocar bloques" que usa Explosive Heart, pero mucho más grande (100×100×100, radio
- * propio en Config.COMMON.invertedHeartExplosionRadius) y con su propio config, independiente del
- * de Explosive. Nombre conservado tal como fue definido originalmente.
+ * Inverted Heart (Blue_Hearts.md): ½ corazón de vida, sin efecto activo. Efecto al romperse (ver
+ * event.HeartEvents#triggerLifeDrain; comportamiento revisado esta sesión - ya NO es una
+ * explosión, eso quedó exclusivo de Explosive Heart): en vez de dar vida, la quita - inflige daño
+ * real (por defecto 500, la vida del Warden; Config.COMMON.invertedHeartDamage) a las entidades
+ * hostiles en un radio de 100 bloques por defecto (radio propio e independiente del de Explosive,
+ * Config.COMMON.invertedHeartExplosionRadius), con la Ender Dragon como única excepción
+ * explícita. Visual tipo "chasquido de Thanos" (partículas, sin onda expansiva ni sonido de
+ * explosión) en vez de la vieja explosión compartida con Explosive Heart. Nombre conservado tal
+ * como fue definido originalmente.
  */
 public class InvertedHeartItem extends Item {
 
