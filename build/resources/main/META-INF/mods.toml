@@ -3,8 +3,9 @@ loaderVersion="[47,)"
 license="All Rights Reserved"
 [[mods]]
 modId="palaneogenesis"
-version="1.4.9"
+version="Official-1.0.09"
 displayName="Palaneogénesis"
+logoFile="logo.png"
 authors="YourNameHere, OtherNameHere"
 description='''Example mod description.
 Newline characters can be used and will be replaced properly.'''

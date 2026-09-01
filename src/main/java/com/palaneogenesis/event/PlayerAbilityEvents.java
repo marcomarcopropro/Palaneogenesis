@@ -70,17 +70,6 @@ public class PlayerAbilityEvents {
 	 * generando un rebote infinito justo en el techo en vez de una caída limpia. */
 	private static final Set<UUID> LEVITATION_CAPPED = new HashSet<>();
 
-	/** Cuántos ticks seguidos lleva sostenida la tecla de levitación (se resetea a 0 apenas se
-	 * suelta) - FIX pedido esta sesión: antes el mega salto arrancaba en el mismo tick que se
-	 * tocaba espacio (un solo tap ya lo disparaba), y se pidió que en cambio haga falta MANTENER
-	 * la tecla 1s seguido para recién ahí activarlo. Sólo gatea la ACTIVACIÓN de un vuelo nuevo
-	 * (mismo criterio que el enfriamiento, ver wantsToLevitate) - un vuelo que ya está en curso no
-	 * vuelve a esperar este 1s aunque siga sosteniendo la tecla. */
-	private static final Map<UUID, Integer> LEVITATION_HOLD_TICKS = new HashMap<>();
-	/** Bajado de 40 (2s) a 20 (1s) - pedido explícito de esta sesión: 2s se sentía demasiado largo
-	 * para la ventana de espera antes de que arranque el mega salto. */
-	private static final int LEVITATION_ACTIVATION_DELAY_TICKS = 20;
-
 	/** Amplifier 9 = ~0.50 bloques/tick de ascenso terminal (~10 bloques/seg) - Mini-Patch pedido
 	 * esta sesión ("el salto se siente clunky y se traba, ajustar el valor a 0.5 para que sea
 	 * fluido sostenido"), subido desde el amplifier 3 anterior (~0.20 bloques/tick). La velocidad
@@ -118,7 +107,6 @@ public class PlayerAbilityEvents {
 		LEVITATION_KEY_HELD.remove(id);
 		LEVITATION_CAPPED.remove(id);
 		LEVITATION_COOLDOWN_TICKS.remove(id);
-		LEVITATION_HOLD_TICKS.remove(id);
 		LevitationState.clear(id);
 	}
 
@@ -231,41 +219,9 @@ public class PlayerAbilityEvents {
 
 		boolean keyHeld = LEVITATION_KEY_HELD.contains(id);
 
-		// Duración de hold continuo de la tecla, independiente de estar en el aire o no (así un
-		// jugador que ya venía sosteniendo espacio al despegar no tiene que volver a empezar la
-		// cuenta desde 0 en el aire). Se resetea a 0 apenas se suelta.
-		int heldTicks = keyHeld ? LEVITATION_HOLD_TICKS.merge(id, 1, Integer::sum) : 0;
-		if (!keyHeld) {
-			LEVITATION_HOLD_TICKS.remove(id);
-		}
-
 		if (player.onGround()) {
 			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
 			// resetea acá - sigue corriendo independiente de que se haya tocado el piso o no.
-			//
-			// FIX (bug reportado: "temporizador roto" al mantener espacio sin soltar nunca): un
-			// vuelo YA en curso (alreadyFlying, ver más abajo - achequeado ACÁ vía
-			// LevitationState.isTracking antes de llamar a stopTracking) que aterriza SÍ resetea
-			// heldTicks, para que el próximo vuelo pida su 1s de espera de nuevo (antes no se
-			// tocaba nunca, así que sólo se reseteaba al SOLTAR la tecla - si el jugador nunca
-			// suelta espacio entre un vuelo y el siguiente, heldTicks quedaba por encima del
-			// umbral para siempre después del primer vuelo, y todos los vuelos siguientes
-			// arrancaban instantáneos apenas se cumplía el enfriamiento).
-			//
-			// OJO, esto no es "resetear en cualquier contacto con el piso": sostener espacio
-			// parado en el piso auto-saltea en bucle en vanilla (cada salto dura bien menos que
-			// LEVITATION_ACTIVATION_DELAY_TICKS), y esos aterrizajes NO son el final de un vuelo
-			// real - son ruido normal del auto-salto mientras el jugador recién está sosteniendo
-			// la tecla parado, antes de que arranque nada. Resetear ahí también (mi primer intento
-			// de este fix) hacía que heldTicks nunca llegara a 40 en ese caso: cada auto-salto lo
-			// volvía a poner en 0 antes de acumular lo suficiente, y el mega salto directamente no
-			// arrancaba nunca. El chequeo de isTracking distingue exactamente eso: sólo es true
-			// mientras hay un vuelo real en curso (lo puso getOrStartTracking cuando
-			// wantsToLevitate empujó al jugador para arriba de verdad), no en un salto vanilla
-			// común.
-			if (LevitationState.isTracking(id)) {
-				LEVITATION_HOLD_TICKS.remove(id);
-			}
 			LevitationState.stopTracking(id);
 			LEVITATION_CAPPED.remove(id);
 			return;
@@ -274,14 +230,14 @@ public class PlayerAbilityEvents {
 		boolean transformed = Transformation.isTransformed(player);
 		boolean alreadyFlying = LevitationState.isTracking(id);
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
-		// FIX pedido esta sesión: un solo tap de espacio ya no alcanza para arrancar el mega
-		// salto - hace falta sostener la tecla LEVITATION_ACTIVATION_DELAY_TICKS (1s) seguido.
-		// Igual que el enfriamiento, esto sólo gatea una activación NUEVA: un vuelo que ya está
-		// en curso (alreadyFlying) no vuelve a esperar este 1s.
-		boolean delayMet = heldTicks >= LEVITATION_ACTIVATION_DELAY_TICKS;
-
+		// FIX pedido esta sesión: se sacó el requisito de sostener la tecla 1s antes de activar
+		// (LEVITATION_ACTIVATION_DELAY_TICKS, ver historial) - ya no hace falta: el enfriamiento
+		// de LEVITATION_COOLDOWN_DURATION_TICKS de acá abajo alcanza solo para que no se confunda
+		// con un tap normal de salto vainilla, así que ahora esto es simplemente "sigue sosteniendo
+		// la tecla" sin ningún tiempo adicional de por medio. Un vuelo que ya está en curso
+		// (alreadyFlying) tampoco esperaba nada antes, así que ese caso no cambia.
 		boolean wantsToLevitate = transformed && keyHeld && !LEVITATION_CAPPED.contains(id)
-			&& (alreadyFlying || (!onCooldown && delayMet));
+			&& (alreadyFlying || !onCooldown);
 
 		if (wantsToLevitate) {
 			if (!alreadyFlying) {
