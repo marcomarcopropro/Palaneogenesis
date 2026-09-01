@@ -35,17 +35,30 @@ import java.util.Map;
  * visual, de qué dibuja ESTA clase, no del array en sí.
  *
  * REGLAS DE CONTEO (documentadas para poder ajustarlas fácil si no es exactamente lo que se pidió):
- * - Recorriendo el array de puntos en orden (más viejo primero), 2 puntos CONSECUTIVOS DEL MISMO
- *   TIPO forman 1 corazón lleno de ese tipo. Si el punto en el que estamos parados no tiene un
- *   compañero del mismo tipo justo después (porque el que sigue es de otro tipo, o porque es el
- *   último punto de todo el array), ese punto se muestra SOLO, como medio corazón de su propio
- *   tipo, y se sigue evaluando desde el punto siguiente - nunca se combinan dos puntos de tipos
- *   distintos en un mismo corazón (ver pairPoints). Ej.: array [Blue, Blue, Explosive, Blue] da
- *   3 corazones: Blue lleno, Explosive medio, Blue medio - no "2 corazones Blue llenos". Esto
- *   además implica que la cantidad de corazones a mostrar (heartCount) NO es simplemente
- *   ceil(totalPoints/2): un tramo con muchos cambios de tipo consecutivos ocupa más íconos que la
- *   misma cantidad de puntos de un solo tipo, así que heartCount se calcula DESPUÉS de emparejar,
- *   nunca antes (ver el uso de pairPoints en HUD más abajo).
+ * - Cada entrada del array de puntos es un MEDIO CORAZÓN individual, nunca un corazón entero. Se
+ *   recorre el array en orden (más viejo primero) y cada medio corazón busca pareja entre los
+ *   medios corazones del MISMO TIPO que ya pasaron y siguen SIN PAREJA - NO tiene que ser el
+ *   vecino inmediato, puede haber cualquier cantidad de otros tipos en el medio (a diferencia de
+ *   la regla vieja de "sólo si es consecutivo"). Si encuentra uno disponible, ambos se combinan en
+ *   1 corazón lleno de ese tipo, mostrado en el LUGAR del medio corazón más viejo de los dos - y
+ *   esa pareja queda PERMANENTEMENTE cerrada: ninguno de los dos vuelve a participar de un
+ *   emparejamiento futuro, sin importar qué se agregue después (ver pairPoints). Si no encuentra
+ *   pareja disponible, el punto se muestra SOLO, como medio corazón de su propio tipo, a la espera
+ *   de que aparezca un compañero más adelante - nunca se combinan dos puntos de tipos distintos, y
+ *   un punto nuevo nunca se mezcla con un corazón que ya quedó lleno/cerrado. Ej.: array
+ *   [Blue, Explosive, Blue] da 1 corazón lleno de Blue (el 1° y el 3° punto se emparejan pese a no
+ *   ser vecinos) + 1 medio Explosive - no "3 corazones sueltos" como daría emparejar sólo
+ *   vecinos. Como no se recorta el array antes de emparejar (ver más abajo), esto es un cálculo
+ *   puro sobre el orden de inserción: no hace falta guardar aparte qué quedó emparejado con qué,
+ *   porque recalcularlo desde el array actual (que sólo cambia agregando al final o consumiendo
+ *   los puntos más viejos primero, ver util.HeartArray#absorbDamage) da siempre el mismo resultado
+ *   mientras ese prefijo no cambie - y si cambia (un golpe consume justo uno de los dos puntos de
+ *   un corazón ya lleno), el sobreviviente vuelve a quedar suelto a buscar pareja nueva, que es el
+ *   comportamiento esperado. Esto además implica que la cantidad de corazones a mostrar
+ *   (heartCount) NO es simplemente ceil(totalPoints/2): un tramo con muchos tipos sin pareja
+ *   disponible ocupa más íconos que la misma cantidad de puntos de un solo tipo, así que
+ *   heartCount se calcula DESPUÉS de emparejar, nunca antes (ver el uso de pairPoints en HUD más
+ *   abajo).
  * - De la regla de arriba sale, por ejemplo, que la Temporary Life de la Ancient Extract Syringe
  *   (40 puntos de un único tipo, ver item.AncientExtractSyringeItem#TEMPORARY_LIFE_POINTS,
  *   comentario "10 íconos/fila × 2 puntos × 2 filas") se siga viendo como 20 corazones llenos -
@@ -188,14 +201,17 @@ public final class HeartHudOverlay {
 			return;
 		}
 
-		// Emparejar TODO el array de una sola vez, en orden - ver la regla de "mismo tipo
-		// consecutivo" en el javadoc de la clase. Ya no se puede cortar el array en trozos ANTES
-		// de emparejar (ni "primeros N puntos" para la fila principal ni "últimos N puntos" para
-		// la extra): cortar a ciegas por cantidad de PUNTOS podía partir un par válido del mismo
-		// tipo justo en el límite del corte, o - peor - dos slices emparejados por separado no
-		// necesariamente coinciden con emparejar el array completo una vez (el resultado depende
-		// de qué punto quedó "suelto" antes del corte). Emparejar una única vez y después cortar
-		// por CANTIDAD DE CORAZONES ya resueltos evita ambos problemas.
+		// Emparejar TODO el array de una sola vez, en orden - ver la regla de "primer medio
+		// corazón disponible del mismo tipo, no necesariamente vecino" en el javadoc de la clase.
+		// Ya no se puede cortar el array en trozos ANTES de emparejar (ni "primeros N puntos" para
+		// la fila principal ni "últimos N puntos" para la extra): cortar a ciegas por cantidad de
+		// PUNTOS podía dejar del lado equivocado del corte al compañero de un par válido (con la
+		// regla vieja de "sólo vecino inmediato" ya pasaba en el límite del corte; con la regla
+		// nueva pasa todavía más fácil, porque la pareja de un punto puede estar arbitrariamente
+		// lejos), o - peor - dos slices emparejados por separado no necesariamente coinciden con
+		// emparejar el array completo una vez (el resultado depende de qué punto quedó "suelto"
+		// antes del corte). Emparejar una única vez y después cortar por CANTIDAD DE CORAZONES ya
+		// resueltos evita ambos problemas.
 		List<DisplayHeart> allHearts = pairPoints(firstPoints(slots, totalPoints));
 		int heartCount = allHearts.size();
 		int tens = heartCount / HEARTS_PER_ROW;
@@ -270,25 +286,33 @@ public final class HeartHudOverlay {
 		guiGraphics.blit(icon, x, y + ICON_Y_OFFSET, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 	}
 
-	/** Empareja una lista plana de puntos (tipo por punto, en orden) en corazones, sin mezclar
-	 * tipos - ver la regla en el javadoc de la clase. Recorre el array evaluando de a un punto: si
-	 * el punto actual y el siguiente son del MISMO tipo, se combinan en un corazón lleno de ese
-	 * tipo y se avanzan los dos; si no (tipo distinto, o no hay siguiente porque es el último punto
-	 * del array), el punto actual queda solo como medio corazón de su propio tipo y se avanza sólo
-	 * uno, para seguir evaluando desde ahí - así un corazón nunca termina mostrando ni sumando el
-	 * tipo equivocado sólo por caer al lado de otro en el array. */
+	/** Empareja una lista plana de puntos (tipo por punto, en orden de inserción, más viejo
+	 * primero) en corazones, tratando cada punto como un medio corazón individual - ver la regla
+	 * en el javadoc de la clase. Recorre el array una sola vez, de más viejo a más nuevo,
+	 * llevando en {@code pendingIndex} el índice (dentro de {@code hearts}, no del array de
+	 * puntos) del medio corazón SIN PAREJA más viejo de cada tipo, si hay alguno pendiente:
+	 * - Si el tipo actual YA tiene un pendiente esperando: ese punto es su pareja. Se reemplaza la
+	 *   entrada pendiente (que hasta ahora estaba como medio corazón) por un corazón LLENO en el
+	 *   mismo lugar - nunca se agrega una entrada nueva para el punto que recién llegó, se
+	 *   "fusiona" en el lugar del que ya estaba esperando - y se saca el tipo de pendingIndex: esa
+	 *   pareja queda cerrada, no vuelve a aparecer como candidata nunca más (ni en esta llamada ni
+	 *   en la próxima vez que se recalcule con más puntos agregados al final).
+	 * - Si el tipo actual NO tiene pendiente: se agrega como medio corazón nuevo al final de
+	 *   {@code hearts} y su índice recién creado queda anotado como el pendiente de ese tipo.
+	 * Un corazón ya lleno nunca puede volver a estar en pendingIndex (se lo saca en el mismo paso
+	 * en que se completa), así que un punto nuevo jamás se fusiona con uno ya cerrado - cumple la
+	 * regla "never merge with an already-complete heart" sin necesidad de chequeo aparte. */
 	private static List<DisplayHeart> pairPoints(List<HeartType> points) {
 		List<DisplayHeart> hearts = new ArrayList<>(points.size());
-		int i = 0;
-		while (i < points.size()) {
-			HeartType type = points.get(i);
-			boolean sameTypeFollows = i + 1 < points.size() && points.get(i + 1) == type;
-			if (sameTypeFollows) {
-				hearts.add(new DisplayHeart(type, false));
-				i += 2;
+		Map<HeartType, Integer> pendingIndex = new EnumMap<>(HeartType.class);
+		for (HeartType type : points) {
+			Integer pending = pendingIndex.get(type);
+			if (pending != null) {
+				hearts.set(pending, new DisplayHeart(type, false));
+				pendingIndex.remove(type);
 			} else {
 				hearts.add(new DisplayHeart(type, true));
-				i += 1;
+				pendingIndex.put(type, hearts.size() - 1);
 			}
 		}
 		return hearts;

@@ -48,9 +48,37 @@ public class HeartEvents {
 	 * Minera de #onPlayerTick, que se re-aplica cada 20 ticks. */
 	private static final int HASTE_REFRESH_DURATION_TICKS = 40;
 
+	/** FIX (bug real, no sólo visual - encontrado investigando el reporte de "corazón de
+	 * Resistencia consumido en un momento raro"): antes de este fix, esta función usaba
+	 * `transformed` sólo para decidir el "golpe letal" (event.setAmount(health+1)), pero el array
+	 * PARTICIPABA en la absorción sin importar `transformed` - alcanzaba con que
+	 * HeartArray.isEmpty(player) diera false. Eso es un problema porque
+	 * item.EmptySyringeItem#revert() sólo vacía el tipo BLUE (Temporary Life, atada 1:1 a estar
+	 * transformado - Sección 3.2); Resistance/Explosive/Inverted (los "corazones crafteados", más
+	 * parecidos a un inventario persistente) sobreviven un revert() intactos, sin vaciarse, y el
+	 * HUD no los dibuja mientras el jugador está en forma vanilla (ver el gate idéntico en
+	 * client.HeartHudOverlay) - pero sin este fix SEGUÍAN absorbiendo daño y disparando su efecto
+	 * "al romperse" (ej. Resistencia II) en forma vanilla, invisibles, contradiciendo el mismo
+	 * comentario de item.ResistanceHeartItem#use ("bloqueado por completo en estado vanilla de
+	 * Steve") - esa restricción sólo bloqueaba AGREGAR puntos nuevos, no el uso de los que ya
+	 * hubiera. Cualquier golpe mientras tanto (una caída, un mob, lo que sea) podía consumir esos
+	 * puntos sobrantes sin que hubiera manera de verlo en pantalla, y si el jugador se
+	 * retransformaba después, ese slot sobrante seguía siendo el más viejo del array - se
+	 * consumía ANTES que la Temporary Life recién otorgada, aunque el array nunca se reordenó (el
+	 * "arrastre" era real, pero por alcance/scope, no por índices invertidos).
+	 * FIX: cortar acá arriba de todo si el jugador no está transformado, sin tocar el array ni
+	 * event.getAmount() - mismo gate que ya usan item.*HeartItem#use y
+	 * client.HeartHudOverlay#HUD, aplicado también a la absorción. Los puntos sobrantes de
+	 * Resistance/Explosive/Inverted NO se pierden (revert() los sigue dejando intactos a
+	 * propósito, ver arriba) - sólo quedan inertes hasta la próxima transformación, en vez de
+	 * seguir absorbiendo/disparando efectos por debajo del HUD. */
 	@SubscribeEvent
 	public static void onLivingDamage(LivingDamageEvent event) {
 		if (!(event.getEntity() instanceof Player player) || player.level().isClientSide) {
+			return;
+		}
+
+		if (!Transformation.isTransformed(player)) {
 			return;
 		}
 
@@ -59,14 +87,10 @@ public class HeartEvents {
 			return;
 		}
 
-		boolean transformed = Transformation.isTransformed(player);
-
 		if (HeartArray.isEmpty(player)) {
 			// Transformado y sin ningún corazón: cualquier golpe que llegue hasta acá equivale a
 			// que la vida roja "real" llegó a 0, aunque el número en pantalla diga otra cosa.
-			if (transformed) {
-				event.setAmount(player.getHealth() + 1.0F);
-			}
+			event.setAmount(player.getHealth() + 1.0F);
 			return;
 		}
 
@@ -76,7 +100,7 @@ public class HeartEvents {
 			triggerBreak(player, broken);
 		}
 
-		if (transformed && HeartArray.isEmpty(player)) {
+		if (HeartArray.isEmpty(player)) {
 			// Este golpe agotó el array entero: es el golpe que mata, no el siguiente.
 			event.setAmount(player.getHealth() + 1.0F);
 		} else {

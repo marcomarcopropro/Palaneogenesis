@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "palaneogenesis:blue_heart" },
+    { "item": "minecraft:feather" },
+    { "item": "minecraft:feather" },
+    { "item": "minecraft:cod" },
+    { "item": "minecraft:cod" },
+    { "item": "minecraft:quartz" },
+    { "item": "minecraft:quartz" },
+    { "item": "minecraft:quartz" },
+    { "item": "minecraft:quartz" }
+  ],
+  "result": {
+    "item": "palaneogenesis:resistance_heart",
+    "count": 2
+  }
+}

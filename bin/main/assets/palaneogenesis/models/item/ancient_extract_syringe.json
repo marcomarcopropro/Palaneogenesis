@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "palaneogenesis:item/ancient_extract_syringe"
+  }
+}
