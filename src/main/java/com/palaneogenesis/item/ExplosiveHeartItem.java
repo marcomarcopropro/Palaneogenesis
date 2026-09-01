@@ -1,5 +1,6 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
@@ -47,7 +48,7 @@ public class ExplosiveHeartItem extends Item {
 		}
 
 		if (!level.isClientSide) {
-			HeartArray.addPoints(player, HeartType.EXPLOSIVE, Config.COMMON.explosiveHeartPoints.get());
+			HeartArray.addPoints(player, HeartType.EXPLOSIVE, HeartOrigin.PLAYER, Config.COMMON.explosiveHeartPoints.get());
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));

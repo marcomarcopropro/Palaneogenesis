@@ -1,5 +1,6 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
@@ -47,7 +48,7 @@ public class ResistanceHeartItem extends Item {
 		}
 
 		if (!level.isClientSide) {
-			HeartArray.addPoints(player, HeartType.RESISTANCE, Config.COMMON.resistanceHeartPoints.get());
+			HeartArray.addPoints(player, HeartType.RESISTANCE, HeartOrigin.PLAYER, Config.COMMON.resistanceHeartPoints.get());
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));

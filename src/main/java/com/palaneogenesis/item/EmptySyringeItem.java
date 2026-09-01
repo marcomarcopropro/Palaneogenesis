@@ -1,8 +1,6 @@
 package com.palaneogenesis.item;
 
-import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.registry.ModItems;
-import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.Transformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
@@ -106,15 +104,25 @@ public class EmptySyringeItem extends Item {
 	/**
 	 * Sección 3.5: "reverting is assumed symmetric with the death case" - restaura MAX_HEALTH a
 	 * 20 (o menos, si el jugador ya perdió corazones rojos por abuso de la mecánica - Fase 3, ver
-	 * util.Transformation#registerToggle/getMaxHealthPenaltyHearts), saca toda la Temporary Life
-	 * (tipo BLUE del array unificado, ver util.HeartArray, a 0),
-	 * apaga el flag de transformación y remueve los efectos pasivos integrados de la Sección 3.3
-	 * (mismo AttributeModifier, mismo UUID fijo, agregado en AncientExtractSyringeItem#transform()
-	 * - Speed y Attack Damage nada más, no hay un tercer efecto de Resistance, se descartó por
+	 * util.Transformation#registerToggle/getMaxHealthPenaltyHearts), apaga el flag de
+	 * transformación y remueve los efectos pasivos integrados de la Sección 3.3 (mismo
+	 * AttributeModifier, mismo UUID fijo, agregado en AncientExtractSyringeItem#transform() -
+	 * Speed y Attack Damage nada más, no hay un tercer efecto de Resistance, se descartó por
 	 * balance, ver util.Transformation). La vida actual se lleva al nuevo máximo (full heal) para
 	 * que el jugador no quede con 1 HP reales sobre una barra de 20 corazones - no está escrito
 	 * explícitamente en el doc, así que avisar si se prefiere otro comportamiento (p. ej. mantener
 	 * la proporción de vida actual).
+	 *
+	 * FIX (destransformarte ya no borra nada): antes esto vaciaba a 0 TODOS los slots BLUE del
+	 * array (Temporary Life de la jeringa Y Blue Heart crafteado, indistinguibles - ver el FIX
+	 * documentado en item.AncientExtractSyringeItem). Ahora revert() no toca el array de corazones
+	 * en absoluto: tanto lo que queda de la Temporary Life (origen SYRINGE) como los corazones
+	 * crafteados (origen PLAYER) sobreviven intactos, guardados, y quedan inertes mientras el
+	 * jugador está en forma vanilla - ni se dibujan en el HUD (client.HeartHudOverlay) ni absorben
+	 * daño (event.HeartEvents#onLivingDamage), ambos gateados por Transformation.isTransformed. Lo
+	 * que haya sobrevivido de la reserva de la jeringa se repone sólo hasta el tope la próxima vez
+	 * que el jugador se transforme (ver AncientExtractSyringeItem#transform /
+	 * capability.IHeartArrayData#topUpSyringe), sin resetearse a cero acá.
 	 */
 	private static void revert(Player player) {
 		// Fase 3: cuenta como toggle para la penalización por abuso ANTES de calcular la salud
@@ -132,7 +140,6 @@ public class EmptySyringeItem extends Item {
 			maxHealth.setBaseValue(effectiveMaxHealth);
 		}
 
-		HeartArray.setPointsOfType(player, HeartType.BLUE, 0);
 		player.setHealth((float) effectiveMaxHealth);
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);

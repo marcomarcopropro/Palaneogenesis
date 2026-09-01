@@ -1,5 +1,6 @@
 package com.palaneogenesis.network;
 
+import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.capability.IHeartArrayData;
 import com.palaneogenesis.client.ClientHeartArraySync;
@@ -39,6 +40,7 @@ public class HeartArraySyncPacket {
 		buffer.writeVarInt(packet.slots.size());
 		for (IHeartArrayData.HeartSlot slot : packet.slots) {
 			buffer.writeEnum(slot.type());
+			buffer.writeEnum(slot.origin());
 			buffer.writeVarInt(slot.points());
 		}
 	}
@@ -48,8 +50,9 @@ public class HeartArraySyncPacket {
 		List<IHeartArrayData.HeartSlot> slots = new ArrayList<>(size);
 		for (int i = 0; i < size; i++) {
 			HeartType type = buffer.readEnum(HeartType.class);
+			HeartOrigin origin = buffer.readEnum(HeartOrigin.class);
 			int points = buffer.readVarInt();
-			slots.add(new IHeartArrayData.HeartSlot(type, points));
+			slots.add(new IHeartArrayData.HeartSlot(type, origin, points));
 		}
 		return new HeartArraySyncPacket(slots);
 	}

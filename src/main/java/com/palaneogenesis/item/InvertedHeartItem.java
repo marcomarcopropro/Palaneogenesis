@@ -1,5 +1,6 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
@@ -49,7 +50,7 @@ public class InvertedHeartItem extends Item {
 		}
 
 		if (!level.isClientSide) {
-			HeartArray.addPoints(player, HeartType.INVERTED, Config.COMMON.invertedHeartPoints.get());
+			HeartArray.addPoints(player, HeartType.INVERTED, HeartOrigin.PLAYER, Config.COMMON.invertedHeartPoints.get());
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));

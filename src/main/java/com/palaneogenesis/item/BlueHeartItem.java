@@ -1,5 +1,6 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
@@ -47,7 +48,12 @@ public class BlueHeartItem extends Item {
 		}
 
 		if (!level.isClientSide) {
-			HeartArray.addPoints(player, HeartType.BLUE, Config.COMMON.blueHeartPoints.get());
+			// FIX (origen SYRINGE/PLAYER): este ítem comparte HeartType.BLUE con la Temporary
+			// Life que otorga la jeringa (ver item.AncientExtractSyringeItem), pero NO es esa
+			// reserva - se agrega como PLAYER, igual que Explosive/Resistance/Inverted, para que
+			// compita con ellos por orden de llegada en vez de mezclarse con el fondo reservado
+			// de la jeringa (ver capability.HeartArrayData#absorbDamage).
+			HeartArray.addPoints(player, HeartType.BLUE, HeartOrigin.PLAYER, Config.COMMON.blueHeartPoints.get());
 			// TODO: optional feedback here, e.g.
 			// level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.5F, 1.5F);
 		}

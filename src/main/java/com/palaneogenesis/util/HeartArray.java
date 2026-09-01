@@ -1,6 +1,7 @@
 package com.palaneogenesis.util;
 
 import com.palaneogenesis.capability.Capabilities;
+import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.capability.IHeartArrayData;
 import com.palaneogenesis.network.HeartArraySyncPacket;
@@ -30,9 +31,9 @@ public final class HeartArray {
 	private HeartArray() {
 	}
 
-	public static void addPoints(Player player, HeartType type, int points) {
+	public static void addPoints(Player player, HeartType type, HeartOrigin origin, int points) {
 		player.getCapability(Capabilities.HEART_ARRAY_DATA).ifPresent(data -> {
-			data.addPoints(type, points);
+			data.addPoints(type, origin, points);
 			sync(player);
 		});
 	}
@@ -57,12 +58,12 @@ public final class HeartArray {
 			.orElse(0);
 	}
 
-	/** Ver IHeartArrayData#setPointsOfType: fija el total de un tipo puntual en un valor
-	 * absoluto sin tocar los demás tipos - usado por AncientExtractSyringeItem#transform y
-	 * EmptySyringeItem#revert para la Temporary Life (BLUE). */
-	public static void setPointsOfType(Player player, HeartType type, int points) {
+	/** Ver IHeartArrayData#topUpSyringe: rellena la reserva SYRINGE de {@code type} hasta el tope
+	 * {@code cap} sin resetearla ni tocar los slots PLAYER del mismo tipo - usado por
+	 * AncientExtractSyringeItem#transform para la Temporary Life (BLUE). */
+	public static void topUpSyringe(Player player, HeartType type, int cap) {
 		player.getCapability(Capabilities.HEART_ARRAY_DATA).ifPresent(data -> {
-			data.setPointsOfType(type, points);
+			data.topUpSyringe(type, cap);
 			sync(player);
 		});
 	}

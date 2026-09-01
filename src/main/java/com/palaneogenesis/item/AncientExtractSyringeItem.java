@@ -17,6 +17,19 @@ import net.minecraft.world.level.Level;
 /**
  * Ancient Extract Syringe - dispara la transformación (doc de Fase 2, Sección 3.2).
  *
+ * FIX (origen SYRINGE/PLAYER - Temporary Life se comía Blue Hearts crafteados en cada
+ * retransformación): {@code transform()} usaba {@code HeartArray.setPointsOfType(BLUE, ...)},
+ * que reemplaza TODOS los slots de un tipo por uno solo, sin distinguir de dónde venía cada uno.
+ * Como el Blue Heart crafteado (ver item.BlueHeartItem) agrega puntos con ese mismo
+ * HeartType.BLUE, cualquier Blue Heart que el jugador hubiera juntado mientras transformado
+ * desaparecía cada vez que se volvía a inyectar la jeringa - y además, si a la Temporary Life le
+ * quedaban puntos sin gastar de la transformación anterior (sobrevive un revert(), ver
+ * item.EmptySyringeItem), este método los tiraba a la basura y volvía a poner el total entero de
+ * nuevo en vez de sólo reponer lo que faltaba. Ahora HeartArray.topUpSyringe (ver
+ * capability.IHeartArrayData#topUpSyringe) sólo toca slots de origen SYRINGE del mismo tipo:
+ * agrega nada más que la diferencia hasta llegar a TEMPORARY_LIFE_POINTS, nunca resetea a cero y
+ * nunca toca los slots PLAYER (Blue Heart crafteado incluido).
+ *
  * CAMBIO (pedido explícito, aislado - "eliminar el gesto de tomar una jeringa"): antes seguía el
  * mismo patrón que las pociones vanilla (getUseAnimation/getUseDuration = DRINK/32, use() vía
  * ItemUtils.startUsingInstantly, el trabajo real en finishUsingItem, Sección 3.2 "mirrors
@@ -92,9 +105,10 @@ public class AncientExtractSyringeItem extends Item {
 
 	/**
 	 * Sección 3.2, los 3 pasos, todos en el mismo método/tick para que nunca haya un frame donde
-	 * los números no coincidan (doc Sección 2): baja MAX_HEALTH al piso del engine, otorga
-	 * Temporary Life vía HeartArray (tipo BLUE), y recién ahí clampea la vida actual - en ese orden,
-	 * porque setHealth clampea contra el getMaxHealth() vigente en el momento de la llamada.
+	 * los números no coincidan (doc Sección 2): baja MAX_HEALTH al piso del engine, otorga/repone
+	 * la Temporary Life vía HeartArray (tipo BLUE, origen SYRINGE, topeada en TEMPORARY_LIFE_POINTS
+	 * - ver el FIX documentado arriba de la clase), y recién ahí clampea la vida actual - en ese
+	 * orden, porque setHealth clampea contra el getMaxHealth() vigente en el momento de la llamada.
 	 *
 	 * Después de eso, Sección 3.3: aplica los efectos pasivos integrados (Speed y Attack Damage
 	 * como AttributeModifier permanente, con UUID fijo en Transformation para que
@@ -113,7 +127,7 @@ public class AncientExtractSyringeItem extends Item {
 			maxHealth.setBaseValue(TRANSFORMED_MAX_HEALTH);
 		}
 
-		HeartArray.setPointsOfType(player, HeartType.BLUE, TEMPORARY_LIFE_POINTS);
+		HeartArray.topUpSyringe(player, HeartType.BLUE, TEMPORARY_LIFE_POINTS);
 		player.setHealth((float) TRANSFORMED_MAX_HEALTH);
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
