@@ -230,12 +230,10 @@ public class PlayerAbilityEvents {
 		boolean transformed = Transformation.isTransformed(player);
 		boolean alreadyFlying = LevitationState.isTracking(id);
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
-		// FIX pedido esta sesión: se sacó el requisito de sostener la tecla 1s antes de activar
-		// (LEVITATION_ACTIVATION_DELAY_TICKS, ver historial) - ya no hace falta: el enfriamiento
-		// de LEVITATION_COOLDOWN_DURATION_TICKS de acá abajo alcanza solo para que no se confunda
-		// con un tap normal de salto vainilla, así que ahora esto es simplemente "sigue sosteniendo
-		// la tecla" sin ningún tiempo adicional de por medio. Un vuelo que ya está en curso
-		// (alreadyFlying) tampoco esperaba nada antes, así que ese caso no cambia.
+		// Comportamiento pedido: tocás espacio (eso es el salto vainilla, no toca nada de esto) y
+		// si en el momento en que ya estás en el aire seguís sosteniendo la tecla, ahí arranca el
+		// mega salto - sin tiempo mínimo de espera ni acumulado entre saltos. Un vuelo que ya está
+		// en curso (alreadyFlying) tampoco espera nada.
 		boolean wantsToLevitate = transformed && keyHeld && !LEVITATION_CAPPED.contains(id)
 			&& (alreadyFlying || !onCooldown);
 
