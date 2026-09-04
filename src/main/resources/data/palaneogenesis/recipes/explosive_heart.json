@@ -1,17 +1,22 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "minecraft:crafting_shaped",
   "category": "misc",
-  "ingredients": [
-    { "item": "palaneogenesis:blue_heart" },
-    { "item": "minecraft:gold_ingot" },
-    { "item": "minecraft:gold_ingot" },
-    { "item": "minecraft:gold_ingot" },
-    { "item": "minecraft:gold_ingot" },
-    { "item": "minecraft:tnt" },
-    { "item": "minecraft:tnt" },
-    { "item": "minecraft:tnt" },
-    { "item": "minecraft:tnt" }
+  "pattern": [
+    "GTG",
+    "THT",
+    "GTG"
   ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "T": {
+      "item": "minecraft:tnt"
+    },
+    "H": {
+      "item": "palaneogenesis:blue_heart"
+    }
+  },
   "result": {
     "item": "palaneogenesis:explosive_heart",
     "count": 2

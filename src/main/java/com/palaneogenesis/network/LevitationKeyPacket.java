@@ -7,10 +7,13 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-/** C2S: flanco de apretar/soltar la tecla de salto vanilla (options.keyJump), enviado sólo en el
- * cambio. No reemplaza el salto en ningún lado del mod (ver ClientInputEvents) - esto sólo le
- * avisa al servidor si esa misma tecla sigue sostenida, para que PlayerAbilityEvents decida si
- * corresponde levitar (jugador ya en el aire, transformado). */
+/** C2S: estado de "hold" de la tecla de salto vanilla (options.keyJump), ya confirmado por el
+ * cliente (ver ClientInputEvents#LEVITATION_HOLD_CONFIRM_TICKS) - no es el flanco crudo de la
+ * tecla. Se manda con held=true recién cuando el cliente lleva varios ticks seguidos con la tecla
+ * apretada (un toque normal nunca llega a mandar esto), y con held=false apenas se suelta, sin
+ * demora. No reemplaza el salto en ningún lado del mod - esto sólo le avisa al servidor si
+ * corresponde tratar la tecla como sostenida, para que PlayerAbilityEvents decida si corresponde
+ * levitar (jugador ya en el aire, transformado). */
 public class LevitationKeyPacket {
 
 	private final boolean held;

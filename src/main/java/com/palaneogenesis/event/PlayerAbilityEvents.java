@@ -232,8 +232,11 @@ public class PlayerAbilityEvents {
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
 		// Comportamiento pedido: tocás espacio (eso es el salto vainilla, no toca nada de esto) y
 		// si en el momento en que ya estás en el aire seguís sosteniendo la tecla, ahí arranca el
-		// mega salto - sin tiempo mínimo de espera ni acumulado entre saltos. Un vuelo que ya está
-		// en curso (alreadyFlying) tampoco espera nada.
+		// mega salto - sin tiempo mínimo de espera acá. El filtro de tocar-vs-sostener YA pasó del
+		// lado cliente antes de que este código vea keyHeld=true (ver
+		// ClientInputEvents#LEVITATION_HOLD_CONFIRM_TICKS) - un toque normal nunca llega a setear
+		// LEVITATION_KEY_HELD, así que no hace falta (ni conviene) filtrarlo de nuevo acá. Un vuelo
+		// que ya está en curso (alreadyFlying) tampoco espera nada.
 		boolean wantsToLevitate = transformed && keyHeld && !LEVITATION_CAPPED.contains(id)
 			&& (alreadyFlying || !onCooldown);
 
