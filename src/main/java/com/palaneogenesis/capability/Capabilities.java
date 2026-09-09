@@ -12,7 +12,7 @@ import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
  */
 public final class Capabilities {
 
-	public static final Capability<ITransformationData> TRANSFORMATION_DATA =
+	public static final Capability<IAncientTransformationData> ANCIENT_TRANSFORMATION_DATA =
 		CapabilityManager.get(new CapabilityToken<>() {
 		});
 
@@ -27,7 +27,7 @@ public final class Capabilities {
 
 	/** Call this once from a RegisterCapabilitiesEvent handler (mod bus). */
 	public static void register(RegisterCapabilitiesEvent event) {
-		event.register(ITransformationData.class);
+		event.register(IAncientTransformationData.class);
 		event.register(IHeartArrayData.class);
 	}
 }

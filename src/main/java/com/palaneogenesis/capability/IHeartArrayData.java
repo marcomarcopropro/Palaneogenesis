@@ -22,8 +22,8 @@ import java.util.List;
  * y la Temporary Life de la jeringa eran indistinguibles: ambos tipo BLUE, así que
  * "reponer/vaciar la jeringa" no tenía forma de tocar una sin tocar la otra).
  *
- * A diferencia de {@link ITransformationData} (que nunca sale del servidor, ver
- * event.TransformationEvents), este array SÍ necesita llegar al cliente para
+ * A diferencia de {@link IAncientTransformationData} (que nunca sale del servidor, ver
+ * event.AncientTransformationEvents), este array SÍ necesita llegar al cliente para
  * client.HeartHudOverlay - ver util.HeartArray, que es quien dispara esa sincronización cada vez
  * que llama a un método mutador de acá.
  */

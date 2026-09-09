@@ -3,7 +3,7 @@ package com.palaneogenesis.item;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.registry.ModItems;
 import com.palaneogenesis.util.HeartArray;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -35,7 +35,7 @@ import net.minecraft.world.level.Level;
  * ItemUtils.startUsingInstantly, el trabajo real en finishUsingItem, Sección 3.2 "mirrors
  * vanilla's own potion → glass bottle behavior") - eso hacía que el jugador levantara el brazo en
  * un gesto de "beber/inyectarse" (UseAnim.DRINK) durante esos 32 ticks de carga, que es el único
- * gesto de transformación que existe en todo el mod (TransformationEvents sólo cuelga la
+ * gesto de transformación que existe en todo el mod (AncientTransformationEvents sólo cuelga la
  * capability, no anima nada). No hay ambigüedad sobre cuál era: es este.
  *
  * Ahora sigue el mismo patrón de un solo click instantáneo que ya usaba BlueHeartItem: sin
@@ -69,7 +69,7 @@ public class AncientExtractSyringeItem extends Item {
 
 		// Ya transformado: no tiene sentido re-inyectarse (mismo corte que tenía use() antes de
 		// este cambio, ahora es el único lugar que lo necesita).
-		if (Transformation.isTransformed(player)) {
+		if (AncientTransformation.isTransformed(player)) {
 			return InteractionResultHolder.pass(stack);
 		}
 
@@ -111,16 +111,16 @@ public class AncientExtractSyringeItem extends Item {
 	 * orden, porque setHealth clampea contra el getMaxHealth() vigente en el momento de la llamada.
 	 *
 	 * Después de eso, Sección 3.3: aplica los efectos pasivos integrados (Speed y Attack Damage
-	 * como AttributeModifier permanente, con UUID fijo en Transformation para que
+	 * como AttributeModifier permanente, con UUID fijo en AncientTransformation para que
 	 * EmptySyringeItem#revert() pueda sacar exactamente ese mismo modifier más adelante). No hay
-	 * un tercer efecto de Resistance: se descartó por balance (ver util.Transformation).
+	 * un tercer efecto de Resistance: se descartó por balance (ver util.AncientTransformation).
 	 */
 	private static void transform(Player player) {
 		// Fase 3: cuenta como un toggle para la penalización por abuso (ver
-		// util.Transformation#registerToggle) - tiene que ir antes de tocar MAX_HEALTH nada más
+		// util.AncientTransformation#registerToggle) - tiene que ir antes de tocar MAX_HEALTH nada más
 		// por consistencia con EmptySyringeItem#revert(), aunque acá no cambia el resultado
 		// inmediato: TRANSFORMED_MAX_HEALTH es un piso fijo, no depende de la penalización.
-		Transformation.registerToggle(player);
+		AncientTransformation.registerToggle(player);
 
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 		if (maxHealth != null) {
@@ -131,15 +131,15 @@ public class AncientExtractSyringeItem extends Item {
 		player.setHealth((float) TRANSFORMED_MAX_HEALTH);
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
-		if (movementSpeed != null && !movementSpeed.hasModifier(Transformation.SPEED_MODIFIER)) {
-			movementSpeed.addPermanentModifier(Transformation.SPEED_MODIFIER);
+		if (movementSpeed != null && !movementSpeed.hasModifier(AncientTransformation.SPEED_MODIFIER)) {
+			movementSpeed.addPermanentModifier(AncientTransformation.SPEED_MODIFIER);
 		}
 
 		AttributeInstance attackDamage = player.getAttribute(Attributes.ATTACK_DAMAGE);
-		if (attackDamage != null && !attackDamage.hasModifier(Transformation.ATTACK_DAMAGE_MODIFIER)) {
-			attackDamage.addPermanentModifier(Transformation.ATTACK_DAMAGE_MODIFIER);
+		if (attackDamage != null && !attackDamage.hasModifier(AncientTransformation.ATTACK_DAMAGE_MODIFIER)) {
+			attackDamage.addPermanentModifier(AncientTransformation.ATTACK_DAMAGE_MODIFIER);
 		}
 
-		Transformation.set(player, true);
+		AncientTransformation.set(player, true);
 	}
 }

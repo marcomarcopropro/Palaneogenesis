@@ -5,7 +5,7 @@ import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.capability.IHeartArrayData;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -81,7 +81,7 @@ public class HeartEvents {
 			return;
 		}
 
-		if (!Transformation.isTransformed(player)) {
+		if (!AncientTransformation.isTransformed(player)) {
 			return;
 		}
 

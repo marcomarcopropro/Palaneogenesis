@@ -14,10 +14,10 @@ import java.util.List;
 
 /**
  * Acceso estático al array unificado de corazones (ver capability.IHeartArrayData), mismo rol que
- * {@link Transformation} tiene para el flag de transformación: el resto del mod no debería llamar
+ * {@link AncientTransformation} tiene para el flag de transformación: el resto del mod no debería llamar
  * a {@code player.getCapability(...)} directamente para esto, sino pasar por acá.
  *
- * Mismo motivo que {@link Transformation#sync} tiene para el flag de transformación (ver el FIX
+ * Mismo motivo que {@link AncientTransformation#sync} tiene para el flag de transformación (ver el FIX
  * documentado ahí): este array SÍ necesita llegar al cliente para el HUD
  * (client.HeartHudOverlay). El viejo diseño con 4 atributos (*HeartPool, ver ModAttributes ya
  * eliminado) se sincronizaba gratis porque Forge sincroniza atributos de entidad

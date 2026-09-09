@@ -15,11 +15,11 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * Le cuelga el array unificado de corazones (ver capability.IHeartArrayData) a cada Player, y
  * empuja su estado al dueño cada vez que hace falta (login, respawn) - separado de
- * TransformationEvents a propósito: esa clase sólo se ocupa del flag de transformación (que nunca
+ * AncientTransformationEvents a propósito: esa clase sólo se ocupa del flag de transformación (que nunca
  * necesitó llegar al cliente), esta sólo del array de corazones (que sí, ver util.HeartArray).
  *
  * A propósito NO hay PlayerEvent.Clone acá tampoco (mismo motivo documentado en
- * TransformationEvents): un Player nuevo recibe un HeartArrayProvider nuevo, vacío, vía este
+ * AncientTransformationEvents): un Player nuevo recibe un HeartArrayProvider nuevo, vacío, vía este
  * mismo AttachCapabilitiesEvent - y event.HeartEvents#onLivingDeath ya vacía el array
  * explícitamente antes del respawn de todos modos.
  */

@@ -4,7 +4,7 @@ import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -41,9 +41,9 @@ public class BlueHeartItem extends Item {
 		// client.HeartHudOverlay) sólo tiene sentido mientras el jugador está transformado -
 		// bloqueado por completo en estado vanilla de Steve, sin gastar el ítem ni otorgar
 		// puntos. Mismo chequeo, sin diferenciar cliente/servidor, que ya usa
-		// item.AncientExtractSyringeItem#use: Transformation.isTransformed lee de una capability
+		// item.AncientExtractSyringeItem#use: AncientTransformation.isTransformed lee de una capability
 		// propia del jugador, disponible igual en ambos lados para su propia instancia.
-		if (!Transformation.isTransformed(player)) {
+		if (!AncientTransformation.isTransformed(player)) {
 			return InteractionResultHolder.fail(stack);
 		}
 

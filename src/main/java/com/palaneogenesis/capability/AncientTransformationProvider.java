@@ -10,18 +10,18 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Holder + serialización NBT de {@link ITransformationData} para un Player puntual. Colgado por
- * {@link com.palaneogenesis.event.TransformationEvents} en AttachCapabilitiesEvent.
+ * Holder + serialización NBT de {@link IAncientTransformationData} para un Player puntual. Colgado por
+ * {@link com.palaneogenesis.event.AncientTransformationEvents} en AttachCapabilitiesEvent.
  */
-public class TransformationProvider implements ICapabilitySerializable<CompoundTag> {
+public class AncientTransformationProvider implements ICapabilitySerializable<CompoundTag> {
 
-	private final ITransformationData data = new TransformationData();
-	private final LazyOptional<ITransformationData> holder = LazyOptional.of(() -> data);
+	private final IAncientTransformationData data = new AncientTransformationData();
+	private final LazyOptional<IAncientTransformationData> holder = LazyOptional.of(() -> data);
 
 	@Nonnull
 	@Override
 	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-		return Capabilities.TRANSFORMATION_DATA.orEmpty(cap, holder);
+		return Capabilities.ANCIENT_TRANSFORMATION_DATA.orEmpty(cap, holder);
 	}
 
 	@Override
@@ -29,7 +29,7 @@ public class TransformationProvider implements ICapabilitySerializable<CompoundT
 		CompoundTag tag = new CompoundTag();
 		tag.putBoolean("Transformed", data.isTransformed());
 		// Sólo el castigo permanente de Fase 3 se persiste - recentToggleCount/lastToggleTick son
-		// un timer de corto plazo (ver ITransformationData) y se quedan siempre en su default.
+		// un timer de corto plazo (ver IAncientTransformationData) y se quedan siempre en su default.
 		tag.putInt("MaxHealthPenaltyHearts", data.getMaxHealthPenaltyHearts());
 		return tag;
 	}

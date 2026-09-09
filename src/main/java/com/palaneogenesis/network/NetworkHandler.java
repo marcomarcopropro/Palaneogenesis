@@ -40,9 +40,9 @@ public final class NetworkHandler {
 		CHANNEL.registerMessage(id(), HeartArraySyncPacket.class,
 			HeartArraySyncPacket::encode, HeartArraySyncPacket::decode, HeartArraySyncPacket::handle);
 		// Nuevo (fix bug: jeringa de transformación usable estando ya transformado): server ->
-		// dueño, ver util.Transformation#sync / capability.ITransformationData.
-		CHANNEL.registerMessage(id(), TransformationSyncPacket.class,
-			TransformationSyncPacket::encode, TransformationSyncPacket::decode, TransformationSyncPacket::handle);
+		// dueño, ver util.AncientTransformation#sync / capability.IAncientTransformationData.
+		CHANNEL.registerMessage(id(), AncientTransformationSyncPacket.class,
+			AncientTransformationSyncPacket::encode, AncientTransformationSyncPacket::decode, AncientTransformationSyncPacket::handle);
 		// Nuevo (HUD del temporizador del salto): server -> dueño, ver
 		// event.PlayerAbilityEvents#broadcastLevitationCooldown / client.LevitationCooldownHudOverlay.
 		CHANNEL.registerMessage(id(), LevitationCooldownSyncPacket.class,

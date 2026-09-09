@@ -1,7 +1,7 @@
 package com.palaneogenesis.client;
 
 import com.palaneogenesis.Palaneogenesis;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraftforge.api.distmarker.Dist;
@@ -28,13 +28,13 @@ import net.minecraftforge.fml.common.Mod;
  *
  * Restauración (pedido explícito): no hace falta guardar ni deshacer nada - no se toca ningún
  * estado, sólo se decide cuadro a cuadro si este evento en particular se cancela. En el primer
- * frame en el que Transformation.isTransformed() vuelva a ser false, la fila vanilla ya se dibuja
+ * frame en el que AncientTransformation.isTransformed() vuelva a ser false, la fila vanilla ya se dibuja
  * normal de nuevo sola.
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
-public final class TransformedHealthHudEvents {
+public final class AncientTransformedHealthHudEvents {
 
-	private TransformedHealthHudEvents() {
+	private AncientTransformedHealthHudEvents() {
 	}
 
 	@SubscribeEvent
@@ -44,7 +44,7 @@ public final class TransformedHealthHudEvents {
 		}
 
 		LocalPlayer player = Minecraft.getInstance().player;
-		if (player != null && Transformation.isTransformed(player)) {
+		if (player != null && AncientTransformation.isTransformed(player)) {
 			event.setCanceled(true);
 		}
 	}

@@ -1,10 +1,10 @@
 package com.palaneogenesis.util;
 
 import com.palaneogenesis.capability.Capabilities;
-import com.palaneogenesis.capability.ITransformationData;
+import com.palaneogenesis.capability.IAncientTransformationData;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.NetworkHandler;
-import com.palaneogenesis.network.TransformationSyncPacket;
+import com.palaneogenesis.network.AncientTransformationSyncPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
@@ -13,7 +13,7 @@ import net.minecraftforge.network.PacketDistributor;
 import java.util.UUID;
 
 /**
- * Acceso estático al flag de transformación (ver {@link com.palaneogenesis.capability.ITransformationData}),
+ * Acceso estático al flag de transformación (ver {@link com.palaneogenesis.capability.IAncientTransformationData}),
  * mismo rol que {@link BlueHeartPool} para el pool de corazones: el resto del mod no debería
  * llamar a {@code player.getCapability(...)} directamente, sino pasar por acá.
  *
@@ -30,23 +30,23 @@ import java.util.UUID;
  * FIX: el flag de transformación SÍ necesita llegar al cliente (a diferencia de lo que decía este
  * comentario antes) - se lee del lado cliente en item.AncientExtractSyringeItem#use,
  * item.EmptySyringeItem#use y client.HeartHudOverlay, y esos tres necesitan ver el mismo valor
- * que el servidor o el cliente predice mal (ver network.TransformationSyncPacket para el detalle
+ * que el servidor o el cliente predice mal (ver network.AncientTransformationSyncPacket para el detalle
  * del bug que esto causaba). Por eso, igual que HeartArray#sync para el array de corazones,
  * #set() ahora empuja el nuevo valor al dueño cada vez que cambia.
  */
-public final class Transformation {
+public final class AncientTransformation {
 
-	private Transformation() {
+	private AncientTransformation() {
 	}
 
 	public static boolean isTransformed(Player player) {
-		return player.getCapability(Capabilities.TRANSFORMATION_DATA)
-			.map(com.palaneogenesis.capability.ITransformationData::isTransformed)
+		return player.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA)
+			.map(com.palaneogenesis.capability.IAncientTransformationData::isTransformed)
 			.orElse(false);
 	}
 
 	public static void set(Player player, boolean transformed) {
-		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data -> {
+		player.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA).ifPresent(data -> {
 			data.setTransformed(transformed);
 			sync(player);
 		});
@@ -68,9 +68,9 @@ public final class Transformation {
 		if (!(player instanceof ServerPlayer serverPlayer)) {
 			return;
 		}
-		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data ->
+		player.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA).ifPresent(data ->
 			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
-				new TransformationSyncPacket(data.isTransformed(), data.getMaxHealthPenaltyHearts()))
+				new AncientTransformationSyncPacket(data.isTransformed(), data.getMaxHealthPenaltyHearts()))
 		);
 	}
 
@@ -88,9 +88,9 @@ public final class Transformation {
 	 * al propio jugador, no un reloj global del mundo.
 	 */
 	public static void registerToggle(Player player) {
-		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data -> {
+		player.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA).ifPresent(data -> {
 			int now = player.tickCount;
-			int windowTicks = Config.COMMON.transformationAbuseWindowTicks.get();
+			int windowTicks = Config.COMMON.ancientTransformationAbuseWindowTicks.get();
 
 			boolean withinWindow = data.getLastToggleTick() != Integer.MIN_VALUE
 				&& now - data.getLastToggleTick() <= windowTicks;
@@ -99,7 +99,7 @@ public final class Transformation {
 			data.setRecentToggleCount(count);
 			data.setLastToggleTick(now);
 
-			int threshold = Config.COMMON.transformationAbuseToggleThreshold.get();
+			int threshold = Config.COMMON.ancientTransformationAbuseToggleThreshold.get();
 			if (count >= threshold) {
 				// NERF (pedido explícito): la racha completa ahora cuesta 2 corazones de vida
 				// máxima en vez de 1 - único número que cambia, todo lo demás (NBT, red, HUD de
@@ -116,17 +116,17 @@ public final class Transformation {
 	/** Corazones rojos de salud máxima perdidos permanentemente por abuso (ver registerToggle()).
 	 * 0 si el jugador nunca gatilló la penalización. */
 	public static int getMaxHealthPenaltyHearts(Player player) {
-		return player.getCapability(Capabilities.TRANSFORMATION_DATA)
-			.map(ITransformationData::getMaxHealthPenaltyHearts)
+		return player.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA)
+			.map(IAncientTransformationData::getMaxHealthPenaltyHearts)
 			.orElse(0);
 	}
 
 	/** Mini-Patch (Broken Hearts auto-repair): borra el contador de penalización entero. Sólo
-	 * toca ese contador - a propósito NO toca MAX_HEALTH acá (event.TransformationEvents es quien
+	 * toca ese contador - a propósito NO toca MAX_HEALTH acá (event.AncientTransformationEvents es quien
 	 * decide si corresponde restaurarla ya mismo, según si el jugador está transformado o no en
 	 * ese momento). */
 	public static void clearMaxHealthPenalty(Player player) {
-		player.getCapability(Capabilities.TRANSFORMATION_DATA).ifPresent(data ->
+		player.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA).ifPresent(data ->
 			data.setMaxHealthPenaltyHearts(0));
 	}
 

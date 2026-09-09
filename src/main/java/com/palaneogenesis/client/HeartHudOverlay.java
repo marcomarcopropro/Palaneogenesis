@@ -5,7 +5,7 @@ import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.capability.IHeartArrayData;
 import com.palaneogenesis.util.HeartArray;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -188,7 +188,7 @@ public final class HeartHudOverlay {
 		// en la forma vanilla"). El array en sí (HeartArray) no se toca acá - sigue existiendo y
 		// absorbiendo daño igual que antes si corresponde; este corte es puramente de qué dibuja
 		// ESTA clase.
-		if (!Transformation.isTransformed(player)) {
+		if (!AncientTransformation.isTransformed(player)) {
 			return;
 		}
 

@@ -1,7 +1,7 @@
 package com.palaneogenesis.capability;
 
-/** Implementación default de {@link ITransformationData}: un solo booleano en memoria, false al crear la instancia. */
-public class TransformationData implements ITransformationData {
+/** Implementación default de {@link IAncientTransformationData}: un solo booleano en memoria, false al crear la instancia. */
+public class AncientTransformationData implements IAncientTransformationData {
 
 	private boolean transformed = false;
 

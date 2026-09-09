@@ -1,7 +1,7 @@
 package com.palaneogenesis.item;
 
 import com.palaneogenesis.registry.ModItems;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -27,8 +27,8 @@ import net.minecraft.world.level.Level;
  * Syringe tenía ANTES de que se le sacara el gesto de "tomar la jeringa" (ver el CAMBIO
  * documentado en AncientExtractSyringeItem) - ese cambio nunca se replicó acá. Con esa animación,
  * cada revert() real necesitaba 32 ticks (1.6s) sostenidos de click; sólo 5 reverts ya suman 160
- * ticks, más que transformationAbuseWindowTicks entero (100 ticks / 5s por default) - así que la
- * racha de util.Transformation#registerToggle nunca llegaba a juntar 5 toggles dentro de la
+ * ticks, más que ancientTransformationAbuseWindowTicks entero (100 ticks / 5s por default) - así que la
+ * racha de util.AncientTransformation#registerToggle nunca llegaba a juntar 5 toggles dentro de la
  * ventana sin importar qué tan rápido clickeara el jugador (confirmado en el video: el contador
  * de Broken Syringe sube varias veces seguidas y la vida máxima nunca baja). Ahora sigue
  * exactamente el mismo patrón instantáneo de un solo click que ya usa AncientExtractSyringeItem:
@@ -43,7 +43,7 @@ public class EmptySyringeItem extends Item {
 	/** Vanilla default (doc Sección 3.5: "max health restored to 20"). */
 	private static final double NORMAL_MAX_HEALTH = 20.0D;
 
-	/** Piso de la penalización por abuso (Fase 3, util.Transformation#registerToggle): por más
+	/** Piso de la penalización por abuso (Fase 3, util.AncientTransformation#registerToggle): por más
 	 * corazones rojos que se hayan perdido, la salud máxima nunca baja de 1 corazón entero (2.0).
 	 * No estaba especificado qué hacer si la penalización vacía la barra entera, así que se avisa
 	 * acá el criterio elegido por si se prefiere otro (ej. dejarlo caer hasta el mismo piso de
@@ -60,7 +60,7 @@ public class EmptySyringeItem extends Item {
 
 		// No transformado: el Empty Syringe no tiene nada que hacer acá, es solo el componente de
 		// crafteo de Fase 1 (mismo corte que tenía use() antes de este cambio).
-		if (!Transformation.isTransformed(player)) {
+		if (!AncientTransformation.isTransformed(player)) {
 			return InteractionResultHolder.pass(stack);
 		}
 
@@ -104,11 +104,11 @@ public class EmptySyringeItem extends Item {
 	/**
 	 * Sección 3.5: "reverting is assumed symmetric with the death case" - restaura MAX_HEALTH a
 	 * 20 (o menos, si el jugador ya perdió corazones rojos por abuso de la mecánica - Fase 3, ver
-	 * util.Transformation#registerToggle/getMaxHealthPenaltyHearts), apaga el flag de
+	 * util.AncientTransformation#registerToggle/getMaxHealthPenaltyHearts), apaga el flag de
 	 * transformación y remueve los efectos pasivos integrados de la Sección 3.3 (mismo
 	 * AttributeModifier, mismo UUID fijo, agregado en AncientExtractSyringeItem#transform() -
 	 * Speed y Attack Damage nada más, no hay un tercer efecto de Resistance, se descartó por
-	 * balance, ver util.Transformation). La vida actual se lleva al nuevo máximo (full heal) para
+	 * balance, ver util.AncientTransformation). La vida actual se lleva al nuevo máximo (full heal) para
 	 * que el jugador no quede con 1 HP reales sobre una barra de 20 corazones - no está escrito
 	 * explícitamente en el doc, así que avisar si se prefiere otro comportamiento (p. ej. mantener
 	 * la proporción de vida actual).
@@ -119,7 +119,7 @@ public class EmptySyringeItem extends Item {
 	 * en absoluto: tanto lo que queda de la Temporary Life (origen SYRINGE) como los corazones
 	 * crafteados (origen PLAYER) sobreviven intactos, guardados, y quedan inertes mientras el
 	 * jugador está en forma vanilla - ni se dibujan en el HUD (client.HeartHudOverlay) ni absorben
-	 * daño (event.HeartEvents#onLivingDamage), ambos gateados por Transformation.isTransformed. Lo
+	 * daño (event.HeartEvents#onLivingDamage), ambos gateados por AncientTransformation.isTransformed. Lo
 	 * que haya sobrevivido de la reserva de la jeringa se repone sólo hasta el tope la próxima vez
 	 * que el jugador se transforme (ver AncientExtractSyringeItem#transform /
 	 * capability.IHeartArrayData#topUpSyringe), sin resetearse a cero acá.
@@ -128,12 +128,12 @@ public class EmptySyringeItem extends Item {
 		// Fase 3: cuenta como toggle para la penalización por abuso ANTES de calcular la salud
 		// máxima efectiva de acá abajo, para que un revert() que justo complete la racha ya
 		// aplique el nuevo corazón perdido en esta misma llamada (ver
-		// util.Transformation#registerToggle).
-		Transformation.registerToggle(player);
+		// util.AncientTransformation#registerToggle).
+		AncientTransformation.registerToggle(player);
 
 		double effectiveMaxHealth = Math.max(
 			MIN_MAX_HEALTH_AFTER_PENALTY,
-			NORMAL_MAX_HEALTH - Transformation.getMaxHealthPenaltyHearts(player) * 2.0D);
+			NORMAL_MAX_HEALTH - AncientTransformation.getMaxHealthPenaltyHearts(player) * 2.0D);
 
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 		if (maxHealth != null) {
@@ -144,14 +144,14 @@ public class EmptySyringeItem extends Item {
 
 		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (movementSpeed != null) {
-			movementSpeed.removeModifier(Transformation.SPEED_MODIFIER);
+			movementSpeed.removeModifier(AncientTransformation.SPEED_MODIFIER);
 		}
 
 		AttributeInstance attackDamage = player.getAttribute(Attributes.ATTACK_DAMAGE);
 		if (attackDamage != null) {
-			attackDamage.removeModifier(Transformation.ATTACK_DAMAGE_MODIFIER);
+			attackDamage.removeModifier(AncientTransformation.ATTACK_DAMAGE_MODIFIER);
 		}
 
-		Transformation.set(player, false);
+		AncientTransformation.set(player, false);
 	}
 }

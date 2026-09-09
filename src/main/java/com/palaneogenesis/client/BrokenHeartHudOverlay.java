@@ -2,7 +2,7 @@ package com.palaneogenesis.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.palaneogenesis.Palaneogenesis;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
@@ -14,7 +14,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * cosmético: NO es un tipo más de {@link com.palaneogenesis.capability.HeartType} (no otorga vida,
  * no es un punto que se pueda romper/absorber daño) - sólo un ícono que reemplaza, en la fila de
  * vida VANILLA, cada corazón que el jugador perdió PERMANENTEMENTE por abuso de la jeringa (mismo
- * contador que ya existía para la penalización, ver util.Transformation#getMaxHealthPenaltyHearts /
+ * contador que ya existía para la penalización, ver util.AncientTransformation#getMaxHealthPenaltyHearts /
  * item.EmptySyringeItem#revert, que es quien realmente resta MAX_HEALTH). Antes de este cambio esa
  * penalización sólo se notaba porque a la fila vanilla le faltaban corazones al final, sin ninguna
  * pista visual de que ahí solía haber uno.
@@ -23,7 +23,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * vanilla visible, mismo baseX/paso de 8px que usa la fila vanilla real (mismos valores ya
  * validados en client.HeartHudOverlay). Como la vida máxima SIN penalización es siempre 10
  * corazones (item.EmptySyringeItem#NORMAL_MAX_HEALTH = 20.0) y cada corazón de penalización resta
- * exactamente un corazón entero (2.0, ver util.Transformation#registerToggle), "corazones
+ * exactamente un corazón entero (2.0, ver util.AncientTransformation#registerToggle), "corazones
  * visibles" + "corazones rotos" da 10 en el caso normal - entran siempre en la misma fila, sin
  * necesidad de una fila extra. Si la penalización sigue sumando más allá del piso duro de
  * EmptySyringeItem#MIN_MAX_HEALTH_AFTER_PENALTY (1 corazón entero), el contador de penalización
@@ -31,7 +31,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * en la fila (10 - visibles) en vez de asumir que penaltyHearts siempre encaja.
  *
  * No se dibuja mientras el jugador está transformado: en ese estado la fila vanilla entera queda
- * oculta (ver client.TransformedHealthHudEvents) y este ícono no tendría a qué pegarse - se apaga
+ * oculta (ver client.AncientTransformedHealthHudEvents) y este ícono no tendría a qué pegarse - se apaga
  * junto con ella en vez de quedar flotando solo donde la fila vanilla ya no se ve.
  *
  * TEXTURA (cambio pedido en esta sesión, mismo criterio ya aplicado a Blue Heart en
@@ -42,7 +42,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * sin referenciar desde código, como hud_broken_heart_legacy.png (mismo criterio que
  * hud_blue_hearts_legacy.png), por si se prefiere volver atrás después de probar el nuevo.
  *
- * La penalización sigue restando siempre corazones ENTEROS (ver util.Transformation -
+ * La penalización sigue restando siempre corazones ENTEROS (ver util.AncientTransformation -
  * getMaxHealthPenaltyHearts/registerToggle no cambiaron en este commit), así que HALF por ahora
  * no se dibuja desde acá - queda cargado y listo por si hiciera falta más adelante, igual que ya
  * pasaba con el segundo cuadro del sheet viejo.
@@ -79,11 +79,11 @@ public final class BrokenHeartHudOverlay {
 
 		// Ver la clase: sin fila vanilla visible durante la transformación, no hay nada a lo que
 		// pegarse.
-		if (Transformation.isTransformed(player)) {
+		if (AncientTransformation.isTransformed(player)) {
 			return;
 		}
 
-		int penaltyHearts = Transformation.getMaxHealthPenaltyHearts(player);
+		int penaltyHearts = AncientTransformation.getMaxHealthPenaltyHearts(player);
 		if (penaltyHearts <= 0) {
 			return;
 		}

@@ -9,7 +9,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 /**
- * Server -> dueño únicamente (mismo rol que TransformationSyncPacket / HeartArraySyncPacket, ver
+ * Server -> dueño únicamente (mismo rol que AncientTransformationSyncPacket / HeartArraySyncPacket, ver
  * event.PlayerAbilityEvents#broadcastLevitationCooldown): empuja los ticks restantes del
  * enfriamiento de la levitación leve, para que client.LevitationCooldownHudOverlay pueda dibujar
  * el temporizador numérico pedido esta sesión ("el temporizador del salto no se muestra").
@@ -23,7 +23,7 @@ import java.util.function.Supplier;
  * para ocultar el número, no para mostrar "0".
  *
  * El handle() delega a ClientLevitationCooldownSync vía DistExecutor a propósito, mismo motivo que
- * TransformationSyncPacket/HeartArraySyncPacket: esta clase se carga en ambos lados por
+ * AncientTransformationSyncPacket/HeartArraySyncPacket: esta clase se carga en ambos lados por
  * NetworkHandler#register, así que no debe tocar clases client-only directamente.
  */
 public class LevitationCooldownSyncPacket {

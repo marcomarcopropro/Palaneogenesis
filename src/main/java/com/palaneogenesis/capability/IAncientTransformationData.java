@@ -7,10 +7,10 @@ package com.palaneogenesis.capability;
  * sistemas todavía - no se anticipa nada de eso acá.
  *
  * La reversión por muerte (Sección 3.5) depende de que esto NO se copie en PlayerEvent.Clone -
- * ver {@link com.palaneogenesis.event.TransformationEvents}. Eso es ausencia de código, no algo
+ * ver {@link com.palaneogenesis.event.AncientTransformationEvents}. Eso es ausencia de código, no algo
  * que esta interfaz o su implementación necesiten resolver.
  */
-public interface ITransformationData {
+public interface IAncientTransformationData {
 
 	boolean isTransformed();
 
@@ -19,7 +19,7 @@ public interface ITransformationData {
 	// --- Fase 3: penalización por abuso (transformarse/destransformarse muchas veces seguidas) ---
 
 	/** Cuántos toggles (transform o revert) seguidos van acumulados, sin resetear todavía por
-	 * exceder la ventana de tiempo (Config.COMMON.transformationAbuseWindowTicks). No se persiste
+	 * exceder la ventana de tiempo (Config.COMMON.ancientTransformationAbuseWindowTicks). No se persiste
 	 * a NBT a propósito: es sólo un timer anti-abuso de corto plazo, no un estado permanente -
 	 * perderlo al relog es aceptable e incluso deseable (nadie debería arrastrar un contador de
 	 * hace sesiones). */
@@ -34,7 +34,7 @@ public interface ITransformationData {
 	void setLastToggleTick(int tick);
 
 	/** Corazones rojos de salud máxima perdidos permanentemente por abuso. A diferencia de los dos
-	 * anteriores, ESTO sí se persiste a NBT (ver TransformationProvider): es el castigo real y
+	 * anteriores, ESTO sí se persiste a NBT (ver AncientTransformationProvider): es el castigo real y
 	 * tiene que sobrevivir un relog, no sólo la sesión actual. */
 	int getMaxHealthPenaltyHearts();
 

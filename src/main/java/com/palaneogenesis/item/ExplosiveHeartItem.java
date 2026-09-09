@@ -4,7 +4,7 @@ import com.palaneogenesis.capability.HeartOrigin;
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.util.HeartArray;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.stats.Stats;
@@ -43,7 +43,7 @@ public class ExplosiveHeartItem extends Item {
 		// Fase 3: misma restricción que ya tenía BlueHeartItem, extendida ahora a todos los
 		// corazones especiales (pedido explícito) - bloqueado por completo en estado vanilla de
 		// Steve, sin gastar el ítem ni otorgar puntos.
-		if (!Transformation.isTransformed(player)) {
+		if (!AncientTransformation.isTransformed(player)) {
 			return InteractionResultHolder.fail(stack);
 		}
 

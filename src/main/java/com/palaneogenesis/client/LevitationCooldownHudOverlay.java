@@ -1,7 +1,7 @@
 package com.palaneogenesis.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.player.LocalPlayer;
@@ -12,7 +12,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * HUD del enfriamiento de la levitación leve (event.PlayerAbilityEvents#LEVITATION_COOLDOWN_DURATION_TICKS)
  * - pedido explícito de esta sesión: "el temporizador del salto no se muestra". Puramente de
  * lectura: el dato autoritativo vive en el servidor y llega acá vía LevitationCooldownSyncPacket ->
- * ClientLevitationCooldownSync (mismo patrón que BeamClientState/ClientTransformationSync: el
+ * ClientLevitationCooldownSync (mismo patrón que BeamClientState/ClientAncientTransformationSync: el
  * paquete de red no toca Minecraft.getInstance() directamente).
  *
  * POSICIÓN (pedido explícito: "entre la barra de hambre y la barra de vida"): en el HUD vanilla la
@@ -52,7 +52,7 @@ public final class LevitationCooldownHudOverlay {
 		// "Qué no hacer" pedido explícito: nunca en estado vanilla (destransformado), aunque el
 		// enfriamiento en sí siga corriendo en el servidor sin importar la transformación (ver
 		// PlayerAbilityEvents#tickLevitation).
-		if (!Transformation.isTransformed(player)) {
+		if (!AncientTransformation.isTransformed(player)) {
 			return;
 		}
 

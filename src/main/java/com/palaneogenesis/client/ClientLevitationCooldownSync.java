@@ -7,7 +7,7 @@ package com.palaneogenesis.client;
  * LevitationCooldownHudOverlay cada frame; nada acá es autoritativo - el servidor
  * (event.PlayerAbilityEvents#LEVITATION_COOLDOWN_TICKS) lo es.
  *
- * Separada del paquete de red en sí (mismo motivo que ClientTransformationSync/ClientHeartArraySync):
+ * Separada del paquete de red en sí (mismo motivo que ClientAncientTransformationSync/ClientHeartArraySync):
  * LevitationCooldownSyncPacket se carga en ambos lados por NetworkHandler#register y no debe tocar
  * clases client-only directamente.
  *

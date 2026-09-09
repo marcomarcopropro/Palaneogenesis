@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 /** Implementación default de {@link IHeartArrayData}: una lista mutable en memoria, vacía al
- * crear la instancia - mismo rol que TransformationData tiene para ITransformationData. */
+ * crear la instancia - mismo rol que AncientTransformationData tiene para IAncientTransformationData. */
 public class HeartArrayData implements IHeartArrayData {
 
 	private static final class Slot {

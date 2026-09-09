@@ -6,7 +6,7 @@ import com.palaneogenesis.network.BeamRenderStatePacket;
 import com.palaneogenesis.network.LevitationCooldownSyncPacket;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.util.LevitationState;
-import com.palaneogenesis.util.Transformation;
+import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -35,11 +35,11 @@ import java.util.UUID;
 /**
  * Servidor: maneja las dos habilidades activas mientras el jugador está transformado que dependen
  * de una tecla mantenida, tick a tick, en vez del patrón de un solo paso que usan Speed/Attack
- * Damage (Sección 3.3, ver util.Transformation) - el rayo del jugador (Sección 3.4) y la
+ * Damage (Sección 3.3, ver util.AncientTransformation) - el rayo del jugador (Sección 3.4) y la
  * levitación leve (pedida fuera del alcance original del doc, ver status update de esta sesión).
  *
  * El estado de "tecla apretada" que llega por red (BeamKeyPacket / LevitationKeyPacket) vive acá
- * en memoria, no en la capability de Transformation - es puramente transitorio, no necesita
+ * en memoria, no en la capability de AncientTransformation - es puramente transitorio, no necesita
  * persistir en NBT ni sobrevivir un relog. El resto del estado de la levitación (altura de
  * referencia, gracia de daño de caída) vive en {@link LevitationState} por el mismo motivo.
  */
@@ -128,7 +128,7 @@ public class PlayerAbilityEvents {
 
 	private static void tickBeam(ServerPlayer player) {
 		UUID id = player.getUUID();
-		boolean held = Transformation.isTransformed(player) && BEAM_KEY_HELD.contains(id);
+		boolean held = AncientTransformation.isTransformed(player) && BEAM_KEY_HELD.contains(id);
 
 		if (!held) {
 			if (BEAM_CHARGE_TICKS.remove(id) != null) {
@@ -227,7 +227,7 @@ public class PlayerAbilityEvents {
 			return;
 		}
 
-		boolean transformed = Transformation.isTransformed(player);
+		boolean transformed = AncientTransformation.isTransformed(player);
 		boolean alreadyFlying = LevitationState.isTracking(id);
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
 		// Comportamiento pedido: tocás espacio (eso es el salto vainilla, no toca nada de esto) y

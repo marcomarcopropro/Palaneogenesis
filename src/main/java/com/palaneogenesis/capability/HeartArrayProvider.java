@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Holder + serialización NBT de {@link IHeartArrayData} para un Player puntual. Colgado por
  * {@link com.palaneogenesis.event.HeartArrayEvents} en AttachCapabilitiesEvent - mismo patrón que
- * TransformationProvider, pero cada slot se persiste con su tipo y sus puntos por separado (no un
+ * AncientTransformationProvider, pero cada slot se persiste con su tipo y sus puntos por separado (no un
  * total por tipo), para no perder los límites entre slots que deciden cuántas veces dispara el
  * efecto "al romperse" de un tipo (ver event.HeartEvents) después de un guardado/carga.
  */
