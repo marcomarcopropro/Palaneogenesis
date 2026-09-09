@@ -12,15 +12,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-@Mod.EventBusSubscriber(modid = "palaneogenesis", bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModSetup {
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() ->
-            CraftingHelper.register(new ResourceLocation("palaneogenesis", "water_source"), WaterIngredient.SERIALIZER)
+            CraftingHelper.register(new ResourceLocation(Palaneogenesis.MOD_ID, "water_source"), WaterIngredient.SERIALIZER)
         );
-        // Spawn en aldeas: manejado por VillageGolemSpawner (LevelTickEvent), no por
+        // Spawn en aldeas: manejado por KaakTunVillageSpawner (LevelTickEvent), no por
         // SpawnPlacements - las entidades MobCategory.MISC (como esta, igual que el golem de
         // hierro) quedan afuera del ciclo normal de NaturalSpawner, así que ese registro nunca
         // se ejecutaba en la práctica.

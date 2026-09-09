@@ -81,7 +81,7 @@ public class Config {
 
 			kaakTunSpawnCount = builder
 				.comment("How many Káak Tun are guaranteed present near each village at once.",
-					"Checked every 60s (VillageGolemSpawner); spawns at most one per check, so raising",
+					"Checked every 60s (KaakTunVillageSpawner); spawns at most one per check, so raising",
 					"this from the default only fills in gradually, one per check cycle.")
 				.defineInRange("spawnCount", 1, 1, 10);
 

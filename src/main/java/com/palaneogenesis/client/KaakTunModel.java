@@ -2,7 +2,6 @@ package com.palaneogenesis.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
 import com.palaneogenesis.entity.KaakTunEntity;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -12,7 +11,6 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import org.slf4j.Logger;
 
 /**
  * Real Káak Tun model, exported from Blockbench (kaak_tun.bbmodel / kaak_tun.java) and adapted
@@ -43,14 +41,6 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
 	 * That convenience is gone now - tuning this again means editing this constant and
 	 * recompiling. */
 	private static final float WALK_ANIM_SPEED = 1.0F;
-
-	/** TEMP DEBUG (report: entity visibly slides/relocates during KaakTunWanderGoal's stroll but
-	 * with zero leg articulation - "duro, sin animación"). Logs the actual limbSwing/
-	 * limbSwingAmount values setupAnim receives, throttled to ~once/sec per matching tick, so we
-	 * get real numbers instead of judging by eye whether the wander stroll is really passing near-
-	 * zero values here (vs. chase movement, which reportedly does animate). Remove once confirmed. */
-	private static final Logger LOGGER = LogUtils.getLogger();
-	private int lastLoggedTick = -1;
 
 	public KaakTunModel(ModelPart root) {
 		this.bone = root.getChild("bone");
@@ -130,14 +120,6 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
 	public void setupAnim(KaakTunEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
 			float netHeadYaw, float headPitch) {
 		this.root().getAllParts().forEach(ModelPart::resetPose);
-
-		int tick = entity.tickCount;
-		if (tick % 20 == 0 && tick != this.lastLoggedTick) {
-			this.lastLoggedTick = tick;
-			LOGGER.info("[KaakTunModel] entity {} tick {}: limbSwing={} limbSwingAmount={} pos=({}, {}, {})",
-				entity.getId(), tick, limbSwing, limbSwingAmount,
-				entity.getX(), entity.getY(), entity.getZ());
-		}
 
 		// Walking: visibility/amplitude tied to actual movement (limbSwingAmount), timeline tied
 		// to real time (ageInTicks, see BUGFIX #2 below for why) - not to a start/stop

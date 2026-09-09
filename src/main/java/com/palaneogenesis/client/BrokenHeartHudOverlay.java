@@ -38,9 +38,8 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * client.HeartHudOverlay - ver el comentario "BLUE HEART - TEXTURA" ahí): en vez del sheet
  * compartido de 16x8 (hud_broken_heart.png, un cuadro lleno + un cuadro sin usar), Broken Heart
  * ahora usa DOS archivos de 9x9 (hud_broken_heart_full.png / hud_broken_heart_half.png, formato
- * vanilla estándar - sin U/V, cada archivo es un ícono entero). El sheet viejo queda en el repo
- * sin referenciar desde código, como hud_broken_heart_legacy.png (mismo criterio que
- * hud_blue_hearts_legacy.png), por si se prefiere volver atrás después de probar el nuevo.
+ * vanilla estándar - sin U/V, cada archivo es un ícono entero). El sheet viejo (hud_broken_heart.png)
+ * fue borrado del repo en ese mismo cambio - no quedó ningún "_legacy" guardado como fallback.
  *
  * La penalización sigue restando siempre corazones ENTEROS (ver util.AncientTransformation -
  * getMaxHealthPenaltyHearts/registerToggle no cambiaron en este commit), así que HALF por ahora

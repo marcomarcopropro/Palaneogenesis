@@ -61,23 +61,10 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 	 * straight from the same addBox(...) calls the renderer is trying to match, not approximated
 	 * from the .bbmodel export. 1 unit = 1/16 block, Y-down - standard Minecraft model-space
 	 * convention. Used by #computeBeamOrigin below. If the beam still doesn't sit exactly on the
-	 * fist after testing in-game with DEBUG_SHOW_HAND_MARKER, tune from THIS point, not back
-	 * toward the old eyeballed one. */
+	 * fist, tune from THIS point, not back toward the old eyeballed one. */
 	private static final float HAND_LOCAL_X = 1.5F;
 	private static final float HAND_LOCAL_Y = 13.5F;
 	private static final float HAND_LOCAL_Z = -0.8333F;
-
-	/** TEMP CALIBRATION AID (see report: "está aproximado en el brazo, pero no exactamente en la
-	 * mano"). While true, draws a small magenta cross in-game at the exact point
-	 * #computeBeamOrigin currently returns - i.e. exactly what HAND_LOCAL_X/Y/Z resolve to this
-	 * frame, following left_arm through idle/walk/attack like the real beam does. Compare that
-	 * cross against the model's actual fist in-game and describe the offset (e.g. "un poco más
-	 * abajo y adelante") - no need to touch Blockbench or read raw coordinates. Set back to false
-	 * once HAND_LOCAL_X/Y/Z are dialed in; it's independent of the real beam's own visibility
-	 * gating (charge/targetId below), so it shows in every pose, not just mid-attack. */
-	private static final boolean DEBUG_SHOW_HAND_MARKER = true;
-	private static final float DEBUG_MARKER_HALF_LENGTH = 0.15F;
-	private static final float DEBUG_MARKER_HALF_WIDTH = 0.03F;
 
 	public KaakTunRenderer(EntityRendererProvider.Context context) {
 		super(context, new KaakTunModel(context.bakeLayer(KaakTunModelLayer.KAAK_TUN)), 0.6F * VISUAL_SCALE);
@@ -97,10 +84,6 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 	public void render(KaakTunEntity entity, float entityYaw, float partialTicks, PoseStack poseStack,
 			MultiBufferSource buffer, int packedLight) {
 		super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
-
-		if (DEBUG_SHOW_HAND_MARKER) {
-			renderHandDebugMarker(entity, entityYaw, poseStack, buffer);
-		}
 
 		int charge = entity.getBeamCharge();
 		int targetId = entity.getBeamTargetId();
@@ -151,35 +134,6 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 
 		quad(consumer, pose, start, end, right, halfWidth);
 		quad(consumer, pose, start, end, up2, halfWidth);
-	}
-
-	/** Draws a small magenta 3-axis cross at exactly the point computeBeamOrigin resolves this
-	 * frame - see DEBUG_SHOW_HAND_MARKER's comment for why/how to use this. Two crossed quads per
-	 * axis (same trick renderBeam uses for the real beam) so each little segment reads from any
-	 * camera angle instead of vanishing edge-on. Magenta specifically so it's never confused with
-	 * the real beam's blue. */
-	private void renderHandDebugMarker(KaakTunEntity entity, float entityYaw, PoseStack poseStack,
-			MultiBufferSource buffer) {
-		Vec3 point = computeBeamOrigin(entity, entityYaw);
-		VertexConsumer consumer = buffer.getBuffer(RenderType.entityTranslucentEmissive(BEAM_TEXTURE));
-		PoseStack.Pose pose = poseStack.last();
-		float s = DEBUG_MARKER_HALF_LENGTH;
-		int r = 255, g = 0, b = 255, a = 255;
-
-		Vec3 xStart = point.add(-s, 0.0D, 0.0D);
-		Vec3 xEnd = point.add(s, 0.0D, 0.0D);
-		quad(consumer, pose, xStart, xEnd, new Vec3(0.0D, 1.0D, 0.0D), DEBUG_MARKER_HALF_WIDTH, r, g, b, a);
-		quad(consumer, pose, xStart, xEnd, new Vec3(0.0D, 0.0D, 1.0D), DEBUG_MARKER_HALF_WIDTH, r, g, b, a);
-
-		Vec3 yStart = point.add(0.0D, -s, 0.0D);
-		Vec3 yEnd = point.add(0.0D, s, 0.0D);
-		quad(consumer, pose, yStart, yEnd, new Vec3(1.0D, 0.0D, 0.0D), DEBUG_MARKER_HALF_WIDTH, r, g, b, a);
-		quad(consumer, pose, yStart, yEnd, new Vec3(0.0D, 0.0D, 1.0D), DEBUG_MARKER_HALF_WIDTH, r, g, b, a);
-
-		Vec3 zStart = point.add(0.0D, 0.0D, -s);
-		Vec3 zEnd = point.add(0.0D, 0.0D, s);
-		quad(consumer, pose, zStart, zEnd, new Vec3(1.0D, 0.0D, 0.0D), DEBUG_MARKER_HALF_WIDTH, r, g, b, a);
-		quad(consumer, pose, zStart, zEnd, new Vec3(0.0D, 1.0D, 0.0D), DEBUG_MARKER_HALF_WIDTH, r, g, b, a);
 	}
 
 	/**
