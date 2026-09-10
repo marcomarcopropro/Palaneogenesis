@@ -1,0 +1,16 @@
+{
+    "name": "item.palaneogenesis.empty_syringe",
+    "icon": "palaneogenesis:empty_syringe",
+    "category": "palaneogenesis:items",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.empty_syringe.page1"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:empty_syringe"
+        }
+    ]
+}

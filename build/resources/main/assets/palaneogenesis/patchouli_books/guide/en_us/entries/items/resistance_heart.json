@@ -1,0 +1,20 @@
+{
+    "name": "item.palaneogenesis.resistance_heart",
+    "icon": "palaneogenesis:resistance_heart",
+    "category": "palaneogenesis:items",
+    "sortnum": 5,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.resistance_heart.page1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.resistance_heart.page2"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:resistance_heart"
+        }
+    ]
+}

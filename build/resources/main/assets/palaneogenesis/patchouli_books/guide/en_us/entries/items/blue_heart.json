@@ -1,0 +1,20 @@
+{
+    "name": "item.palaneogenesis.blue_heart",
+    "icon": "palaneogenesis:blue_heart",
+    "category": "palaneogenesis:items",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.blue_heart.page1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.blue_heart.page2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.blue_heart.page3"
+        }
+    ]
+}

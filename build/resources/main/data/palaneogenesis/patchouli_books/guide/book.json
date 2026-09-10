@@ -1,0 +1,8 @@
+{
+    "name": "book.palaneogenesis.name",
+    "landing_text": "book.palaneogenesis.landing",
+    "subtitle": "book.palaneogenesis.subtitle",
+    "show_progress": false,
+    "use_blocky_font": true,
+    "use_resource_pack": true
+}
