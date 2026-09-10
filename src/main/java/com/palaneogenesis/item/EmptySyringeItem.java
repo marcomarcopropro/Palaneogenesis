@@ -135,6 +135,10 @@ public class EmptySyringeItem extends Item {
 			MIN_MAX_HEALTH_AFTER_PENALTY,
 			NORMAL_MAX_HEALTH - AncientTransformation.getMaxHealthPenaltyHearts(player) * 2.0D);
 
+		// COMPAT (Stage 3): mismo criterio de aislamiento documentado en
+		// item.AncientExtractSyringeItem#transform - setBaseValue() a propósito, no se intenta
+		// componer con mods externos de vida máxima. Ver ese comentario para la justificación
+		// completa; acá aplica igual, sólo que revirtiendo en vez de transformando.
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 		if (maxHealth != null) {
 			maxHealth.setBaseValue(effectiveMaxHealth);

@@ -140,6 +140,8 @@ public class AncientTransformationEvents {
 		// sin importar la penalización, así que no hay nada visible que cambiar todavía; el
 		// contador ya quedó en 0, así que el próximo revert() ya calcula la vida máxima completa.
 		if (!AncientTransformation.isTransformed(player)) {
+			// COMPAT (Stage 3): mismo criterio de aislamiento documentado en
+			// item.AncientExtractSyringeItem#transform - setBaseValue() a propósito.
 			AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 			if (maxHealth != null) {
 				maxHealth.setBaseValue(NORMAL_MAX_HEALTH);

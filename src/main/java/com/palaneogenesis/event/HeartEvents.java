@@ -19,6 +19,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -74,8 +75,17 @@ public class HeartEvents {
 	 * client.HeartHudOverlay#HUD, aplicado también a la absorción. Los puntos sobrantes de
 	 * Resistance/Explosive/Inverted NO se pierden (revert() los sigue dejando intactos a
 	 * propósito, ver arriba) - sólo quedan inertes hasta la próxima transformación, en vez de
-	 * seguir absorbiendo/disparando efectos por debajo del HUD. */
-	@SubscribeEvent
+	 * seguir absorbiendo/disparando efectos por debajo del HUD.
+	 *
+	 * COMPAT (Stage 3): antes corría en la prioridad NORMAL por default, sin fijarla
+	 * explícitamente - orden de composición contra otros mods que también reducen daño acá
+	 * (escudos, trinkets, otros corazones) quedaba librado al orden de registro, no garantizado.
+	 * Se fija LOWEST a propósito: este handler ya lee event.getAmount() (línea de arriba), o sea
+	 * que compone bien "hacia arriba" con cualquier reducción de prioridad más alta; correr en
+	 * LOWEST asegura además que sea la ÚLTIMA capa antes de que el daño se aplique de verdad
+	 * (mismo rol que cumple la absorción vanilla), en vez de arriesgarse a que un mod de
+	 * prioridad más baja recalcule el daño desde un amount desactualizado y pise este resultado. */
+	@SubscribeEvent(priority = EventPriority.LOWEST)
 	public static void onLivingDamage(LivingDamageEvent event) {
 		if (!(event.getEntity() instanceof Player player) || player.level().isClientSide) {
 			return;

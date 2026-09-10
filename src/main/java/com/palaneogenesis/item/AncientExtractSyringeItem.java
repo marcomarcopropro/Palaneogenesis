@@ -122,6 +122,16 @@ public class AncientExtractSyringeItem extends Item {
 		// inmediato: TRANSFORMED_MAX_HEALTH es un piso fijo, no depende de la penalización.
 		AncientTransformation.registerToggle(player);
 
+		// COMPAT (Stage 3, decisión explícita del owner): MAX_HEALTH se pisa con setBaseValue(),
+		// a propósito, en vez de componerse vía AttributeModifier con lo que pongan otros mods de
+		// vida máxima. No es un descuido - se evaluó la alternativa (modifier permanente en vez
+		// de tocar el base value) y se descartó: tratar de hacer que la vida máxima de ESTE mod
+		// (la Temporary Life azul) conviva/se combine con la de mods de vida máxima externos es
+		// justamente la fuente de bugs que se quiere evitar, no algo que valga la pena resolver.
+		// Política: mientras el jugador está transformado, este mod es dueño exclusivo de
+		// MAX_HEALTH; cualquier valor que otro mod haya puesto ahí se pierde al transformar, y
+		// eso es esperado, no un bug de compatibilidad de este mod - queda documentado también en
+		// el libro guía (entry items/ancient_extract_syringe, página de compatibilidad).
 		AttributeInstance maxHealth = player.getAttribute(Attributes.MAX_HEALTH);
 		if (maxHealth != null) {
 			maxHealth.setBaseValue(TRANSFORMED_MAX_HEALTH);
