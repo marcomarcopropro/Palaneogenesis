@@ -1,0 +1,13 @@
+{
+    "criteria": {
+        "tick": {
+            "trigger": "minecraft:tick",
+            "conditions": {}
+        }
+    },
+    "rewards": {
+        "loot": [
+            "palaneogenesis:gameplay/guide_book"
+        ]
+    }
+}

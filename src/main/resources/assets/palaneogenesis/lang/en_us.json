@@ -14,5 +14,15 @@
     "attribute.palaneogenesis.resistance_heart_pool": "Resistance Heart Pool",
     "attribute.palaneogenesis.inverted_heart_pool": "Inverted Heart Pool",
     "key.categories.palaneogenesis": "Palaneogénesis",
-    "key.palaneogenesis.beam": "Fire Beam"
+    "key.palaneogenesis.beam": "Fire Beam",
+
+    "book.palaneogenesis.name": "Palaneogénesis",
+    "book.palaneogenesis.landing": "A field guide to the mysteries of $(item)Palaneogénesis$().",
+    "book.palaneogenesis.subtitle": "Field Guide",
+    "book.palaneogenesis.category.mobs.name": "Mobs",
+    "book.palaneogenesis.category.mobs.description": "The creatures of Palaneogénesis.",
+    "book.palaneogenesis.category.items.name": "Items",
+    "book.palaneogenesis.category.items.description": "Every item added by the mod, what it does, and how to craft it.",
+    "book.palaneogenesis.category.effects.name": "Effects",
+    "book.palaneogenesis.category.effects.description": "Coming soon."
 }
