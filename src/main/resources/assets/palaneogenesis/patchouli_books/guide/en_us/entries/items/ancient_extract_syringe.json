@@ -1,0 +1,21 @@
+{
+    "name": "item.palaneogenesis.ancient_extract_syringe",
+    "icon": "palaneogenesis:ancient_extract_syringe",
+    "category": "palaneogenesis:items",
+    "sortnum": 2,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.ancient_extract_syringe.page1"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "book.palaneogenesis.entry.items.ancient_extract_syringe.title_recipe",
+            "text": "book.palaneogenesis.entry.items.ancient_extract_syringe.page2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.ancient_extract_syringe.page3"
+        }
+    ]
+}

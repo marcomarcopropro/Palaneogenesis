@@ -1,0 +1,12 @@
+{
+    "name": "item.palaneogenesis.broken_syringe",
+    "icon": "palaneogenesis:broken_syringe",
+    "category": "palaneogenesis:items",
+    "sortnum": 3,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.broken_syringe.page1"
+        }
+    ]
+}

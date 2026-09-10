@@ -1,0 +1,12 @@
+{
+    "name": "item.palaneogenesis.kaak_tun_spawn_egg",
+    "icon": "palaneogenesis:kaak_tun_spawn_egg",
+    "category": "palaneogenesis:items",
+    "sortnum": 7,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.kaak_tun_spawn_egg.page1"
+        }
+    ]
+}

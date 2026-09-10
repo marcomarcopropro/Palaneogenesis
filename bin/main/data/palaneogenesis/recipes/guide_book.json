@@ -1,0 +1,16 @@
+{
+  "type": "patchouli:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:book"
+    },
+    {
+      "item": "palaneogenesis:blue_heart"
+    }
+  ],
+  "result": {
+    "item": "patchouli:guide_book",
+    "count": 1,
+    "nbt": "{\"patchouli:book\":\"palaneogenesis:guide\"}"
+  }
+}

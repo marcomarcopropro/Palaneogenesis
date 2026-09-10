@@ -1,0 +1,20 @@
+{
+    "name": "item.palaneogenesis.explosive_heart",
+    "icon": "palaneogenesis:explosive_heart",
+    "category": "palaneogenesis:items",
+    "sortnum": 4,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.explosive_heart.page1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.explosive_heart.page2"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:explosive_heart"
+        }
+    ]
+}

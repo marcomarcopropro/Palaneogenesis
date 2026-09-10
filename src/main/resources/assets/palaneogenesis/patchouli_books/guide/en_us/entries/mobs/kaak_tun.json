@@ -1,0 +1,39 @@
+{
+    "name": "entity.palaneogenesis.kaak_tun",
+    "icon": "palaneogenesis:kaak_tun_spawn_egg",
+    "category": "palaneogenesis:mobs",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page3"
+        },
+        {
+            "type": "patchouli:entity",
+            "entity": "palaneogenesis:kaak_tun",
+            "scale": 1.5,
+            "offset": 0.6,
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page4"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page5"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page6"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.mobs.kaak_tun.page7"
+        }
+    ]
+}

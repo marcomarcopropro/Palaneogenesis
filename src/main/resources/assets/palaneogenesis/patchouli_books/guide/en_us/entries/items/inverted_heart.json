@@ -1,0 +1,20 @@
+{
+    "name": "item.palaneogenesis.inverted_heart",
+    "icon": "palaneogenesis:inverted_heart",
+    "category": "palaneogenesis:items",
+    "sortnum": 6,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.inverted_heart.page1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.inverted_heart.page2"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:inverted_heart"
+        }
+    ]
+}
