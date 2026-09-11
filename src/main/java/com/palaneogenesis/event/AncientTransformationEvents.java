@@ -5,9 +5,13 @@ import com.palaneogenesis.capability.AncientTransformationProvider;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.network.TransformationEffectsPacket;
 import com.palaneogenesis.util.AncientTransformation;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -116,11 +120,69 @@ public class AncientTransformationEvents {
 	 * del mismo timer ya en curso. */
 	private static final Map<UUID, Integer> LAST_SEEN_PENALTY = new HashMap<>();
 
+	// --- Segundo burst de tierra, sincronizado con el último latido ---
+
+	/** Pedido de esta sesión ("le agregaría un golpe así con partículas en la tierra cuando
+	 * suena el último corazón, que ya se transforma, para mostrar el poder de la
+	 * transformación"): el primer burst de tierra ya existía junto al sonido/inicio de la
+	 * transformación (ver item.AncientExtractSyringeItem#transform); este es un SEGUNDO burst,
+	 * retrasado hasta el último de los 10 latidos de client.HeartbeatFlashOverlay
+	 * (PULSE_TIMES_SECONDS[9] = 3.298s, el momento en que la secuencia de latido/flash termina y
+	 * la transformación ya se sintió completa). 3.298s * 20 ticks/s = 65.96 ≈ 66 ticks. */
+	private static final int LAST_HEARTBEAT_BURST_DELAY_TICKS = 66;
+
+	/** Misma cantidad/criterio visual que AncientExtractSyringeItem#DIRT_BURST_COUNT (no se
+	 * reusa esa constante directamente porque es privada de esa clase, y a propósito: los dos
+	 * bursts deberían poder ajustarse por separado si algún día se pide que se vean distintos). */
+	private static final int LAST_HEARTBEAT_BURST_COUNT = 40;
+
+	/** Ticks restantes hasta el segundo burst, por jugador. Mismo criterio que
+	 * REPAIR_TICKS_REMAINING de más abajo (estado transitorio en memoria, no necesita sobrevivir
+	 * un relog) - mapa separado porque el timing y el gatillo de reseteo no tienen nada que ver
+	 * entre sí. */
+	private static final Map<UUID, Integer> LAST_HEARTBEAT_BURST_TICKS_REMAINING = new HashMap<>();
+
+	/** Llamado desde item.AncientExtractSyringeItem#transform, justo después del primer burst -
+	 * agenda el segundo para LAST_HEARTBEAT_BURST_DELAY_TICKS ticks más tarde (ver
+	 * #tickLastHeartbeatBurst, resuelto dentro de #onPlayerTick). A propósito no se cancela si el
+	 * jugador se destransforma antes de que pasen los 66 ticks (ej. usando la Empty Syringe
+	 * segundos después de inyectarse) - es un caso borde raro, y un burst de tierra de más,
+	 * puramente cosmético, no rompe nada; cancelar ahí agregaría un segundo punto de limpieza
+	 * (EmptySyringeItem) sólo para un caso que en la práctica casi no pasa. */
+	public static void scheduleLastHeartbeatBurst(ServerPlayer player) {
+		LAST_HEARTBEAT_BURST_TICKS_REMAINING.put(player.getUUID(), LAST_HEARTBEAT_BURST_DELAY_TICKS);
+	}
+
+	/** Cuenta regresiva independiente de REPAIR_TICKS_REMAINING (mapa separado, mismo patrón de
+	 * UUID->Integer) - resuelta acá adentro en vez de un @SubscribeEvent propio para no agregar
+	 * un segundo listener de TickEvent.PlayerTickEvent redundante con el que ya existe. */
+	private static void tickLastHeartbeatBurst(ServerPlayer player) {
+		UUID id = player.getUUID();
+		Integer remaining = LAST_HEARTBEAT_BURST_TICKS_REMAINING.get(id);
+		if (remaining == null) {
+			return;
+		}
+		if (remaining > 1) {
+			LAST_HEARTBEAT_BURST_TICKS_REMAINING.put(id, remaining - 1);
+			return;
+		}
+
+		LAST_HEARTBEAT_BURST_TICKS_REMAINING.remove(id);
+		// Partícula vanilla, mismo criterio que el primer burst (BLOCK sobre Blocks.DIRT, no
+		// hace falta asset propio para esto).
+		if (player.level() instanceof ServerLevel serverLevel) {
+			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
+				player.getX(), player.getY() + 0.1D, player.getZ(),
+				LAST_HEARTBEAT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
+		}
+	}
+
 	@SubscribeEvent
 	public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
 		UUID id = event.getEntity().getUUID();
 		REPAIR_TICKS_REMAINING.remove(id);
 		LAST_SEEN_PENALTY.remove(id);
+		LAST_HEARTBEAT_BURST_TICKS_REMAINING.remove(id);
 	}
 
 	/** Pedido explícito del Mini-Patch: "un timer oculto que arranca cuando el jugador recibe
@@ -136,6 +198,11 @@ public class AncientTransformationEvents {
 		}
 
 		UUID id = player.getUUID();
+
+		// Independiente de todo lo de abajo (penaltyHearts puede cortar con un return temprano):
+		// el segundo burst de tierra no tiene nada que ver con la reparación de corazones rotos.
+		tickLastHeartbeatBurst(player);
+
 		int penaltyHearts = AncientTransformation.getMaxHealthPenaltyHearts(player);
 
 		if (penaltyHearts <= 0) {

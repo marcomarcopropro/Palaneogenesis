@@ -2,6 +2,7 @@ package com.palaneogenesis.item;
 
 import com.palaneogenesis.capability.HeartType;
 import com.palaneogenesis.client.HeartbeatFlashOverlay;
+import com.palaneogenesis.event.AncientTransformationEvents;
 import com.palaneogenesis.registry.ModItems;
 import com.palaneogenesis.registry.ModSounds;
 import com.palaneogenesis.util.HeartArray;
@@ -9,6 +10,7 @@ import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
@@ -181,6 +183,17 @@ public class AncientExtractSyringeItem extends Item {
 		// dueño - a propósito: "se transformó alguien cerca" es información que otros jugadores
 		// también deberían poder percibir, a diferencia del parpadeo rojo de pantalla, que sí es
 		// exclusivo de quien se transforma - ver el DistExecutor en #use()).
+		//
+		// FIX (feedback de esta sesión: "el audio suena, pero suena muy bajo, yo lo subiría un
+		// 100% más del volumen que tiene ahora"): el volume=1.0F de acá abajo se deja intacto a
+		// propósito - subirlo también HABÍA duplicado el aumento (jugaba contra el archivo YA
+		// reforzado). El fix real está en el asset (ancient_transformation.ogg), no acá: se
+		// midió la ganancia real con ffmpeg volumedetect antes de tocar nada (mean -21.4dB,
+		// pico -6.3dB) y se aplicó volume=2.0 con ffmpeg (+6dB, el doble de amplitud pedido) -
+		// el pico resultante quedó en -0.2dB, así que el 100% pedido entraba justo sin clipear.
+		// Si en el futuro hiciera falta MÁS que esto, es el archivo el que hay que resubir con
+		// más ganancia real, no este parámetro (a diferencia de subir el número de acá, que sólo
+		// simula más volumen alejando el rango de audición, sin hacer más fuerte la onda en sí).
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
 			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
 
@@ -195,6 +208,17 @@ public class AncientExtractSyringeItem extends Item {
 			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
 				player.getX(), player.getY() + 0.1D, player.getZ(),
 				DIRT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
+
+			// Stage 4, Paso 1 (pedido de esta sesión: "le agregaría un golpe así con partículas
+			// en la tierra cuando suena el último corazón, que ya se transforma, para mostrar el
+			// poder de la transformación"): el burst de arriba ya cubre el instante de usar la
+			// jeringa; este agenda un SEGUNDO burst, idéntico en forma, pero retrasado hasta el
+			// último latido de client.HeartbeatFlashOverlay (PULSE_TIMES_SECONDS[9] = 3.298s)
+			// en vez de sonar junto con el primero - ver
+			// event.AncientTransformationEvents#scheduleLastHeartbeatBurst para el timer.
+			if (player instanceof ServerPlayer serverPlayer) {
+				AncientTransformationEvents.scheduleLastHeartbeatBurst(serverPlayer);
+			}
 		}
 
 		// Le avisa a todos los que trackean a este jugador (no sólo a él mismo, a diferencia de

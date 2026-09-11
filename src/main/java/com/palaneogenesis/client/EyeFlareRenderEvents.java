@@ -44,9 +44,21 @@ import java.util.Map;
  * puntito; cuando mueve la cabeza rápido, el segmento se alarga brevemente ese único frame y
  * vuelve a colapsar apenas se frena. Ver PREVIOUS_EYE_POSITIONS.
  *
+ * FIX (feedback de esta sesión: "literalmente es un PNG pegado de lo que sería el efecto de
+ * aura y no el efecto de los ojos [...] debería verse un efecto tipo un blur, algo más lindo"):
+ * EYE_TEXTURE apuntaba directo a ancient_particle.png, el mismo sprite recortado y de borde duro
+ * que usa el aura orbital (ver client.AncientAuraParticle) - estirado por el quad del movimiento,
+ * eso se lee como una textura pegoteada, no como una fuente de luz propia. Ahora usa eye_glow.png,
+ * un gradiente radial dedicado (caída gaussiana de alfa, núcleo claro a borde transparente,
+ * generado en vez de recortado de un sprite) - derivado de la MISMA paleta violeta/índigo de
+ * ancient_particle.png (núcleo RGB(200,90,230), borde RGB(70,10,100), misma familia de tono que
+ * el más vivo verificado en ancient_particle.png, RGB(90,10,128), sólo con más luminancia en el
+ * centro para que lea como brillo) - respeta el pedido de "que se respete la gama de colores" sin
+ * volver a compartir archivo/geometría de sprite con el aura.
+ *
  * A propósito SIN tinte de color (vértices en blanco puro, 255/255/255): mismo criterio
- * documentado en client.AncientAuraParticle - ancient_particle.png ya es violeta/índigo oscuro
- * (verificado leyendo el archivo), no cian como tenía el prototipo de referencia del owner. Lo
+ * documentado en client.AncientAuraParticle - la textura ya viene coloreada en el propio PNG (ver
+ * FIX arriba), así que un tinte adicional en vértices sólo la alejaría de la paleta pedida. Lo
  * que SÍ cambia respecto al aura es que acá se fuerza full-bright (uv2 fijo, mismo truco que
  * BEAM_LIGHT en PlayerBeamRenderEvents/KaakTunRenderer) - un "eye flare" tiene que leerse como una
  * fuente de luz propia incluso de día, a diferencia de las motas ambiente del aura, que sí siguen
@@ -56,7 +68,7 @@ import java.util.Map;
 public final class EyeFlareRenderEvents {
 
 	private static final ResourceLocation EYE_TEXTURE =
-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/particle/ancient_particle.png");
+		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/particle/eye_glow.png");
 	private static final int FULL_BRIGHT = 0xF000F0;
 
 	/** Radio del brillo. Chico a propósito (ver AncientAuraParticle#quadSize, mismo criterio
