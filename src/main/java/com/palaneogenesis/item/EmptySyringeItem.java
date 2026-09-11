@@ -157,5 +157,13 @@ public class EmptySyringeItem extends Item {
 		}
 
 		AncientTransformation.set(player, false);
+
+		// Stage 4, Paso 1: apaga el aura orbital + eye flare para todos los que trackean a este
+		// jugador (ver util.AncientTransformation#broadcastEffects, mismo mecanismo que prende en
+		// AncientExtractSyringeItem#transform). El efecto propio de destransformación en sí
+		// ("daño al revertir", Stage 4 Paso 2) sigue sin implementarse - falta el asset visual,
+		// ver Sección 0.1 del roadmap - esto sólo corta el aura persistente para que no se quede
+		// dibujándose sobre un jugador que ya no está transformado.
+		AncientTransformation.broadcastEffects(player, false);
 	}
 }

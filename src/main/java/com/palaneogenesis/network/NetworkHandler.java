@@ -47,5 +47,10 @@ public final class NetworkHandler {
 		// event.PlayerAbilityEvents#broadcastLevitationCooldown / client.LevitationCooldownHudOverlay.
 		CHANNEL.registerMessage(id(), LevitationCooldownSyncPacket.class,
 			LevitationCooldownSyncPacket::encode, LevitationCooldownSyncPacket::decode, LevitationCooldownSyncPacket::handle);
+		// Nuevo (Stage 4, Paso 1 - aura + eye flare de la transformación): server -> TODOS los que
+		// trackean (a diferencia de AncientTransformationSyncPacket, que es dueño únicamente), ver
+		// util.AncientTransformation#broadcastEffects / client.TransformationEffectsClientState.
+		CHANNEL.registerMessage(id(), TransformationEffectsPacket.class,
+			TransformationEffectsPacket::encode, TransformationEffectsPacket::decode, TransformationEffectsPacket::handle);
 	}
 }

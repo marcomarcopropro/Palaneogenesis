@@ -2,6 +2,8 @@ package com.palaneogenesis.event;
 
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.capability.AncientTransformationProvider;
+import com.palaneogenesis.network.NetworkHandler;
+import com.palaneogenesis.network.TransformationEffectsPacket;
 import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,6 +16,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,6 +62,34 @@ public class AncientTransformationEvents {
 	public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
 		if (event.getEntity() instanceof ServerPlayer player) {
 			AncientTransformation.sync(player);
+			// Stage 4, Paso 1: mismo motivo que sync() arriba, pero para el aura/eye flare - un
+			// jugador que se desconecta transformado (el flag sobrevive a NBT) tiene que volver a
+			// verse a sí mismo (y que los demás lo vean) con el efecto activo apenas se reconecta,
+			// no recién la próxima vez que transforme/revierta.
+			AncientTransformation.broadcastEffects(player, AncientTransformation.isTransformed(player));
+		}
+	}
+
+	/** Stage 4, Paso 1: complemento de broadcastEffects() (que sólo avisa en el momento en que
+	 * alguien transforma/revierte, a quien ya lo esté trackeando en ESE momento). Un jugador que
+	 * entra en rango DESPUÉS - camina hacia un jugador ya transformado, o se reconecta y empieza a
+	 * trackear gente que ya estaba transformada - nunca recibió ese aviso, así que sin esto vería
+	 * a un jugador transformado sin aura ni eye flare hasta que esa persona vuelva a
+	 * transformarse/revertir. PlayerEvent.StartTracking dispara exactamente en ese momento (el
+	 * "target" empieza a ser visible/trackeado para "el jugador que llegó"), así que basta con
+	 * mandarle el estado actual sólo a ese jugador nuevo (PacketDistributor.PLAYER, no
+	 * TRACKING_ENTITY_AND_SELF - los demás trackers ya lo saben). */
+	@SubscribeEvent
+	public static void onStartTracking(PlayerEvent.StartTracking event) {
+		if (!(event.getEntity() instanceof ServerPlayer newTracker)) {
+			return;
+		}
+		if (!(event.getTarget() instanceof Player trackedPlayer)) {
+			return;
+		}
+		if (AncientTransformation.isTransformed(trackedPlayer)) {
+			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> newTracker),
+				new TransformationEffectsPacket(trackedPlayer.getId(), true));
 		}
 	}
 

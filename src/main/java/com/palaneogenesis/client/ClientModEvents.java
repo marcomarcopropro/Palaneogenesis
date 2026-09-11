@@ -3,11 +3,13 @@ package com.palaneogenesis.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.registry.ModEntityTypes;
+import com.palaneogenesis.registry.ModParticleTypes;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -36,6 +38,14 @@ public class ClientModEvents {
 		event.registerEntityRenderer(ModEntityTypes.KAAK_TUN.get(), KaakTunRenderer::new);
 	}
 
+	/** Stage 4, Paso 1: registra AncientAuraParticle.Provider, que además cachea el SpriteSet
+	 * resultante (ver ese constructor) para que client.AncientAuraSpawner pueda construir
+	 * partículas directo sin pasar por level.addParticle(). */
+	@SubscribeEvent
+	public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
+		event.registerSpriteSet(ModParticleTypes.ANCIENT_AURA.get(), AncientAuraParticle.Provider::new);
+	}
+
 	@SubscribeEvent
 	public static void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
 		// Cambio de arquitectura de corazones: BlueHeartHudOverlay + CraftedHeartsHudOverlay
@@ -53,6 +63,17 @@ public class ClientModEvents {
 		// (se ancla arriba de PLAYER_HEALTH sólo por orden de registro Forge, no por relación real -
 		// ver client.LevitationCooldownHudOverlay, que calcula su propia posición absoluta).
 		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "levitation_cooldown_hud", LevitationCooldownHudOverlay.HUD);
+
+		// Stage 4, Paso 1 (parpadeo rojo sincronizado a los latidos del audio de transformación):
+		// se ancla arriba de PLAYER_HEALTH, mismo criterio de "sólo orden de registro, sin
+		// relación funcional real" que los dos de arriba - a propósito NO se ancla a
+		// VanillaGuiOverlay.VIGNETTE pese a ser conceptualmente el más parecido (tinte de pantalla
+		// completa): Mojang sacó el shader de viñeta del juego (~1.17), así que ese overlay
+		// probablemente ni siquiera exista en este enum - no vale la pena el riesgo de una
+		// constante que puede no compilar quedándose con PLAYER_HEALTH, que ya está probado en
+		// uso dos líneas arriba (ver client.HeartbeatFlashOverlay, que calcula su propio
+		// color/alpha, sin depender de qué overlay vanilla tenga al lado).
+		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "heartbeat_flash", HeartbeatFlashOverlay.HUD);
 	}
 
 	@SubscribeEvent

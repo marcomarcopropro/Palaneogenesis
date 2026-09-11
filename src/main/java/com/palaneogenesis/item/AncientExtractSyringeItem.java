@@ -1,9 +1,15 @@
 package com.palaneogenesis.item;
 
 import com.palaneogenesis.capability.HeartType;
+import com.palaneogenesis.client.HeartbeatFlashOverlay;
 import com.palaneogenesis.registry.ModItems;
+import com.palaneogenesis.registry.ModSounds;
 import com.palaneogenesis.util.HeartArray;
 import com.palaneogenesis.util.AncientTransformation;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -13,6 +19,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 
 /**
  * Ancient Extract Syringe - dispara la transformación (doc de Fase 2, Sección 3.2).
@@ -59,6 +68,12 @@ public class AncientExtractSyringeItem extends Item {
 	/** Piso del engine para MAX_HEALTH (doc Sección 2): 0 literal no es alcanzable, 1.0 sí. */
 	private static final double TRANSFORMED_MAX_HEALTH = 1.0D;
 
+	/** Stage 4, Paso 1: cantidad de partículas del burst de tierra al transformarse - número
+	 * elegido a ojo para que se note como un "levantarse de golpe" sin llegar a ser una
+	 * polvareda densa (pedido explícito: "que no saturen... que se vea bien"), fácil de ajustar
+	 * si no es lo que se busca. */
+	private static final int DIRT_BURST_COUNT = 40;
+
 	public AncientExtractSyringeItem(Properties properties) {
 		super(properties);
 	}
@@ -75,6 +90,15 @@ public class AncientExtractSyringeItem extends Item {
 
 		if (!level.isClientSide) {
 			transform(player);
+		} else {
+			// Stage 4, Paso 1 ("quiero que en el tiempo de cada latido... la pantalla roja"):
+			// arranca el parpadeo sólo en el cliente que hizo el click (use() corre en ambos
+			// lados, pero cada cliente sólo ejecuta esta rama para SU PROPIO click - nunca para
+			// el de otro jugador, así que esto ya queda automáticamente limitado a quien se está
+			// transformando, sin chequeo extra). Vía DistExecutor, mismo motivo que
+			// network.AncientTransformationSyncPacket: este ítem se carga en ambos lados, no debe
+			// tocar client.HeartbeatFlashOverlay directo.
+			DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> HeartbeatFlashOverlay::scheduleForTransform);
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));
@@ -151,5 +175,32 @@ public class AncientExtractSyringeItem extends Item {
 		}
 
 		AncientTransformation.set(player, true);
+
+		// Stage 4, Paso 1: sonido de transformación, audible para el jugador y cualquiera cerca
+		// (Level#playSound con excepto=null transmite a todos los clientes en rango, no sólo al
+		// dueño - a propósito: "se transformó alguien cerca" es información que otros jugadores
+		// también deberían poder percibir, a diferencia del parpadeo rojo de pantalla, que sí es
+		// exclusivo de quien se transforma - ver el DistExecutor en #use()).
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+
+		if (player.level() instanceof ServerLevel serverLevel) {
+			// "también podés hacer que a la hora de transformarse, por ejemplo, alrededor se
+			// levanten partículas de tierra y después desaparezcan y no aparezcan más" -
+			// confirmado explícitamente (una vez por transformación individual, no una vez por
+			// partida entera): un solo burst acá, en el único lugar donde transform() corre por
+			// cada uso real de la jeringa - nunca se repite mientras la transformación sigue
+			// activa. Partícula vanilla (ParticleTypes.BLOCK sobre Blocks.DIRT), no hace falta
+			// asset propio para esto (a diferencia del aura, que sí usa ancient_particle.png).
+			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
+				player.getX(), player.getY() + 0.1D, player.getZ(),
+				DIRT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
+		}
+
+		// Le avisa a todos los que trackean a este jugador (no sólo a él mismo, a diferencia de
+		// AncientTransformation.set() de arriba, que ya sincronizó el flag sólo al dueño vía
+		// sync()) que arranquen a mostrar el aura orbital + eye flare - ver
+		// util.AncientTransformation#broadcastEffects y client.TransformationEffectsClientState.
+		AncientTransformation.broadcastEffects(player, true);
 	}
 }

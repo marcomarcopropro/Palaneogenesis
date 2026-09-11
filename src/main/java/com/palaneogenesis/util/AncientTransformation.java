@@ -5,6 +5,7 @@ import com.palaneogenesis.capability.IAncientTransformationData;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.network.AncientTransformationSyncPacket;
+import com.palaneogenesis.network.TransformationEffectsPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
@@ -72,6 +73,24 @@ public final class AncientTransformation {
 			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
 				new AncientTransformationSyncPacket(data.isTransformed(), data.getMaxHealthPenaltyHearts()))
 		);
+	}
+
+	/** Stage 4, Paso 1: a diferencia de sync() (dueño únicamente), esto se manda a TODOS los
+	 * clientes que trackean a {@code player} (incluido el propio dueño, de ahí
+	 * TRACKING_ENTITY_AND_SELF - mismo distributor que ya usa
+	 * event.PlayerAbilityEvents#broadcastBeamState para el rayo) porque el aura orbital y el eye
+	 * flare (client.AncientAuraSpawner / client.EyeFlareRenderEvents) son efectos que tienen que
+	 * verse desde afuera, no sólo sentirse del lado del propio jugador transformado. Ver
+	 * client.TransformationEffectsClientState para el porqué de que esto viva separado de
+	 * sync()/AncientTransformationSyncPacket en vez de ampliar ese paquete existente.
+	 *
+	 * No-op si player no es un ServerPlayer real, mismo motivo que sync(). */
+	public static void broadcastEffects(Player player, boolean active) {
+		if (!(player instanceof ServerPlayer serverPlayer)) {
+			return;
+		}
+		NetworkHandler.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
+			new TransformationEffectsPacket(player.getId(), active));
 	}
 
 	// --- Fase 3: penalización por abuso de la mecánica ---

@@ -5,7 +5,9 @@ import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.registry.ModCreativeTabs;
 import com.palaneogenesis.registry.ModEntityTypes;
 import com.palaneogenesis.registry.ModItems;
+import com.palaneogenesis.registry.ModParticleTypes;
 import com.palaneogenesis.registry.ModRecipeSerializers;
+import com.palaneogenesis.registry.ModSounds;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -21,6 +23,10 @@ public class Palaneogenesis {
         ModItems.register(modEventBus);
         ModRecipeSerializers.register(modEventBus);
         ModEntityTypes.register(modEventBus);
+        // Stage 4, Paso 1: primer sonido y primera partícula propios del mod (ver ambas clases -
+        // hasta este cambio no existía ninguno de los dos registros).
+        ModSounds.register(modEventBus);
+        ModParticleTypes.register(modEventBus);
         // Pestaña de creativo dedicada (ver registry.ModCreativeTabs) - reemplaza el
         // onBuildCreativeModeTabContents que tenía ModSetup, que mezclaba los items del mod en
         // CreativeModeTabs.INGREDIENTS/SPAWN_EGGS.
