@@ -16,6 +16,11 @@
         {
             "type": "patchouli:text",
             "text": "book.palaneogenesis.entry.items.ancient_extract_syringe.page3"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "book.palaneogenesis.entry.items.ancient_extract_syringe.title_compat",
+            "text": "book.palaneogenesis.entry.items.ancient_extract_syringe.page4"
         }
     ]
 }
