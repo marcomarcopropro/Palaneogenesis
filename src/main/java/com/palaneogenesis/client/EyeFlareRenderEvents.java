@@ -21,8 +21,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Vector3f;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Stage 4, Paso 1 - "eye flare" pedido por el owner: "una luz de esas que persiga en el
@@ -91,6 +94,32 @@ public final class EyeFlareRenderEvents {
 	 * "entityId:R"), un solo Vec3 por ojo - no una cola/lista, a propósito. */
 	private static final Map<String, Vec3> PREVIOUS_EYE_POSITIONS = new HashMap<>();
 
+	/**
+	 * FIX (bug reportado: "los ojos tienen el efecto correcto pero están mal implementados").
+	 * A diferencia de client.AncientAuraSpawner y client.PlayerBeamRenderEvents - que no guardan
+	 * NADA propio entre frames, leen la Entity real (o BeamClientState) de cero cada vez - esta
+	 * clase sí necesita memoria entre frames (PREVIOUS_EYE_POSITIONS de arriba, para el
+	 * "segmento de un solo frame" documentado en el javadoc de la clase). Esa memoria nunca se
+	 * limpiaba cuando una entidad dejaba de estar activa
+	 * (TransformationEffectsClientState#update(id, false) - p. ej. al destransformarse con la
+	 * Empty Syringe): las entradas "id:L"/"id:R" quedaban en el Map para siempre. Dos
+	 * consecuencias reales: (1) fuga de memoria - cada entidad que se transforma alguna vez
+	 * queda ocupando el Map de por vida de la sesión aunque nunca se vuelva a transformar; (2)
+	 * glitch visual real la PRÓXIMA vez que esa MISMA entidad se reactiva (se vuelve a
+	 * transformar, o simplemente reentra en rango de tracking): #renderSingleEye toma esa
+	 * posición vieja y obsoleta como previousPos, así que el primer frame dibuja un streak
+	 * larguísimo desde donde sea que estaba la última vez hasta la posición nueva, en vez del
+	 * puntito quieto que se supone que se ve al reactivarse sin moverse.
+	 *
+	 * La detección de la transición activo→inactivo se hace acá, comparando cuadro a cuadro el
+	 * set de IDs activos contra una copia del frame anterior (ver #pruneDeactivatedEntries) - a
+	 * propósito NO se engancha directo a TransformationEffectsClientState#update(), para no
+	 * acoplar esa clase genérica (que no sabe ni le importa qué consumidor guarda qué caché
+	 * propia - hoy sólo esta, mañana podría ser cualquier otro efecto) a los detalles internos de
+	 * este efecto en particular.
+	 */
+	private static Set<Integer> lastActiveIds = Collections.emptySet();
+
 	private EyeFlareRenderEvents() {
 	}
 
@@ -99,7 +128,15 @@ public final class EyeFlareRenderEvents {
 		if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
 			return;
 		}
-		if (TransformationEffectsClientState.activeEntityIds().isEmpty()) {
+
+		// Ver el javadoc de LAST_ACTIVE_IDS: esto tiene que correr ANTES del early-return de
+		// "no hay nadie activo" de acá abajo, porque el caso más importante a detectar es
+		// justamente cuando el set activo cae a vacío (la última entidad se destransformó) - si
+		// el chequeo de vacío cortara primero, ese frame nunca llegaría a limpiar sus entradas.
+		Set<Integer> currentActiveIds = TransformationEffectsClientState.activeEntityIds();
+		pruneDeactivatedEntries(currentActiveIds);
+
+		if (currentActiveIds.isEmpty()) {
 			return;
 		}
 
@@ -130,7 +167,7 @@ public final class EyeFlareRenderEvents {
 		poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 		PoseStack.Pose pose = poseStack.last();
 
-		for (Integer entityId : TransformationEffectsClientState.activeEntityIds()) {
+		for (Integer entityId : currentActiveIds) {
 			Entity entity = level.getEntity(entityId);
 			if (!(entity instanceof LivingEntity living) || !living.isAlive()) {
 				continue;
@@ -145,6 +182,21 @@ public final class EyeFlareRenderEvents {
 
 		poseStack.popPose();
 		buffer.endBatch(renderType);
+	}
+
+	/** Ver el javadoc de LAST_ACTIVE_IDS. Cualquier ID que estaba en el set activo el frame
+	 * anterior y ya no está en el actual acaba de desactivarse (destransformación, muerte,
+	 * salida de rango de tracking) - se borran sus dos entradas de PREVIOUS_EYE_POSITIONS para
+	 * que, si esa misma entidad se reactiva más adelante, arranque de cero (previousPos ==
+	 * currentPos en su primer frame, sin streak) en vez de arrastrar una posición obsoleta. */
+	private static void pruneDeactivatedEntries(Set<Integer> currentActiveIds) {
+		for (Integer id : lastActiveIds) {
+			if (!currentActiveIds.contains(id)) {
+				PREVIOUS_EYE_POSITIONS.remove(id + ":L");
+				PREVIOUS_EYE_POSITIONS.remove(id + ":R");
+			}
+		}
+		lastActiveIds = currentActiveIds.isEmpty() ? Collections.emptySet() : new HashSet<>(currentActiveIds);
 	}
 
 	private static void renderEyes(LivingEntity living, float partialTick, Vec3 camRight, Vec3 camForward,

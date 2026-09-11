@@ -66,6 +66,30 @@ public final class HeartbeatFlashOverlay {
 		startTimeMs = System.currentTimeMillis();
 	}
 
+	/**
+	 * FIX (bug reportado: "la animación de transformación al usar la jeringa vacía no se corta,
+	 * esto puede generar conflictos con la animación de destransformación"). #HUD se apaga solo
+	 * por TOTAL_DURATION_MS (4s de reloj de pared) sin importar si el jugador sigue transformado
+	 * o no - eso era una red de seguridad para el caso "el juego se cierra a mitad del efecto"
+	 * (ver el javadoc de TOTAL_DURATION_MS), nunca para el caso normal de revertir a tiempo. Como
+	 * item.EmptySyringeItem#use ya es de un solo click instantáneo (mismo cambio que
+	 * item.AncientExtractSyringeItem, sin getUseDuration), nada impedía destransformarse en medio
+	 * de esos 4 segundos - y como startTimeMs no se tocaba en el revert, la secuencia de latidos
+	 * seguía dibujándose sobre la pantalla ya destransformada hasta agotar su propio timer, en vez
+	 * de cortarse en el momento del revert() real. Esto todavía no choca visualmente con nada (el
+	 * efecto propio de destransformación de Stage 4 Paso 2 - "daño al revertir" - sigue sin
+	 * implementarse, ver el comentario en item.EmptySyringeItem#revert), pero sí deja la pantalla
+	 * parpadeando en rojo sin motivo tras revertir, y el día que ese efecto de destransformación
+	 * se agregue, correría al mismo tiempo que estos latidos sobrantes sin que nada los avise.
+	 *
+	 * Se llama desde item.EmptySyringeItem#use, mismo patrón exacto (DistExecutor +
+	 * Dist.CLIENT) que #scheduleForTransform ya usa desde AncientExtractSyringeItem#use - cada
+	 * cliente corta esto sólo para SU PROPIO click de revert, nunca para el de otro jugador.
+	 */
+	public static void cancel() {
+		startTimeMs = -1L;
+	}
+
 	public static final IGuiOverlay HUD = (gui, guiGraphics, partialTick, screenWidth, screenHeight) -> {
 		if (startTimeMs < 0L) {
 			return;

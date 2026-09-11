@@ -184,16 +184,33 @@ public class AncientExtractSyringeItem extends Item {
 		// también deberían poder percibir, a diferencia del parpadeo rojo de pantalla, que sí es
 		// exclusivo de quien se transforma - ver el DistExecutor en #use()).
 		//
-		// FIX (feedback de esta sesión: "el audio suena, pero suena muy bajo, yo lo subiría un
-		// 100% más del volumen que tiene ahora"): el volume=1.0F de acá abajo se deja intacto a
-		// propósito - subirlo también HABÍA duplicado el aumento (jugaba contra el archivo YA
-		// reforzado). El fix real está en el asset (ancient_transformation.ogg), no acá: se
-		// midió la ganancia real con ffmpeg volumedetect antes de tocar nada (mean -21.4dB,
-		// pico -6.3dB) y se aplicó volume=2.0 con ffmpeg (+6dB, el doble de amplitud pedido) -
-		// el pico resultante quedó en -0.2dB, así que el 100% pedido entraba justo sin clipear.
-		// Si en el futuro hiciera falta MÁS que esto, es el archivo el que hay que resubir con
-		// más ganancia real, no este parámetro (a diferencia de subir el número de acá, que sólo
-		// simula más volumen alejando el rango de audición, sin hacer más fuerte la onda en sí).
+		// FIX previo (sesión anterior, "el audio suena muy bajo"): había subido la ganancia
+		// LINEAL de todo el archivo hasta que el pico más fuerte tocara -0.2dB. No alcanzó (bug
+		// reportado de nuevo: "el audio sigue sin escucharse") porque medir ganancia lineal sobre
+		// el archivo entero esconde el problema real. ancient_transformation.ogg no es un sonido
+		// continuo: son los 10 golpes individuales de PULSE_TIMES_SECONDS (ver
+		// client.HeartbeatFlashOverlay), cada uno de ~60-100ms separado por silencio real
+		// (confirmado con ffmpeg astats, frame a frame). Medido pico real POR golpe en el archivo
+		// original: una rampa perfectamente creciente de -8.29dB (golpe 1) a -0.23dB (golpe 10) -
+		// 8dB de diferencia entre el primer latido y el último. El fix anterior sólo podía subir
+		// la ganancia hasta donde el ÚLTIMO golpe (ya casi en el techo) lo permitiera sin clipear,
+		// así que los primeros ~6 de los 10 golpes seguían sonando varios dB más bajo que el
+		// final - de ahí que en juego el efecto se sintiera como "no se escucha" a pesar de que
+		// técnicamente el archivo entero ya no era silencioso.
+		//
+		// FIX real (este asset): en vez de una ganancia lineal fija, se aplicó un compresor de
+		// rango dinámico (ffmpeg acompressor, threshold=-24dB, ratio=8:1, attack=5ms,
+		// release=100ms) + limitador de techo real (alimiter, -1.0dBTP) sobre el archivo
+		// ORIGINAL (no sobre la versión ya ganeada de la sesión anterior, para no encadenar dos
+		// fixes con supuestos distintos). El compresor empareja los 10 golpes entre sí (todos por
+		// encima del threshold quedan comprimidos hacia él, así que el golpe más flojo sube
+		// proporcionalmente más que el más fuerte) y el limitador después asegura que ni el golpe
+		// más fuerte ya comprimido pase de -1.0dBTP. Resultado verificado (mismo método de
+		// medición por golpe): los 10 picos quedan entre -2.78dB y -0.95dB, menos de 2dB de
+		// diferencia entre el más flojo y el más fuerte, sin clipear. volume=1.0F acá abajo sigue
+		// intacto a propósito, mismo motivo que la sesión anterior: el fix vive en el asset, no
+		// en este parámetro (subir este número sólo extiende el rango de audición, no hace más
+		// fuerte la onda ni empareja los golpes entre sí).
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
 			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
 

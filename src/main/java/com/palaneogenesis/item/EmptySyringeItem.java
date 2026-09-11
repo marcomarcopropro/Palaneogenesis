@@ -1,5 +1,6 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.client.HeartbeatFlashOverlay;
 import com.palaneogenesis.registry.ModItems;
 import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.stats.Stats;
@@ -11,6 +12,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 
 /**
  * Empty Syringe - doble rol (doc de Fase 2, Sección 3.5). Sigue siendo el ingrediente de
@@ -66,6 +69,14 @@ public class EmptySyringeItem extends Item {
 
 		if (!level.isClientSide) {
 			revert(player);
+		} else {
+			// FIX (bug reportado: "la animación de transformación no se corta al usar la jeringa
+			// vacía"). Mismo patrón exacto que el DistExecutor de
+			// AncientExtractSyringeItem#use al transformarse: use() corre en ambos lados, así que
+			// esta rama sólo se ejecuta en el cliente de quien hizo ESTE click de revert (nunca en
+			// el de otro jugador mirando) - ver el javadoc completo del fix en
+			// client.HeartbeatFlashOverlay#cancel.
+			DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> HeartbeatFlashOverlay::cancel);
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));
