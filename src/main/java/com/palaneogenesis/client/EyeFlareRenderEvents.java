@@ -88,7 +88,18 @@ public final class EyeFlareRenderEvents {
 	 * "que no se vea incómodo") - las proporciones de TAMANO_OJO=0.25 del prototipo de referencia
 	 * eran relativas a una escena de Three.js con su propia escala arbitraria, no a bloques reales
 	 * de Minecraft, así que no se copia el número tal cual. */
-	private static final float HALF_WIDTH = 0.045F;
+	/** FIX (bug reportado con video + zoom cuadro a cuadro: con transformación activa y aura
+	 * visible, los ojos no mostraban NINGÚN brillo perceptible). Se investigó la advertencia del
+	 * log "Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2"
+	 * como posible causa y se descartó: es un warning de Mojang conocido y documentado
+	 * (MC-263498 / MC-249414), reproducible incluso en vanilla sin mods, inofensivo para el
+	 * render. La causa real está acá: HALF_WIDTH=0.045 (quad de ~9cm) combinado con el alfa ya
+	 * reducido al 51% en el fix anterior (pedido en su momento porque se veía "muy sólido") deja
+	 * el efecto por debajo del umbral perceptible a distancia de juego normal, sobre todo
+	 * comprimido en una grabación. Se sube a 0.08 (~18cm, todavía chico y sin tocar la forma del
+	 * gradiente) y el alfa de eye_glow.png se reescala x1.4 (núcleo 131 -> 183) para volver a
+	 * leerse como brillo sin volver al 252 original ("muy sólido" que motivó el fix anterior). */
+	private static final float HALF_WIDTH = 0.08F;
 
 	/** Separación horizontal de cada ojo respecto al centro de la cara. */
 	private static final double EYE_X_OFFSET = 0.09D;
