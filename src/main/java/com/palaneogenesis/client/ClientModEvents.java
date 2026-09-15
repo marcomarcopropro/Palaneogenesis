@@ -5,6 +5,7 @@ import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.registry.ModEntityTypes;
 import com.palaneogenesis.registry.ModParticleTypes;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
@@ -38,12 +39,31 @@ public class ClientModEvents {
 		event.registerEntityRenderer(ModEntityTypes.KAAK_TUN.get(), KaakTunRenderer::new);
 	}
 
-	/** Stage 4, Paso 1: registra AncientAuraParticle.Provider, que además cachea el SpriteSet
-	 * resultante (ver ese constructor) para que client.AncientAuraSpawner pueda construir
-	 * partículas directo sin pasar por level.addParticle(). */
+	/** Stage 4, Paso 1 (migración de esta sesión, reemplaza a la EyeFlareRenderEvents vieja):
+	 * cuelga client.EyeGlowLayer de los DOS skins de jugador vainilla ("default"/ancho normal y
+	 * "slim"/Alex de brazos finos) - a diferencia de KaakTunRenderer arriba (un solo renderer para
+	 * un mob custom), el jugador tiene dos PlayerRenderer separados según el skin elegido en la
+	 * cuenta, y un RenderLayer agregado a uno solo no aparecería en el otro. event.getSkins()
+	 * itera ambos nombres en vez de hardcodear "default"/"slim" para no romper si Mojang agrega
+	 * un tercer skin base más adelante. */
+	@SubscribeEvent
+	public static void addLayers(EntityRenderersEvent.AddLayers event) {
+		for (String skinName : event.getSkins()) {
+			PlayerRenderer renderer = event.getSkin(skinName);
+			if (renderer != null) {
+				renderer.addLayer(new EyeGlowLayer(renderer));
+			}
+		}
+	}
+
+	/** Stage 4, Paso 1: registra AncientAuraParticle.Provider y EyePowerParticle.Provider, que
+	 * además cachean el SpriteSet resultante (ver esos constructores) para que
+	 * client.AncientAuraSpawner/client.EyePowerSpawner puedan construir partículas directo sin
+	 * pasar por level.addParticle(). */
 	@SubscribeEvent
 	public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
 		event.registerSpriteSet(ModParticleTypes.ANCIENT_AURA.get(), AncientAuraParticle.Provider::new);
+		event.registerSpriteSet(ModParticleTypes.EYE_POWER.get(), EyePowerParticle.Provider::new);
 	}
 
 	@SubscribeEvent

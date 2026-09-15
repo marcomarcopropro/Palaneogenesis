@@ -6,7 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Stage 4, Paso 1: caché cliente de "qué entidades cercanas están mostrando ahora mismo los
- * efectos visuales de la transformación" (aura orbital + eye flare), mantenida al día por
+ * efectos visuales de la transformación" (aura orbital + brillo de ojos, este último dividido en
+ * ancla fija + estela de partículas - ver client.EyeGlowLayer), mantenida al día por
  * network.TransformationEffectsPacket - mismo rol que client.BeamClientState para el rayo, mismo
  * motivo de existir: capability.IAncientTransformationData se sincroniza server -> dueño
  * únicamente (ver network.AncientTransformationSyncPacket, "Server -> dueño únicamente"), así que
@@ -18,8 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Guarda sólo IDs de entidad (Set, no Map) porque a diferencia del rayo no hay ningún dato extra
  * que sincronizar por entrada - "está mostrando efectos sí/no" es todo lo que
- * client.AncientAuraSpawner y client.EyeFlareRenderEvents necesitan; la posición/rotación en sí ya
- * la tienen gratis leyendo la Entity real del ClientLevel cada frame.
+ * client.AncientAuraSpawner, client.EyeGlowLayer y client.EyePowerSpawner necesitan; la
+ * posición/rotación en sí ya la tienen gratis leyendo la Entity real del ClientLevel cada frame (o,
+ * en el caso de EyeGlowLayer, directo de la PoseStack del propio modelo que ya se está dibujando).
  */
 public final class TransformationEffectsClientState {
 

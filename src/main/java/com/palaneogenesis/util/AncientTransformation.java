@@ -78,9 +78,10 @@ public final class AncientTransformation {
 	/** Stage 4, Paso 1: a diferencia de sync() (dueño únicamente), esto se manda a TODOS los
 	 * clientes que trackean a {@code player} (incluido el propio dueño, de ahí
 	 * TRACKING_ENTITY_AND_SELF - mismo distributor que ya usa
-	 * event.PlayerAbilityEvents#broadcastBeamState para el rayo) porque el aura orbital y el eye
-	 * flare (client.AncientAuraSpawner / client.EyeFlareRenderEvents) son efectos que tienen que
-	 * verse desde afuera, no sólo sentirse del lado del propio jugador transformado. Ver
+	 * event.PlayerAbilityEvents#broadcastBeamState para el rayo) porque el aura orbital y el brillo
+	 * de ojos (client.AncientAuraSpawner / client.EyeGlowLayer / client.EyePowerSpawner) son
+	 * efectos que tienen que verse desde afuera, no sólo sentirse del lado del propio jugador
+	 * transformado. Ver
 	 * client.TransformationEffectsClientState para el porqué de que esto viva separado de
 	 * sync()/AncientTransformationSyncPacket en vez de ampliar ese paquete existente.
 	 *
