@@ -1,0 +1,228 @@
+diff --git a/src/main/java/com/palaneogenesis/client/EyeFlareRenderEvents.java b/src/main/java/com/palaneogenesis/client/EyeFlareRenderEvents.java
+index b5ac206..e47f622 100644
+--- a/src/main/java/com/palaneogenesis/client/EyeFlareRenderEvents.java
++++ b/src/main/java/com/palaneogenesis/client/EyeFlareRenderEvents.java
+@@ -66,6 +66,16 @@ import java.util.Set;
+  * BEAM_LIGHT en PlayerBeamRenderEvents/KaakTunRenderer) - un "eye flare" tiene que leerse como una
+  * fuente de luz propia incluso de día, a diferencia de las motas ambiente del aura, que sí siguen
+  * la luz del mundo (ver AncientAuraParticle#getRenderType, sin override de getLightColor).
++ *
++ * FIX (bug reportado con imagen de referencia: "no es tan transparente, no se ve con la
++ * presencia" - comparado contra una imagen de un brillo bien suave/translúcido en los ojos):
++ * eye_glow.png medía alfa=252/255 en el núcleo (prácticamente opaco) con una meseta plana antes
++ * de empezar la caída gaussiana - de ahí que en el video se viera como un puntito sólido pegado
++ * encima de la cara en vez de un brillo que deja pasar algo del fondo. Se re-generó la misma
++ * textura (mismo tamaño 32x32, misma paleta violeta/índigo, MISMA forma de caída gaussiana ya
++ * validada - "el efecto parece que es correcto", no se tocó la forma) escalando el canal alfa
++ * completo por 0.52 (núcleo 252 -> 131, ~51% de opacidad en el punto más fuerte, resto de la
++ * curva escalado proporcionalmente para no romper el gradiente ya aprobado).
+  */
+ @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
+ public final class EyeFlareRenderEvents {
+@@ -86,9 +96,34 @@ public final class EyeFlareRenderEvents {
+ 	 * de la cabeza (mismo motivo que MOUTH_FORWARD_OFFSET en PlayerBeamRenderEvents, valor más
+ 	 * chico porque los ojos están más al centro de la cabeza que la boca). */
+ 	private static final double EYE_FORWARD_OFFSET = 0.15D;
+-	/** Leve ajuste hacia abajo respecto a getEyePosition() (que vanilla define un poco por encima
+-	 * de la altura real de los ojos en el modelo). */
+-	private static final double EYE_DOWN_OFFSET = 0.05D;
++
++	/** FIX (bug reportado con video: "la posición de los ojos es incorrecta" - confirmado
++	 * extrayendo frames del video con ffmpeg: en encuadre normal, el brillo aparece claramente
++	 * por DEBAJO de los ojos reales del skin, a la altura de la boca/mentón, no de los ojos).
++	 * Dos causas encontradas en este método, ambas corregidas:
++	 *
++	 * (1) EYE_DOWN_OFFSET (antes 0.05D, restado de getEyePosition()) partía de un supuesto nunca
++	 * verificado contra una captura real ("vanilla define la altura un poco por encima de la
++	 * real") - el video de esta sesión lo contradice directamente: el brillo ya aparecía abajo,
++	 * así que restarle encima ese offset sólo empeoraba el desvío. Se saca por completo: se usa
++	 * getEyePosition() tal cual, sin ajuste vertical fijo.
++	 *
++	 * (2) forwardOffset (ver #renderEyes) se calculaba escalando el VIEW VECTOR COMPLETO
++	 * (look.scale(EYE_FORWARD_OFFSET)), que incluye el pitch (mirar arriba/abajo) - a diferencia
++	 * de `right` (look.cross(eje Y)), que por ser un producto cruz con el eje vertical queda
++	 * automáticamente horizontal sin importar el pitch, forwardOffset SÍ heredaba la componente
++	 * vertical del pitch: con la cabeza apuntando algo hacia abajo (como en buena parte del
++	 * video), ese offset "hacia adelante" empujaba el brillo hacia ABAJO además de hacia
++	 * adelante, arrastrándolo desde la altura de ojos hacia la de la boca. Ahora forwardOffset
++	 * se calcula proyectando `look` al plano horizontal antes de escalar (mismo criterio que ya
++	 * usa `right`): la separación ojo-cara sigue el yaw (hacia dónde mira en el plano horizontal)
++	 * sin que el pitch la desvíe verticalmente - anatómicamente, los ojos están a una altura fija
++	 * respecto a la cabeza sin importar si la cabeza mira arriba o abajo.
++	 *
++	 * No se pudo confirmar en vivo contra el juego corriendo (sólo contra el video ya grabado) -
++	 * avisar si tras probar esto en el juego todavía queda desalineado, para ajustar de nuevo con
++	 * un video fresco en vez de volver a suponer un número. */
++	private static final double EYE_DOWN_OFFSET = 0.0D;
+ 
+ 	/** Ver el javadoc de la clase: última posición conocida de cada ojo (claves "entityId:L" /
+ 	 * "entityId:R"), un solo Vec3 por ojo - no una cola/lista, a propósito. */
+@@ -211,7 +246,14 @@ public final class EyeFlareRenderEvents {
+ 		} else {
+ 			right = right.normalize();
+ 		}
+-		Vec3 forwardOffset = look.scale(EYE_FORWARD_OFFSET);
++
++		// Ver el FIX de EYE_DOWN_OFFSET más arriba: se usa la proyección HORIZONTAL de `look`
++		// (mismo criterio que ya aplicaba `right`, que por ser cross con el eje Y ya era
++		// horizontal) en vez del view vector completo, para que el pitch (mirar arriba/abajo) no
++		// arrastre el brillo verticalmente - sólo el yaw decide hacia dónde apunta este offset.
++		Vec3 lookHorizontal = new Vec3(look.x, 0.0D, look.z);
++		Vec3 forwardDir = lookHorizontal.lengthSqr() > 1.0E-6D ? lookHorizontal.normalize() : camForward;
++		Vec3 forwardOffset = forwardDir.scale(EYE_FORWARD_OFFSET);
+ 
+ 		Vec3 leftEye = eyeCenter.subtract(right.scale(EYE_X_OFFSET)).add(forwardOffset);
+ 		Vec3 rightEye = eyeCenter.add(right.scale(EYE_X_OFFSET)).add(forwardOffset);
+diff --git a/src/main/java/com/palaneogenesis/event/AncientTransformationEvents.java b/src/main/java/com/palaneogenesis/event/AncientTransformationEvents.java
+index 0c07892..0d6c911 100644
+--- a/src/main/java/com/palaneogenesis/event/AncientTransformationEvents.java
++++ b/src/main/java/com/palaneogenesis/event/AncientTransformationEvents.java
+@@ -133,8 +133,13 @@ public class AncientTransformationEvents {
+ 
+ 	/** Misma cantidad/criterio visual que AncientExtractSyringeItem#DIRT_BURST_COUNT (no se
+ 	 * reusa esa constante directamente porque es privada de esa clase, y a propósito: los dos
+-	 * bursts deberían poder ajustarse por separado si algún día se pide que se vean distintos). */
+-	private static final int LAST_HEARTBEAT_BURST_COUNT = 40;
++	 * bursts deberían poder ajustarse por separado si algún día se pide que se vean distintos).
++	 *
++	 * FIX (mismo pedido de esta sesión que en AncientExtractSyringeItem#DIRT_BURST_COUNT - "que
++	 * se vea mas poderoso"): mismo ajuste en paralelo, de 40 a 70, para que este segundo burst
++	 * (al último latido) siga viéndose parejo con el primero en vez de quedar el flojo de los
++	 * dos por no haberse actualizado. */
++	private static final int LAST_HEARTBEAT_BURST_COUNT = 70;
+ 
+ 	/** Ticks restantes hasta el segundo burst, por jugador. Mismo criterio que
+ 	 * REPAIR_TICKS_REMAINING de más abajo (estado transitorio en memoria, no necesita sobrevivir
+@@ -173,7 +178,7 @@ public class AncientTransformationEvents {
+ 		if (player.level() instanceof ServerLevel serverLevel) {
+ 			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
+ 				player.getX(), player.getY() + 0.1D, player.getZ(),
+-				LAST_HEARTBEAT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
++				LAST_HEARTBEAT_BURST_COUNT, 0.45D, 0.22D, 0.45D, 0.07D);
+ 		}
+ 	}
+ 
+diff --git a/src/main/java/com/palaneogenesis/item/AncientExtractSyringeItem.java b/src/main/java/com/palaneogenesis/item/AncientExtractSyringeItem.java
+index 1141a92..5af38be 100644
+--- a/src/main/java/com/palaneogenesis/item/AncientExtractSyringeItem.java
++++ b/src/main/java/com/palaneogenesis/item/AncientExtractSyringeItem.java
+@@ -73,8 +73,21 @@ public class AncientExtractSyringeItem extends Item {
+ 	/** Stage 4, Paso 1: cantidad de partículas del burst de tierra al transformarse - número
+ 	 * elegido a ojo para que se note como un "levantarse de golpe" sin llegar a ser una
+ 	 * polvareda densa (pedido explícito: "que no saturen... que se vea bien"), fácil de ajustar
+-	 * si no es lo que se busca. */
+-	private static final int DIRT_BURST_COUNT = 40;
++	 * si no es lo que se busca.
++	 *
++	 * FIX (feedback de esta sesión: "el efecto final de la tierra alrededor funciona, pero
++	 * quiero que se vea mas poderoso"): de 40 a 70 partículas (+75%, más denso sin llegar a
++	 * saturar como pedía el criterio original), y en el sendParticles de más abajo el spread
++	 * horizontal sube de 0.3 a 0.45 y la velocidad de 0.03 a 0.07 (más del doble) - un burst
++	 * "poderoso" necesita sobre todo que las partículas salgan disparadas con más fuerza y más
++	 * lejos, no sólo que haya más cantidad amontonada en el mismo radio chico de antes. El spread
++	 * vertical sube proporcionalmente menos (0.15 a 0.22) para que siga leyéndose como una
++	 * explosión hacia los costados desde el piso, no como una columna hacia arriba.
++	 *
++	 * Mismo ajuste aplicado en paralelo a event.AncientTransformationEvents#LAST_HEARTBEAT_BURST_COUNT
++	 * (el segundo burst, al último latido) para que los dos sigan viéndose parejos entre sí, como
++	 * ya venían. */
++	private static final int DIRT_BURST_COUNT = 70;
+ 
+ 	public AncientExtractSyringeItem(Properties properties) {
+ 		super(properties);
+@@ -207,12 +220,25 @@ public class AncientExtractSyringeItem extends Item {
+ 		// proporcionalmente más que el más fuerte) y el limitador después asegura que ni el golpe
+ 		// más fuerte ya comprimido pase de -1.0dBTP. Resultado verificado (mismo método de
+ 		// medición por golpe): los 10 picos quedan entre -2.78dB y -0.95dB, menos de 2dB de
+-		// diferencia entre el más flojo y el más fuerte, sin clipear. volume=1.0F acá abajo sigue
+-		// intacto a propósito, mismo motivo que la sesión anterior: el fix vive en el asset, no
+-		// en este parámetro (subir este número sólo extiende el rango de audición, no hace más
+-		// fuerte la onda ni empareja los golpes entre sí).
++		// diferencia entre el más flojo y el más fuerte, sin clipear.
++		//
++		// FIX (feedback de esta sesión, "late mas fuerte, pero aun es debil, al menos un 100%
++		// mas en el volumen"): acá SÍ corresponde subir este parámetro, a diferencia de la
++		// sesión anterior - ahí subirlo hubiera duplicado un aumento que en ese momento vivía
++		// entero en el archivo (mismo bug que se evitó, ver el historial de este comentario); acá
++		// el archivo ya está al techo real que permite sin clipear (ver el párrafo de arriba,
++		// -0.95dB en el golpe más fuerte) y lo que se pide es MÁS volumen todavía sin volver a
++		// tocar el archivo. volume acá abajo es un multiplicador de ganancia que aplica el motor
++		// de audio en la reproducción (Level#playSound), en una etapa separada de los samples ya
++		// codificados en el .ogg - no es lo mismo que la ganancia lineal del archivo (que si ya
++		// toca el techo, clipea los samples en sí); pasar de 1.0F a 2.0F es literalmente el
++		// "100% más" pedido. Aviso honesto: como el golpe más fuerte del archivo ya está casi en
++		// el techo real (-0.95dB), duplicar la ganancia en esta etapa puede recortar levemente
++		// ESE golpe puntual al reproducirse (no en el archivo, sólo en el mezclador de audio del
++		// juego en ese instante) - si al probarlo se escucha distorsionado en vez de más fuerte,
++		// avisar para bajar este número en vez de volver a procesar el archivo.
+ 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+-			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
++			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
+ 
+ 		if (player.level() instanceof ServerLevel serverLevel) {
+ 			// "también podés hacer que a la hora de transformarse, por ejemplo, alrededor se
+@@ -224,7 +250,7 @@ public class AncientExtractSyringeItem extends Item {
+ 			// asset propio para esto (a diferencia del aura, que sí usa ancient_particle.png).
+ 			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
+ 				player.getX(), player.getY() + 0.1D, player.getZ(),
+-				DIRT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
++				DIRT_BURST_COUNT, 0.45D, 0.22D, 0.45D, 0.07D);
+ 
+ 			// Stage 4, Paso 1 (pedido de esta sesión: "le agregaría un golpe así con partículas
+ 			// en la tierra cuando suena el último corazón, que ya se transforma, para mostrar el
+diff --git a/src/main/resources/assets/palaneogenesis/textures/particle/eye_glow.png b/src/main/resources/assets/palaneogenesis/textures/particle/eye_glow.png
+index 58c614b3b2e0d3a34e750a150ebea88e9a33df61..fd3fa7b99253937753a0af691ada3d6f3235806f 100644
+GIT binary patch
+delta 1158
+zcmV;11bO?u3YrO!BYy;8Nkl<Zc$~#o%W~v43<S_1XTABad`bTQnB5W4Kn^4|8rzBO
+z)K)?kb(m2BEj$`c{r&qNCSP2pCaU`MTUAL`e$|xtXJ3RtU{F&NQ&UwHl?kGxHh{`X
+zVX~O~H2~aP9WF2^6l(SXfJ|Yrn5<w(WYoU`U~1CP)Zywj4}T15W_kgj3qV}}Oy?N|
+zLxGUNQGb`7cLBg44Ncdv6$M*SFf%h<5H1m@%$&hb7KlWmOf6Ma2FJT;c>@3j>FC<L
+zSx27$;O6TI1I$cS)OI0Om6TMjuV-W=3<Qy@U`s{wkmC)ACjdL_%ei&$)-boj;pTt=
+zP(XF%VFIYCN`Dr~B#|HpGc~FzMI=|GvZ|ia@dRLpy`yXQZXF%Xn|E|~xVw3CxGw;B
+z1%NCv7=grqBCcs#uW41uJ?`}ez{;~WG+SpoZ{2%qXx-t>%{vTkYEV^MmNP5KWWaEM
+zfT<lKvWryqmuF=%d3MJG09<ypJKP!?I=Xl7t$V*Uw14x!&`k}d1`(00<N|OE4mY*C
+zKA5VO^JKDURDu;5j|gm%+0NY@YkNcM4ei#wzjXAMhV~7H+m6Bpz+^CaH#NURW;&jo
+zk;LK$3x%PWJOSuzuzB3hs&5W&4ei#^U%L124eh0&z3eDl033tE-$@H;^DM`wFDA=(
+z^_!WP*?;`Y02r_eudmR5YiKXs`)?inyPMz47Jy7f#{HG^U@{0sWbE#tndM^BReOuu
+z&pnqyXS>1RFmxDh4eh0)e_xTf!QdhyOonlSsj57S(Qw~(%$99^+U2S$ug)eJQ&sF@
+z+d$m>wrb*ALvs<4!4YR9ERJ0tt5YUtOq=@JpMQ&p=ws{od@S3>ObuoeOhfaV-_9;#
+z(#<aKtv0>bdG@jR;mca!S1%V?L~#z)^?a<{eV&!foGrJ*E;3WVWMp36t7O%r-nE{6
+z$RtBw&aS5xXJ=LMLNdYR5gGSga7>;>I5_T+acA;iGA<w{5IMm-`SV4Ok3Cnh$TeJI
+z8GpTB`#dxGx(yE=e-4fxOrAitoy=vsp7u;ZR!U~da-7UL)q)W)Y<hhnnXowCA)+7a
+z{9F+^f)U#ui@AWD`f-P_wv1Y8CXpZ#V-1!kl39KJE)@@sp9ha0gX12I5g8*g7#X?k
+zZ(mmca>^)TiwT1wOzpUg-OS2>;rNGPbbr5`BN!13My_YZ{?JDRL_~riFccEClnj^S
+zbLL-0?)~q^@e2DG9LEvIIC#Y1IGsmE1<wY$0GMAdrnY4iuVP}2Qxc4i1W9C!V8p>A
+zMvNF792_|~GB`oJ0kHbH77La<WRz6Z%$kvr@u4JJ;pTG8BaS?H)ZnPW@g&oq0DolV
+z1R=Ub+f_^?jr^=A-8ml|(|L@1PoBR~#Z1Z}$0j2^Z#q~)Vvf`gW%<te3VnTAmTwT7
+zwX!m4R3>X(O!BiAlT~o_<%`Kq$35=Fq+GuKzq^|4wZ3Gw=>Ks!-D{JTh={4xuezT9
+Y1wKl^WaiXBCjbBd07*qoM6N<$f>Dtu_W%F@
+
+delta 1324
+zcmV+{1=ISP3BC%DBYy=2Nkl<Zc$~$T`;Mcx4aG?wN}da5HoI+JsZY}9Pm`I<+Ln08
+z{PF2?JQrkliz1aE7%*({CyJLN{ny>UAwM?M)I?QZeOXnKl_DbbBb)j68ihe%P+L<~
+zMP;KXsagP)mBnN+`CTyI1aNb6xWb@NnArtDRW>iwLdeR>%zt7rnXF(`WaNJZU~1aX
+z%;D;`O&DMcVF6rwU<XJh85s#fg3!sCS^1$iJ_LY48=9>JH;2Ok1E7GJK~?PyKxQUc
+zB$EU|Bxq_>RhgX0<U5FW05E7rx8@BU9SzML?rz@P++k>D1{H;_NZcZzn3-g9Mn=Fe
+zLB#SFRaAzIcYhGC0Cu-8<KDe{L+cH#JG{GjhoM8!R28af3m~hCEKVi|5(C6AwXq;~
+zPf1n1x{g->yW9J29=$hjhmL;Z@LM;(arg}s2UTrv049s)V4RRRL2<ke)ZI~4CFeNv
+z9l###4Gj%#JNah(u6w_0X!j1kck??KZcVMLD%Q@-%74M+5r(fIUQ7)lVpk`xt2DJe
+zJ9YrQigq~M8(Qz^H{JVP_x{k(9@lz+;oj5^rsg6dSs7V*X7XinKAYObJ0g<HIGIcu
+zlVC-Lib(kiJb^(k=FOYKyTflA+I>TN?A||j^v@0L6AX{b3vB^RCXY-$ncCsXGnsYC
+zj3BlQ34e=(L70>sK%p=g00Z3I-Mp_m-vH1*cklmfXkQxIPs<B^0gQF}TUBjW*D{$L
+zv~7jOp2`VBGFdKLZC5i>GczavLxZ6^{Kn1i8rnlc`_$0BbnicR^e=AyV734<M`S!-
+z8K3J)js%a9ae|>iG0f~zO+`fA)Wq~^n!(HfMSp|h0K+W|_b@y*w4XZqm+t)^4eb$z
+z8xavEPsR<Vs^$vD7Z`4#I6$}BVP<$`OHF($s4DvBuvKKBs?F58sa-(a{9(n!r-pVT
+zA~HD-7f)FHzT)GsGG(h7+n#o1M^tr-frTJ%P;4!jnw#1NW7c7~X=pbGKiuqT%;ee3
+z`hNm$rsjLGx)_$rx^&V#RsL_oMOHJ}%f+Q&RqiEr<@wCYk(q<Z)9!W=k;!>t@|2k)
+zE64h6R28rGsmuP$mWYU7ef_6lDXu@ywc&Z?`AcLx?*Yf;d3~NH=Tl@nGx@^gF)Pnm
+zIjU+_71y45Wk;$?JS#6sX7zKfwmMn77=LE+={nCdbG%K%!ST!F{FTY49fZX*i*w)i
+zm90u~5xFRt%*<7_CX*u=Cm6o2@_M+=^RW2+gF^J{<osoF{x&(EBjal@PD~CaCyUH&
+z)ar;^DQ0q)QCw;!kQhjuR%2;b<#o^V4@>dn{B3ajXL3FT<0Udqkuf48_WgIsc7F*%
+zCWXn0j0C|YCI%EoQ@if_%*rziFMrjHCg;;yFTpqlV?@Rb1|uV{MC+v+Rxk>N#D)-8
+zV&c;C_mlorJ6>*onVc^p#@E4dnw%pT5xD^bqhu-Oiyl~~S5xC#)hi;o+UX#8{FWez
+zj8ia<gX1(~o+sy+oH051Rw=(yM1PYrSFNJFmQlqbX&jMp`j#Y%j1i2n437~b1_vi+
+zPR>^{{S`n~*5u5$GHRVZXdK@wO4pso<lKzM<VW)SohoLshK#(HQA{R5h6Pqj{iZBm
+z0mr$`{BBvkLoBySRu*kb(I0)7>;d<~50m{m&T%G_MzF#np~%1OX||7bjwStZnt%J_
+ibdB1JmHdyN=YIeNZ}i8;(zxOP0000<MNUMnLSTZoCV)8r
+
