@@ -66,6 +66,16 @@ import java.util.Set;
  * BEAM_LIGHT en PlayerBeamRenderEvents/KaakTunRenderer) - un "eye flare" tiene que leerse como una
  * fuente de luz propia incluso de día, a diferencia de las motas ambiente del aura, que sí siguen
  * la luz del mundo (ver AncientAuraParticle#getRenderType, sin override de getLightColor).
+ *
+ * FIX (bug reportado con imagen de referencia: "no es tan transparente, no se ve con la
+ * presencia" - comparado contra una imagen de un brillo bien suave/translúcido en los ojos):
+ * eye_glow.png medía alfa=252/255 en el núcleo (prácticamente opaco) con una meseta plana antes
+ * de empezar la caída gaussiana - de ahí que en el video se viera como un puntito sólido pegado
+ * encima de la cara en vez de un brillo que deja pasar algo del fondo. Se re-generó la misma
+ * textura (mismo tamaño 32x32, misma paleta violeta/índigo, MISMA forma de caída gaussiana ya
+ * validada - "el efecto parece que es correcto", no se tocó la forma) escalando el canal alfa
+ * completo por 0.52 (núcleo 252 -> 131, ~51% de opacidad en el punto más fuerte, resto de la
+ * curva escalado proporcionalmente para no romper el gradiente ya aprobado).
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
 public final class EyeFlareRenderEvents {
@@ -86,9 +96,34 @@ public final class EyeFlareRenderEvents {
 	 * de la cabeza (mismo motivo que MOUTH_FORWARD_OFFSET en PlayerBeamRenderEvents, valor más
 	 * chico porque los ojos están más al centro de la cabeza que la boca). */
 	private static final double EYE_FORWARD_OFFSET = 0.15D;
-	/** Leve ajuste hacia abajo respecto a getEyePosition() (que vanilla define un poco por encima
-	 * de la altura real de los ojos en el modelo). */
-	private static final double EYE_DOWN_OFFSET = 0.05D;
+
+	/** FIX (bug reportado con video: "la posición de los ojos es incorrecta" - confirmado
+	 * extrayendo frames del video con ffmpeg: en encuadre normal, el brillo aparece claramente
+	 * por DEBAJO de los ojos reales del skin, a la altura de la boca/mentón, no de los ojos).
+	 * Dos causas encontradas en este método, ambas corregidas:
+	 *
+	 * (1) EYE_DOWN_OFFSET (antes 0.05D, restado de getEyePosition()) partía de un supuesto nunca
+	 * verificado contra una captura real ("vanilla define la altura un poco por encima de la
+	 * real") - el video de esta sesión lo contradice directamente: el brillo ya aparecía abajo,
+	 * así que restarle encima ese offset sólo empeoraba el desvío. Se saca por completo: se usa
+	 * getEyePosition() tal cual, sin ajuste vertical fijo.
+	 *
+	 * (2) forwardOffset (ver #renderEyes) se calculaba escalando el VIEW VECTOR COMPLETO
+	 * (look.scale(EYE_FORWARD_OFFSET)), que incluye el pitch (mirar arriba/abajo) - a diferencia
+	 * de `right` (look.cross(eje Y)), que por ser un producto cruz con el eje vertical queda
+	 * automáticamente horizontal sin importar el pitch, forwardOffset SÍ heredaba la componente
+	 * vertical del pitch: con la cabeza apuntando algo hacia abajo (como en buena parte del
+	 * video), ese offset "hacia adelante" empujaba el brillo hacia ABAJO además de hacia
+	 * adelante, arrastrándolo desde la altura de ojos hacia la de la boca. Ahora forwardOffset
+	 * se calcula proyectando `look` al plano horizontal antes de escalar (mismo criterio que ya
+	 * usa `right`): la separación ojo-cara sigue el yaw (hacia dónde mira en el plano horizontal)
+	 * sin que el pitch la desvíe verticalmente - anatómicamente, los ojos están a una altura fija
+	 * respecto a la cabeza sin importar si la cabeza mira arriba o abajo.
+	 *
+	 * No se pudo confirmar en vivo contra el juego corriendo (sólo contra el video ya grabado) -
+	 * avisar si tras probar esto en el juego todavía queda desalineado, para ajustar de nuevo con
+	 * un video fresco en vez de volver a suponer un número. */
+	private static final double EYE_DOWN_OFFSET = 0.0D;
 
 	/** Ver el javadoc de la clase: última posición conocida de cada ojo (claves "entityId:L" /
 	 * "entityId:R"), un solo Vec3 por ojo - no una cola/lista, a propósito. */
@@ -211,7 +246,14 @@ public final class EyeFlareRenderEvents {
 		} else {
 			right = right.normalize();
 		}
-		Vec3 forwardOffset = look.scale(EYE_FORWARD_OFFSET);
+
+		// Ver el FIX de EYE_DOWN_OFFSET más arriba: se usa la proyección HORIZONTAL de `look`
+		// (mismo criterio que ya aplicaba `right`, que por ser cross con el eje Y ya era
+		// horizontal) en vez del view vector completo, para que el pitch (mirar arriba/abajo) no
+		// arrastre el brillo verticalmente - sólo el yaw decide hacia dónde apunta este offset.
+		Vec3 lookHorizontal = new Vec3(look.x, 0.0D, look.z);
+		Vec3 forwardDir = lookHorizontal.lengthSqr() > 1.0E-6D ? lookHorizontal.normalize() : camForward;
+		Vec3 forwardOffset = forwardDir.scale(EYE_FORWARD_OFFSET);
 
 		Vec3 leftEye = eyeCenter.subtract(right.scale(EYE_X_OFFSET)).add(forwardOffset);
 		Vec3 rightEye = eyeCenter.add(right.scale(EYE_X_OFFSET)).add(forwardOffset);

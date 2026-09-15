@@ -73,8 +73,21 @@ public class AncientExtractSyringeItem extends Item {
 	/** Stage 4, Paso 1: cantidad de partículas del burst de tierra al transformarse - número
 	 * elegido a ojo para que se note como un "levantarse de golpe" sin llegar a ser una
 	 * polvareda densa (pedido explícito: "que no saturen... que se vea bien"), fácil de ajustar
-	 * si no es lo que se busca. */
-	private static final int DIRT_BURST_COUNT = 40;
+	 * si no es lo que se busca.
+	 *
+	 * FIX (feedback de esta sesión: "el efecto final de la tierra alrededor funciona, pero
+	 * quiero que se vea mas poderoso"): de 40 a 70 partículas (+75%, más denso sin llegar a
+	 * saturar como pedía el criterio original), y en el sendParticles de más abajo el spread
+	 * horizontal sube de 0.3 a 0.45 y la velocidad de 0.03 a 0.07 (más del doble) - un burst
+	 * "poderoso" necesita sobre todo que las partículas salgan disparadas con más fuerza y más
+	 * lejos, no sólo que haya más cantidad amontonada en el mismo radio chico de antes. El spread
+	 * vertical sube proporcionalmente menos (0.15 a 0.22) para que siga leyéndose como una
+	 * explosión hacia los costados desde el piso, no como una columna hacia arriba.
+	 *
+	 * Mismo ajuste aplicado en paralelo a event.AncientTransformationEvents#LAST_HEARTBEAT_BURST_COUNT
+	 * (el segundo burst, al último latido) para que los dos sigan viéndose parejos entre sí, como
+	 * ya venían. */
+	private static final int DIRT_BURST_COUNT = 70;
 
 	public AncientExtractSyringeItem(Properties properties) {
 		super(properties);
@@ -207,12 +220,25 @@ public class AncientExtractSyringeItem extends Item {
 		// proporcionalmente más que el más fuerte) y el limitador después asegura que ni el golpe
 		// más fuerte ya comprimido pase de -1.0dBTP. Resultado verificado (mismo método de
 		// medición por golpe): los 10 picos quedan entre -2.78dB y -0.95dB, menos de 2dB de
-		// diferencia entre el más flojo y el más fuerte, sin clipear. volume=1.0F acá abajo sigue
-		// intacto a propósito, mismo motivo que la sesión anterior: el fix vive en el asset, no
-		// en este parámetro (subir este número sólo extiende el rango de audición, no hace más
-		// fuerte la onda ni empareja los golpes entre sí).
+		// diferencia entre el más flojo y el más fuerte, sin clipear.
+		//
+		// FIX (feedback de esta sesión, "late mas fuerte, pero aun es debil, al menos un 100%
+		// mas en el volumen"): acá SÍ corresponde subir este parámetro, a diferencia de la
+		// sesión anterior - ahí subirlo hubiera duplicado un aumento que en ese momento vivía
+		// entero en el archivo (mismo bug que se evitó, ver el historial de este comentario); acá
+		// el archivo ya está al techo real que permite sin clipear (ver el párrafo de arriba,
+		// -0.95dB en el golpe más fuerte) y lo que se pide es MÁS volumen todavía sin volver a
+		// tocar el archivo. volume acá abajo es un multiplicador de ganancia que aplica el motor
+		// de audio en la reproducción (Level#playSound), en una etapa separada de los samples ya
+		// codificados en el .ogg - no es lo mismo que la ganancia lineal del archivo (que si ya
+		// toca el techo, clipea los samples en sí); pasar de 1.0F a 2.0F es literalmente el
+		// "100% más" pedido. Aviso honesto: como el golpe más fuerte del archivo ya está casi en
+		// el techo real (-0.95dB), duplicar la ganancia en esta etapa puede recortar levemente
+		// ESE golpe puntual al reproducirse (no en el archivo, sólo en el mezclador de audio del
+		// juego en ese instante) - si al probarlo se escucha distorsionado en vez de más fuerte,
+		// avisar para bajar este número en vez de volver a procesar el archivo.
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+			ModSounds.ANCIENT_TRANSFORMATION.get(), SoundSource.PLAYERS, 2.0F, 1.0F);
 
 		if (player.level() instanceof ServerLevel serverLevel) {
 			// "también podés hacer que a la hora de transformarse, por ejemplo, alrededor se
@@ -224,7 +250,7 @@ public class AncientExtractSyringeItem extends Item {
 			// asset propio para esto (a diferencia del aura, que sí usa ancient_particle.png).
 			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
 				player.getX(), player.getY() + 0.1D, player.getZ(),
-				DIRT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
+				DIRT_BURST_COUNT, 0.45D, 0.22D, 0.45D, 0.07D);
 
 			// Stage 4, Paso 1 (pedido de esta sesión: "le agregaría un golpe así con partículas
 			// en la tierra cuando suena el último corazón, que ya se transforma, para mostrar el

@@ -133,8 +133,13 @@ public class AncientTransformationEvents {
 
 	/** Misma cantidad/criterio visual que AncientExtractSyringeItem#DIRT_BURST_COUNT (no se
 	 * reusa esa constante directamente porque es privada de esa clase, y a propósito: los dos
-	 * bursts deberían poder ajustarse por separado si algún día se pide que se vean distintos). */
-	private static final int LAST_HEARTBEAT_BURST_COUNT = 40;
+	 * bursts deberían poder ajustarse por separado si algún día se pide que se vean distintos).
+	 *
+	 * FIX (mismo pedido de esta sesión que en AncientExtractSyringeItem#DIRT_BURST_COUNT - "que
+	 * se vea mas poderoso"): mismo ajuste en paralelo, de 40 a 70, para que este segundo burst
+	 * (al último latido) siga viéndose parejo con el primero en vez de quedar el flojo de los
+	 * dos por no haberse actualizado. */
+	private static final int LAST_HEARTBEAT_BURST_COUNT = 70;
 
 	/** Ticks restantes hasta el segundo burst, por jugador. Mismo criterio que
 	 * REPAIR_TICKS_REMAINING de más abajo (estado transitorio en memoria, no necesita sobrevivir
@@ -173,7 +178,7 @@ public class AncientTransformationEvents {
 		if (player.level() instanceof ServerLevel serverLevel) {
 			serverLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DIRT.defaultBlockState()),
 				player.getX(), player.getY() + 0.1D, player.getZ(),
-				LAST_HEARTBEAT_BURST_COUNT, 0.3D, 0.15D, 0.3D, 0.03D);
+				LAST_HEARTBEAT_BURST_COUNT, 0.45D, 0.22D, 0.45D, 0.07D);
 		}
 	}
 
