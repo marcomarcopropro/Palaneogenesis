@@ -129,9 +129,39 @@ public class PlayerBeamRenderEvents {
 	 * (FIRST_PERSON_START_WIDTH_SCALE) so it reads as a beam leaving the mouth, not a floating
 	 * column. Looking steeply upwards the mouth goes behind the near plane and the start is simply
 	 * clipped, which is the correct view from inside the head. */
-	/** En primera persona el rayo nace más fino (fracción de HALF_WIDTH en el origen) y se
+	/** FIX (report: transparent gap between the mouth and where the beam becomes solid): the opaque
+	 * core of the texture is only ~40% of the quad width, so with a 0.45 start the first stretch was a
+	 * hair-thin thread and the visible beam seemed to begin well above the mouth. 0.80 makes the
+	 * solid core start at the mouth. Lower it if the start looks too fat.
+	 *
+	 * En primera persona el rayo nace más fino (fracción de HALF_WIDTH en el origen) y se
 	 * ensancha hasta el ancho normal en el otro extremo. */
-	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.15F;
+	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.50F;
+	/** First-person origin, in camera axes. FIX (report: the beam still came out from the very bottom
+	 * of the screen in first person): the previous origin was 0.20 forward / 0.125 below the camera,
+	 * about 32 degrees under the centre of the view, right at the bottom edge with the default FOV.
+	 * Now 0.22 forward / 0.09 below (about 22 degrees under the centre, ~80% down the screen with the
+	 * default FOV) and a thicker start (0.45), so the start is clearly visible at the mouth. The beam is born clearly
+	 * higher on screen. Tune these two values: less FIRST_PERSON_BELOW_CAMERA = higher start. */
+	/** FIX (report: the beam feels too far forward, not too high or low): forward 0.22 -> 0.12 with
+	 * below 0.09 -> 0.05, same ratio so the start keeps the same spot on screen (about 22 degrees
+	 * under the centre) but sits closer to the camera, i.e. closer to the face. The start width goes
+	 * 0.80 -> 0.60 because the same width looks bigger from closer. */
+	private static final double FIRST_PERSON_FORWARD = 0.02D;
+	private static final double FIRST_PERSON_BELOW_CAMERA = 0.10D;
+	/** FIX (report: the beam looked like a separate object floating in front of the camera, with a
+	 * hard flat edge where it started; it must look like it comes out of the mouth). In first person
+	 * the first FIRST_PERSON_FADE_LENGTH blocks now fade in from alpha 0, so the beam materialises at
+	 * the mouth instead of starting with a visible cut. The start is also thinner (0.40) and the
+	 * origin sits 0.15 forward / 0.075 below the camera (same ~27 degrees under the centre of the
+	 * view, a bit closer to the screen's bottom edge, where a mouth would be). */
+	/** FIX (report: the beam looked far from the camera; it must come out of the mouth like spit - you
+	 * never see your own mouth, you see the spit once it is already away). The origin is now right at
+	 * the camera, 0.02 forward / 0.10 below, so the start is OFF-SCREEN below the view and the beam
+	 * enters from the bottom edge already close to the camera (about 0.12 blocks ahead). The fade-in
+	 * is turned off (0.0) because it would hide exactly that first visible stretch. Set it above 0 to
+	 * bring it back. */
+	private static final double FIRST_PERSON_FADE_LENGTH = 0.0D;
 
 	@SubscribeEvent
 	public static void onRenderLevelStage(RenderLevelStageEvent event) {
@@ -215,19 +245,33 @@ public class PlayerBeamRenderEvents {
 		float vStart = vSpan + vScroll;
 		float vEnd = vScroll;
 
-		quad(consumer, pose, start, end, spinRight, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd);
-		quad(consumer, pose, start, end, spinUp, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd);
+		if (firstPersonSelf && FIRST_PERSON_FADE_LENGTH > 0.0D && length > FIRST_PERSON_FADE_LENGTH * 2.0D) {
+			// Fade-in segment (alpha 0 -> full) followed by the normal beam, so there is no hard start.
+			double t = FIRST_PERSON_FADE_LENGTH / length;
+			Vec3 mid = start.add(dir.scale(FIRST_PERSON_FADE_LENGTH));
+			float startHalf = HALF_WIDTH * startWidthScale;
+			float midHalf = startHalf + (HALF_WIDTH - startHalf) * (float) t;
+			float vMid = vStart + (vEnd - vStart) * (float) t;
+			for (Vec3 widthDir : new Vec3[] { spinRight, spinUp }) {
+				quad(consumer, pose, start, mid, widthDir, startHalf, midHalf, vStart, vMid, 0, 220);
+				quad(consumer, pose, mid, end, widthDir, midHalf, HALF_WIDTH, vMid, vEnd, 220, 220);
+			}
+			return;
+		}
+		quad(consumer, pose, start, end, spinRight, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd, 220, 220);
+		quad(consumer, pose, start, end, spinUp, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd, 220, 220);
 	}
 
-	/** First-person mouth: camera position, down to the neck pivot, then forward / up along the camera
-	 * axes. See the first-person notes above. */
+	/** First-person origin: a point in front of the camera and slightly below its centre, expressed
+	 * with the CAMERA axes (look / up) so that on screen it always sits at the same spot (about 11
+	 * degrees below the centre of the view) whatever the pitch, and it follows view bobbing. See the
+	 * first-person notes above. */
 	private static Vec3 computeFirstPersonOrigin(Camera camera) {
 		org.joml.Vector3f look = camera.getLookVector();
 		org.joml.Vector3f up = camera.getUpVector();
 		return camera.getPosition()
-			.subtract(0.0D, NECK_BELOW_EYE, 0.0D)
-			.add(look.x() * MOUTH_FORWARD_FROM_NECK, look.y() * MOUTH_FORWARD_FROM_NECK, look.z() * MOUTH_FORWARD_FROM_NECK)
-			.add(up.x() * MOUTH_UP_FROM_NECK, up.y() * MOUTH_UP_FROM_NECK, up.z() * MOUTH_UP_FROM_NECK);
+			.add(look.x() * FIRST_PERSON_FORWARD, look.y() * FIRST_PERSON_FORWARD, look.z() * FIRST_PERSON_FORWARD)
+			.subtract(up.x() * FIRST_PERSON_BELOW_CAMERA, up.y() * FIRST_PERSON_BELOW_CAMERA, up.z() * FIRST_PERSON_BELOW_CAMERA);
 	}
 
 	/** Third-person mouth: neck pivot + (forward, up) rotated with the head. See MOUTH_* above. */
@@ -245,18 +289,19 @@ public class PlayerBeamRenderEvents {
 	}
 
 	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, Vec3 start, Vec3 end,
-			Vec3 widthDir, float startHalfWidth, float endHalfWidth, float vStart, float vEnd) {
+			Vec3 widthDir, float startHalfWidth, float endHalfWidth, float vStart, float vEnd,
+			int startAlpha, int endAlpha) {
 		Vec3 ws = widthDir.scale(startHalfWidth);
 		Vec3 we = widthDir.scale(endHalfWidth);
-		vertex(consumer, pose, start.subtract(ws), 0.0F, vStart);
-		vertex(consumer, pose, start.add(ws), 1.0F, vStart);
-		vertex(consumer, pose, end.add(we), 1.0F, vEnd);
-		vertex(consumer, pose, end.subtract(we), 0.0F, vEnd);
+		vertex(consumer, pose, start.subtract(ws), 0.0F, vStart, startAlpha);
+		vertex(consumer, pose, start.add(ws), 1.0F, vStart, startAlpha);
+		vertex(consumer, pose, end.add(we), 1.0F, vEnd, endAlpha);
+		vertex(consumer, pose, end.subtract(we), 0.0F, vEnd, endAlpha);
 	}
 
-	private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, Vec3 p, float u, float v) {
+	private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, Vec3 p, float u, float v, int alpha) {
 		consumer.vertex(pose.pose(), (float) p.x, (float) p.y, (float) p.z)
-			.color(150, 220, 255, 220)
+			.color(150, 220, 255, alpha)
 			.uv(u, v)
 			.overlayCoords(OverlayTexture.NO_OVERLAY)
 			.uv2(BEAM_LIGHT)
