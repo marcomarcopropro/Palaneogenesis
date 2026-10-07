@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
@@ -182,12 +183,75 @@ public class AncientTransformationEvents {
 		}
 	}
 
+	// --- Heavy slowdown while the transformation heartbeat sequence plays ---
+
+	/** Movement-speed modifier applied only while the transformation animation (heart / pumping /
+	 * red flashes, see client.HeartbeatFlashOverlay) is running. Fixed UUID (randomly generated once,
+	 * it only has to be unique and stable) so the exact same modifier can always be found and
+	 * removed, same reason util.AncientTransformation#SPEED_MODIFIER has one. MULTIPLY_TOTAL with
+	 * -0.90 multiplies the FINAL speed by 0.10, i.e. the same strength as vanilla Slowness VI: the
+	 * character can barely move. Because it multiplies the final value, it also overrides the +30 %
+	 * transformation speed bonus (SPEED_MODIFIER) while it lasts instead of being diluted by it.
+	 * It is added as a TRANSIENT modifier on purpose: transient modifiers are never saved to NBT, so
+	 * a crash or relog mid-animation cannot leave a player permanently slowed. */
+	private static final UUID TRANSFORM_SLOWDOWN_ID = UUID.fromString("9f1e7b44-738a-4d23-b36f-7fec962a06ec");
+	private static final AttributeModifier TRANSFORM_SLOWDOWN = new AttributeModifier(
+		TRANSFORM_SLOWDOWN_ID, "palaneogenesis:transformation_slowdown", -0.90D, AttributeModifier.Operation.MULTIPLY_TOTAL);
+
+	/** Length of the slowdown in server ticks. Derived from the same sequence the red flashes use
+	 * (client.HeartbeatFlashOverlay): last heartbeat at 3.298 s (= LAST_HEARTBEAT_BURST_DELAY_TICKS,
+	 * 66 ticks) + 80 ms full flash + 120 ms fade = 3.498 s = 69.96 ~ 70 ticks. So the slowdown ends
+	 * when the last red flash has finished fading. The server counts ticks while the client flash
+	 * runs on wall-clock time, so the two can differ by a tick or two; that is not noticeable. */
+	private static final int TRANSFORM_SLOWDOWN_TICKS = 70;
+
+	/** Ticks left of the slowdown per player (transient in-memory state, same pattern as the
+	 * other timers in this class). */
+	private static final Map<UUID, Integer> TRANSFORM_SLOWDOWN_TICKS_REMAINING = new HashMap<>();
+
+	/** Called from item.AncientExtractSyringeItem#transform right after the transformation starts.
+	 * Applies the slowdown and starts its countdown (restarts it if one was already running). */
+	public static void startTransformSlowdown(ServerPlayer player) {
+		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (movementSpeed == null) {
+			return;
+		}
+		// addTransientModifier throws if a modifier with the same UUID is already present.
+		if (!movementSpeed.hasModifier(TRANSFORM_SLOWDOWN)) {
+			movementSpeed.addTransientModifier(TRANSFORM_SLOWDOWN);
+		}
+		TRANSFORM_SLOWDOWN_TICKS_REMAINING.put(player.getUUID(), TRANSFORM_SLOWDOWN_TICKS);
+	}
+
+	/** Counts the slowdown down and removes it when it ends. It is also removed as soon as the player
+	 * is no longer transformed (de-transformation with the Empty Syringe, or death + respawn, where
+	 * the new Player starts untransformed): that single check covers every early-exit path without
+	 * touching item.EmptySyringeItem. Resolved inside #onPlayerTick like the other timers here. */
+	private static void tickTransformSlowdown(ServerPlayer player) {
+		UUID id = player.getUUID();
+		Integer remaining = TRANSFORM_SLOWDOWN_TICKS_REMAINING.get(id);
+		if (remaining == null) {
+			return;
+		}
+		if (remaining > 1 && AncientTransformation.isTransformed(player)) {
+			TRANSFORM_SLOWDOWN_TICKS_REMAINING.put(id, remaining - 1);
+			return;
+		}
+
+		TRANSFORM_SLOWDOWN_TICKS_REMAINING.remove(id);
+		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (movementSpeed != null) {
+			movementSpeed.removeModifier(TRANSFORM_SLOWDOWN);
+		}
+	}
+
 	@SubscribeEvent
 	public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
 		UUID id = event.getEntity().getUUID();
 		REPAIR_TICKS_REMAINING.remove(id);
 		LAST_SEEN_PENALTY.remove(id);
 		LAST_HEARTBEAT_BURST_TICKS_REMAINING.remove(id);
+		TRANSFORM_SLOWDOWN_TICKS_REMAINING.remove(id);
 	}
 
 	/** Pedido explícito del Mini-Patch: "un timer oculto que arranca cuando el jugador recibe
@@ -207,6 +271,8 @@ public class AncientTransformationEvents {
 		// Independiente de todo lo de abajo (penaltyHearts puede cortar con un return temprano):
 		// el segundo burst de tierra no tiene nada que ver con la reparación de corazones rotos.
 		tickLastHeartbeatBurst(player);
+		// Same reasoning: the transformation slowdown has nothing to do with the broken-heart repair.
+		tickTransformSlowdown(player);
 
 		int penaltyHearts = AncientTransformation.getMaxHealthPenaltyHearts(player);
 

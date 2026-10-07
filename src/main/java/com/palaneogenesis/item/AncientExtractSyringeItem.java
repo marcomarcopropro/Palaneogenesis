@@ -261,6 +261,10 @@ public class AncientExtractSyringeItem extends Item {
 			// event.AncientTransformationEvents#scheduleLastHeartbeatBurst para el timer.
 			if (player instanceof ServerPlayer serverPlayer) {
 				AncientTransformationEvents.scheduleLastHeartbeatBurst(serverPlayer);
+				// Heavy slowdown for the length of the heartbeat sequence (character can barely
+				// move while the heart / pumping effect plays); it removes itself when the last
+				// heartbeat flash ends - see AncientTransformationEvents#startTransformSlowdown.
+				AncientTransformationEvents.startTransformSlowdown(serverPlayer);
 			}
 		}
 

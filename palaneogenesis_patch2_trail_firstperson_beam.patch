@@ -1,0 +1,275 @@
+diff --git a/src/main/java/com/palaneogenesis/client/EyeTrailRenderEvents.java b/src/main/java/com/palaneogenesis/client/EyeTrailRenderEvents.java
+index e2a8c11..0a31204 100644
+--- a/src/main/java/com/palaneogenesis/client/EyeTrailRenderEvents.java
++++ b/src/main/java/com/palaneogenesis/client/EyeTrailRenderEvents.java
+@@ -70,20 +70,36 @@ public final class EyeTrailRenderEvents {
+ 	 * ribbon samples the middle of the radial gradient (see class javadoc). */
+ 	private static final float TEXTURE_CENTER_V = 15.5F / 32.0F;
+ 
+-	/** How long a point of the trail lives, in ticks. 14 = the lifetime the old sparks had
+-	 * (EyePowerParticle#BASE_LIFETIME_TICKS), so the trail is about as long as before in time.
+-	 * Longer = longer streak behind a moving player. */
+-	private static final float TRAIL_LIFETIME_TICKS = 14.0F;
++	/** How long a point of the trail lives, in ticks.
++	 *
++	 * FIX (report: "the trail is too long, it should stay closer to the eye and look smoother"):
++	 * was 14 ticks (0.7 s), which on a walking player stretched the streak over 2-3 blocks. Now
++	 * 5 ticks (0.25 s). On top of the time limit there is a LENGTH limit (MAX_TRAIL_LENGTH), because
++	 * a time limit alone still grows with speed (5 ticks of sprinting is ~1.4 blocks). Whichever
++	 * limit is reached first ends the trail. */
++	private static final float TRAIL_LIFETIME_TICKS = 5.0F;
++
++	/** Maximum length of the visible trail along its path, in blocks, measured from the eye. */
++	private static final float MAX_TRAIL_LENGTH = 0.6F;
++
++	/** Each segment between two recorded points is split into this many pieces and the points are
++	 * placed on a Catmull-Rom curve through the recorded ones. The recorded samples are 20 per
++	 * second, so joining them directly draws a polyline with visible corners whenever the head turns
++	 * or the player changes direction; the curve rounds those corners off (this is the "smooth"
++	 * part of the fix). The curve passes through every recorded point, so it never drifts away
++	 * from the eye. */
++	private static final int SUBDIVISIONS = 4;
+ 
+ 	/** Samples kept per eye. +2 because index 0 (newest) is never drawn (see #drawRibbon) and the
+-	 * oldest drawn sample must reach TRAIL_LIFETIME_TICKS. */
+-	private static final int HISTORY_CAPACITY = (int) TRAIL_LIFETIME_TICKS + 2;
++	 * oldest drawn sample must reach TRAIL_LIFETIME_TICKS; +1 more because the Catmull-Rom curve
++	 * looks one sample past each end. */
++	private static final int HISTORY_CAPACITY = (int) Math.ceil(TRAIL_LIFETIME_TICKS) + 3;
+ 
+ 	/** Half width of the ribbon at the eye / at its tail, in blocks. Head value is a bit under the
+ 	 * glow halo half size (0.075 in EyeGlowLayer) so the ribbon is born inside the glowing eye.
+ 	 * Raise HEAD_HALF_WIDTH for a thicker streak. */
+ 	private static final float HEAD_HALF_WIDTH = 0.05F;
+-	private static final float TAIL_HALF_WIDTH = 0.012F;
++	private static final float TAIL_HALF_WIDTH = 0.006F;
+ 
+ 	/** Alpha at the eye end (0..1); it fades linearly to 0 at the tail. */
+ 	private static final float HEAD_ALPHA = 0.9F;
+@@ -91,13 +107,14 @@ public final class EyeTrailRenderEvents {
+ 	/** Colour ramp stop: same split the old particles used (EyePowerParticle#COOLDOWN_SPLIT). */
+ 	private static final float COOLDOWN_SPLIT = 0.3F;
+ 
+-	/** Old points rise and open outwards while they age: this keeps the "two trails that go up
+-	 * and open from each eye" gesture the old sparks had (EyePowerSpawner), so a player who stands
+-	 * still still shows a short streak instead of nothing. RISE_TOTAL is the total distance in
+-	 * blocks (the old sparks travelled about 0.25 with speed 0.028 decaying x0.9 per tick), and
+-	 * RISE_DECAY is the same per-tick decay the sparks used. Set RISE_TOTAL to 0 for a pure
+-	 * movement trail. */
+-	private static final double RISE_TOTAL = 0.20D;
++	/** Old points rise and open outwards while they age: this keeps a hint of the "two trails that
++	 * go up and open from each eye" gesture the old sparks had (EyePowerSpawner), so a player who
++	 * stands still still shows a short streak instead of nothing. RISE_TOTAL is the total distance
++	 * in blocks, and RISE_DECAY is the per-tick decay the old sparks used.
++	 *
++	 * FIX (same report, "closer to the eye"): 0.20 -> 0.05. The drift was pulling the older half of
++	 * the trail visibly away from the eye. Set RISE_TOTAL to 0 for a pure movement trail. */
++	private static final double RISE_TOTAL = 0.05D;
+ 	private static final double RISE_DECAY = 0.90D;
+ 
+ 	/** Eye position in HEAD space, copied from client.EyeGlowLayer (EYE_X_OFFSET / EYE_Y_OFFSET /
+@@ -293,20 +310,59 @@ public final class EyeTrailRenderEvents {
+ 			slot++;
+ 		}
+ 
+-		// Camera-facing width direction per point (tangent x direction-to-camera), kept on the same
+-		// side as the previous point so the strip never twists.
+-		Vec3[] side = new Vec3[n];
++		// 1) Round off the corners: Catmull-Rom curve through the recorded points (see SUBDIVISIONS).
++		int m = (n - 1) * SUBDIVISIONS + 1;
++		Vec3[] curve = new Vec3[m];
++		float[] curveAge = new float[m];
++		for (int k = 0; k < n - 1; k++) {
++			Vec3 p0 = pos[Math.max(k - 1, 0)];
++			Vec3 p1 = pos[k];
++			Vec3 p2 = pos[k + 1];
++			Vec3 p3 = pos[Math.min(k + 2, n - 1)];
++			for (int sub = 0; sub < SUBDIVISIONS; sub++) {
++				float f = (float) sub / (float) SUBDIVISIONS;
++				int at = k * SUBDIVISIONS + sub;
++				curve[at] = catmullRom(p0, p1, p2, p3, f);
++				curveAge[at] = Mth.lerp(f, age[k], age[k + 1]);
++			}
++		}
++		curve[m - 1] = pos[n - 1];
++		curveAge[m - 1] = age[n - 1];
++
++		// 2) Life fraction per point = the larger of "how old" and "how far from the eye along the
++		// path" (see TRAIL_LIFETIME_TICKS / MAX_TRAIL_LENGTH). It never decreases along the strip, so
++		// the strip is simply cut after the first point that reaches 1 (alpha 0 there).
++		float[] life = new float[m];
++		double travelled = 0.0D;
++		int used = m;
++		for (int k = 0; k < m; k++) {
++			if (k > 0) {
++				travelled += curve[k].distanceTo(curve[k - 1]);
++			}
++			life[k] = Mth.clamp(Math.max(curveAge[k] / TRAIL_LIFETIME_TICKS, (float) (travelled / MAX_TRAIL_LENGTH)), 0.0F, 1.0F);
++			if (life[k] >= 1.0F) {
++				used = k + 1;
++				break;
++			}
++		}
++		if (used < 2) {
++			return;
++		}
++
++		// 3) Camera-facing width direction per point (tangent x direction-to-camera), kept on the
++		// same side as the previous point so the strip never twists.
++		Vec3[] side = new Vec3[used];
+ 		Vec3 previous = camRight;
+-		for (int k = 0; k < n; k++) {
++		for (int k = 0; k < used; k++) {
+ 			Vec3 tangent;
+ 			if (k == 0) {
+-				tangent = pos[0].subtract(pos[1]);
+-			} else if (k == n - 1) {
+-				tangent = pos[n - 2].subtract(pos[n - 1]);
++				tangent = curve[0].subtract(curve[1]);
++			} else if (k == used - 1) {
++				tangent = curve[used - 2].subtract(curve[used - 1]);
+ 			} else {
+-				tangent = pos[k - 1].subtract(pos[k + 1]);
++				tangent = curve[k - 1].subtract(curve[k + 1]);
+ 			}
+-			Vec3 candidate = tangent.cross(camPos.subtract(pos[k]));
++			Vec3 candidate = tangent.cross(camPos.subtract(curve[k]));
+ 			candidate = candidate.lengthSqr() > 1.0E-8D ? candidate.normalize() : previous;
+ 			if (candidate.dot(previous) < 0.0D) {
+ 				candidate = candidate.scale(-1.0D);
+@@ -315,23 +371,45 @@ public final class EyeTrailRenderEvents {
+ 			previous = candidate;
+ 		}
+ 
+-		for (int k = 0; k < n - 1; k++) {
+-			float t0 = Mth.clamp(age[k] / TRAIL_LIFETIME_TICKS, 0.0F, 1.0F);
+-			float t1 = Mth.clamp(age[k + 1] / TRAIL_LIFETIME_TICKS, 0.0F, 1.0F);
+-			float w0 = Mth.lerp(t0, HEAD_HALF_WIDTH, TAIL_HALF_WIDTH);
+-			float w1 = Mth.lerp(t1, HEAD_HALF_WIDTH, TAIL_HALF_WIDTH);
++		for (int k = 0; k < used - 1; k++) {
++			float t0 = life[k];
++			float t1 = life[k + 1];
++			float w0 = Mth.lerp(smooth(1.0F - t0), TAIL_HALF_WIDTH, HEAD_HALF_WIDTH);
++			float w1 = Mth.lerp(smooth(1.0F - t1), TAIL_HALF_WIDTH, HEAD_HALF_WIDTH);
+ 			int[] c0 = colorAt(t0);
+ 			int[] c1 = colorAt(t1);
+ 
+-			vertex(consumer, pose, pos[k].subtract(side[k].scale(w0)), 0.0F, c0);
+-			vertex(consumer, pose, pos[k].add(side[k].scale(w0)), 1.0F, c0);
+-			vertex(consumer, pose, pos[k + 1].add(side[k + 1].scale(w1)), 1.0F, c1);
+-			vertex(consumer, pose, pos[k + 1].subtract(side[k + 1].scale(w1)), 0.0F, c1);
++			vertex(consumer, pose, curve[k].subtract(side[k].scale(w0)), 0.0F, c0);
++			vertex(consumer, pose, curve[k].add(side[k].scale(w0)), 1.0F, c0);
++			vertex(consumer, pose, curve[k + 1].add(side[k + 1].scale(w1)), 1.0F, c1);
++			vertex(consumer, pose, curve[k + 1].subtract(side[k + 1].scale(w1)), 0.0F, c1);
+ 		}
+ 	}
+ 
++	/** Uniform Catmull-Rom point between p1 and p2 at f in [0,1]; passes through p1 (f=0) and p2 (f=1). */
++	private static Vec3 catmullRom(Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, float f) {
++		double f2 = f * f;
++		double f3 = f2 * f;
++		double x = 0.5D * ((2.0D * p1.x) + (-p0.x + p2.x) * f
++			+ (2.0D * p0.x - 5.0D * p1.x + 4.0D * p2.x - p3.x) * f2
++			+ (-p0.x + 3.0D * p1.x - 3.0D * p2.x + p3.x) * f3);
++		double y = 0.5D * ((2.0D * p1.y) + (-p0.y + p2.y) * f
++			+ (2.0D * p0.y - 5.0D * p1.y + 4.0D * p2.y - p3.y) * f2
++			+ (-p0.y + 3.0D * p1.y - 3.0D * p2.y + p3.y) * f3);
++		double z = 0.5D * ((2.0D * p1.z) + (-p0.z + p2.z) * f
++			+ (2.0D * p0.z - 5.0D * p1.z + 4.0D * p2.z - p3.z) * f2
++			+ (-p0.z + 3.0D * p1.z - 3.0D * p2.z + p3.z) * f3);
++		return new Vec3(x, y, z);
++	}
++
++	/** Smoothstep on [0,1]: eases both ends so width and alpha fade without a visible kink. */
++	private static float smooth(float x) {
++		float c = Mth.clamp(x, 0.0F, 1.0F);
++		return c * c * (3.0F - 2.0F * c);
++	}
++
+ 	/** {r, g, b, a} (0..255) at life fraction t: GLOW -> BASE -> DEEP like EyePowerParticle#updateColor,
+-	 * alpha falling linearly to 0 at the tail. */
++	 * alpha eased (smoothstep) down to 0 at the tail. */
+ 	private static int[] colorAt(float t) {
+ 		float[] from;
+ 		float[] to;
+@@ -348,7 +426,7 @@ public final class EyeTrailRenderEvents {
+ 		int r = Mth.clamp((int) (Mth.lerp(segment, from[0], to[0]) * 255.0F), 0, 255);
+ 		int g = Mth.clamp((int) (Mth.lerp(segment, from[1], to[1]) * 255.0F), 0, 255);
+ 		int b = Mth.clamp((int) (Mth.lerp(segment, from[2], to[2]) * 255.0F), 0, 255);
+-		int a = Mth.clamp((int) ((1.0F - t) * HEAD_ALPHA * 255.0F), 0, 255);
++		int a = Mth.clamp((int) (smooth(1.0F - t) * HEAD_ALPHA * 255.0F), 0, 255);
+ 		return new int[] { r, g, b, a };
+ 	}
+ 
+diff --git a/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java b/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java
+index 840a909..c1ff921 100644
+--- a/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java
++++ b/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java
+@@ -107,21 +107,28 @@ public class PlayerBeamRenderEvents {
+ 	 * en vez de tapar media cara. */
+ 	private static final float THIRD_PERSON_START_WIDTH_SCALE = 0.55F;
+ 
+-	/** Primera persona (sólo el jugador local): la boca real está por debajo del borde inferior de
+-	 * la pantalla, así que el origen se calcula en ejes de la CÁMARA (sigue abajo del encuadre aunque
+-	 * mires arriba o abajo) y el rayo ENTRA por el borde inferior - sin tramo flotante ni hueco
+-	 * (el bug original) porque el inicio queda siempre fuera de pantalla.
++	/** First person (local player only).
+ 	 *
+-	 * FIX (reporte: "ahora parece salir del torso"): el origen anterior (0.08 adelante, 0.30 abajo)
+-	 * hacía que el rayo cruzara el borde inferior a ~0.4 bloques de la cámara, muy cerca, y por
+-	 * perspectiva entraba como una columna ancha sobre la hotbar - se lee como algo que sube del
+-	 * cuerpo. Ahora el origen está más lejos de la cámara sobre el MISMO rayo de visión del borde
+-	 * inferior (mismo punto de entrada en pantalla), pero cruza el borde a ~0.55 bloques y mucho más
+-	 * fino: se lee como un haz delgado que sale de la boca. El ángulo se calcula con el FOV real
+-	 * (halfFov + FIRST_PERSON_MARGIN_DEG) para que el inicio quede justo fuera de pantalla con
+-	 * cualquier FOV. El punto de impacto no cambia: sigue siendo el raycast del servidor. */
+-	private static final double FIRST_PERSON_FORWARD = 0.50D;
+-	private static final double FIRST_PERSON_MARGIN_DEG = 3.0D;
++	 * FIX (report: "in first person the beam comes out from too low; it must be higher and closer,
++	 * because it has to come out of the mouth"). The previous origin was not the mouth at all: it was
++	 * a point pushed 0.50 in front of the camera and ~0.39 BELOW it, chosen only so the start of the
++	 * beam would sit just outside the bottom edge of the screen (computed from the FOV). That hid
++	 * the start, but it also meant the beam always entered from the very bottom of the view.
++	 *
++	 * Now the origin is the real mouth, computed with the same model numbers as the third-person
++	 * origin (see NECK_BELOW_EYE / MOUTH_*), but expressed with the CAMERA axes, which in first
++	 * person are the head axes (look / up). Relative to the camera at pitch 0 the mouth is 0.204
++	 * in front and 0.125 below (0.213 down to the neck pivot, then 0.088 back up to the mouth), i.e.
++	 * 2.5x closer and 3x higher than before. Using the camera (not the player's eye position) keeps it
++	 * glued to the view, including view bobbing. The point of impact does not change: it is still
++	 * the server raycast along the crosshair.
++	 *
++	 * Trade-off, on purpose: since the origin is now inside the visible area (about 10 % above the
++	 * bottom edge with the default FOV), the narrow start of the beam is visible as it leaves the
++	 * mouth instead of being hidden below the screen. The start width is kept thin
++	 * (FIRST_PERSON_START_WIDTH_SCALE) so it reads as a beam leaving the mouth, not a floating
++	 * column. Looking steeply upwards the mouth goes behind the near plane and the start is simply
++	 * clipped, which is the correct view from inside the head. */
+ 	/** En primera persona el rayo nace más fino (fracción de HALF_WIDTH en el origen) y se
+ 	 * ensancha hasta el ancho normal en el otro extremo. */
+ 	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.15F;
+@@ -212,18 +219,15 @@ public class PlayerBeamRenderEvents {
+ 		quad(consumer, pose, start, end, spinUp, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd);
+ 	}
+ 
+-	/** Origen del rayo en primera persona: en ejes de la cámara (adelante + abajo), ver
+-	* FIRST_PERSON_FORWARD y FIRST_PERSON_MARGIN_DEG. */
++	/** First-person mouth: camera position, down to the neck pivot, then forward / up along the camera
++	 * axes. See the first-person notes above. */
+ 	private static Vec3 computeFirstPersonOrigin(Camera camera) {
+ 		org.joml.Vector3f look = camera.getLookVector();
+ 		org.joml.Vector3f up = camera.getUpVector();
+-		// Ángulo (bajo el eje de la cámara) justo por debajo del borde inferior de la pantalla.
+-		double halfFovDeg = Minecraft.getInstance().options.fov().get() / 2.0D;
+-		double angle = Math.toRadians(Math.min(halfFovDeg + FIRST_PERSON_MARGIN_DEG, 85.0D));
+-		double down = FIRST_PERSON_FORWARD * Math.tan(angle);
+ 		return camera.getPosition()
+-			.add(look.x() * FIRST_PERSON_FORWARD, look.y() * FIRST_PERSON_FORWARD, look.z() * FIRST_PERSON_FORWARD)
+-			.subtract(up.x() * down, up.y() * down, up.z() * down);
++			.subtract(0.0D, NECK_BELOW_EYE, 0.0D)
++			.add(look.x() * MOUTH_FORWARD_FROM_NECK, look.y() * MOUTH_FORWARD_FROM_NECK, look.z() * MOUTH_FORWARD_FROM_NECK)
++			.add(up.x() * MOUTH_UP_FROM_NECK, up.y() * MOUTH_UP_FROM_NECK, up.z() * MOUTH_UP_FROM_NECK);
+ 	}
+ 
+ 	/** Third-person mouth: neck pivot + (forward, up) rotated with the head. See MOUTH_* above. */

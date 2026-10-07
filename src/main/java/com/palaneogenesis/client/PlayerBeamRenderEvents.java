@@ -71,38 +71,64 @@ public class PlayerBeamRenderEvents {
 	 * da una sensación de giro/profundidad en vez de una cruz plana estática. */
 	private static final float ROTATION_DEGREES_PER_TICK = 6.0F;
 
-	/** Boca del modelo, medida desde la posición de ojos vanilla ya interpolada y en ejes de la
-	 * CABEZA (no del mundo): la cara del cubo de la cabeza está a 0.234 bloques del centro (4 px de
-	 * 16 por la escala 0.9375 del modelo) y la boca cae ~2 px (0.11) más abajo que los ojos.
+	/** Mouth of the vanilla player model, expressed in HEAD space (not world space).
 	 *
-	 * FIX (bug reportado: el rayo "se veía frente a la boca y dejaba un espacio gris/transparente"):
-	 * antes el origen estaba 0.30 adelante del ojo y 0.15 abajo en ejes del MUNDO, o sea unos 7 cm
-	 * por delante de la cara y fuera de la boca cuando se miraba arriba/abajo; entre la cara y el
-	 * inicio del rayo se veía el fondo. Ahora el origen queda apenas ADENTRO de la cara
-	 * (MOUTH_FORWARD_OFFSET < 0.234): como el rayo se dibuja después de las entidades y con
-	 * test de profundidad, la cabeza tapa el tramo enterrado y el rayo nace directo de la piel,
-	 * sin hueco. Sigue siendo el mismo eje que usa el raycast del servidor (la cruz). */
-	private static final double MOUTH_DOWN_OFFSET = 0.11D;
-	private static final double MOUTH_FORWARD_OFFSET = 0.20D;
+	 * FIX (report: "the beam still comes out lower and lower instead of straight from the mouth",
+	 * and, two updates earlier, "it came out of the mouth but too far forward, leaving a transparent
+	 * gap"). Root cause of the "lower and lower": the previous origin was eye + look*0.20 -
+	 * headUp*0.11, i.e. it pivoted around the EYE position. The rendered head does NOT pivot there:
+	 * vanilla rotates the head cube around the NECK (model pivot, 1.501 * 0.9375 = 1.407 blocks above
+	 * the feet), while getEyePosition() stays fixed at 1.62 no matter the pitch. So the farther the
+	 * player looked down, the more the real mouth swung forward and down while the origin stayed
+	 * behind, inside the head - and the beam left the face lower and lower (computed with the
+	 * model's own dimensions: looking down 30 deg the origin was 0.13 behind the face, at 60 deg
+	 * 0.19 behind it and 0.14 above the mouth, so the beam crossed the face plane well under the
+	 * mouth). The older "perfect" version (world-axes offset, 0.30 forward) only matched the mouth
+	 * around a 30-degree downward look and floated 0.07 in front of the face when looking straight
+	 * ahead - that was the transparent gap.
+	 *
+	 * Now the origin is built exactly like the head is drawn: neck pivot, then rotated with the head
+	 * (look / headUp axes). Numbers come from the vanilla player model (1 px = 0.9375 / 16 blocks):
+	 *   neck pivot         = 1.62 - 1.407            = 0.213 below getEyePosition()
+	 *   face plane         = 4 px in front of pivot  = 0.234
+	 *   mouth (skin row 6) = 1.5 px above the pivot  = 0.088
+	 * MOUTH_FORWARD_FROM_NECK sits MOUTH_INSET (0.03) INSIDE the face plane on purpose: the beam is
+	 * drawn after the entities with depth testing, so the head hides the buried stretch and the beam
+	 * is born straight out of the skin with no gap (same trick the previous version used, now with
+	 * the inset measured from the real face plane at every pitch).
+	 *
+	 * Known limits (not changed here): crouching / swimming / elytra poses move the real neck a few
+	 * centimetres relative to the eye height; the offsets above are for the standing pose. */
+	private static final double NECK_BELOW_EYE = 0.213D;
+	private static final double MOUTH_INSET = 0.03D;
+	private static final double MOUTH_FORWARD_FROM_NECK = 0.234D - MOUTH_INSET;
+	private static final double MOUTH_UP_FROM_NECK = 0.088D;
 	/** En tercera persona el rayo también nace más fino que su ancho final, así encaja en la boca
 	 * en vez de tapar media cara. */
 	private static final float THIRD_PERSON_START_WIDTH_SCALE = 0.55F;
 
-	/** Primera persona (sólo el jugador local): la boca real está por debajo del borde inferior de
-	 * la pantalla, así que el origen se calcula en ejes de la CÁMARA (sigue abajo del encuadre aunque
-	 * mires arriba o abajo) y el rayo ENTRA por el borde inferior - sin tramo flotante ni hueco
-	 * (el bug original) porque el inicio queda siempre fuera de pantalla.
+	/** First person (local player only).
 	 *
-	 * FIX (reporte: "ahora parece salir del torso"): el origen anterior (0.08 adelante, 0.30 abajo)
-	 * hacía que el rayo cruzara el borde inferior a ~0.4 bloques de la cámara, muy cerca, y por
-	 * perspectiva entraba como una columna ancha sobre la hotbar - se lee como algo que sube del
-	 * cuerpo. Ahora el origen está más lejos de la cámara sobre el MISMO rayo de visión del borde
-	 * inferior (mismo punto de entrada en pantalla), pero cruza el borde a ~0.55 bloques y mucho más
-	 * fino: se lee como un haz delgado que sale de la boca. El ángulo se calcula con el FOV real
-	 * (halfFov + FIRST_PERSON_MARGIN_DEG) para que el inicio quede justo fuera de pantalla con
-	 * cualquier FOV. El punto de impacto no cambia: sigue siendo el raycast del servidor. */
-	private static final double FIRST_PERSON_FORWARD = 0.50D;
-	private static final double FIRST_PERSON_MARGIN_DEG = 3.0D;
+	 * FIX (report: "in first person the beam comes out from too low; it must be higher and closer,
+	 * because it has to come out of the mouth"). The previous origin was not the mouth at all: it was
+	 * a point pushed 0.50 in front of the camera and ~0.39 BELOW it, chosen only so the start of the
+	 * beam would sit just outside the bottom edge of the screen (computed from the FOV). That hid
+	 * the start, but it also meant the beam always entered from the very bottom of the view.
+	 *
+	 * Now the origin is the real mouth, computed with the same model numbers as the third-person
+	 * origin (see NECK_BELOW_EYE / MOUTH_*), but expressed with the CAMERA axes, which in first
+	 * person are the head axes (look / up). Relative to the camera at pitch 0 the mouth is 0.204
+	 * in front and 0.125 below (0.213 down to the neck pivot, then 0.088 back up to the mouth), i.e.
+	 * 2.5x closer and 3x higher than before. Using the camera (not the player's eye position) keeps it
+	 * glued to the view, including view bobbing. The point of impact does not change: it is still
+	 * the server raycast along the crosshair.
+	 *
+	 * Trade-off, on purpose: since the origin is now inside the visible area (about 10 % above the
+	 * bottom edge with the default FOV), the narrow start of the beam is visible as it leaves the
+	 * mouth instead of being hidden below the screen. The start width is kept thin
+	 * (FIRST_PERSON_START_WIDTH_SCALE) so it reads as a beam leaving the mouth, not a floating
+	 * column. Looking steeply upwards the mouth goes behind the near plane and the start is simply
+	 * clipped, which is the correct view from inside the head. */
 	/** En primera persona el rayo nace más fino (fracción de HALF_WIDTH en el origen) y se
 	 * ensancha hasta el ancho normal en el otro extremo. */
 	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.15F;
@@ -193,31 +219,29 @@ public class PlayerBeamRenderEvents {
 		quad(consumer, pose, start, end, spinUp, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd);
 	}
 
-	/** Origen del rayo en primera persona: en ejes de la cámara (adelante + abajo), ver
-	* FIRST_PERSON_FORWARD y FIRST_PERSON_MARGIN_DEG. */
+	/** First-person mouth: camera position, down to the neck pivot, then forward / up along the camera
+	 * axes. See the first-person notes above. */
 	private static Vec3 computeFirstPersonOrigin(Camera camera) {
 		org.joml.Vector3f look = camera.getLookVector();
 		org.joml.Vector3f up = camera.getUpVector();
-		// Ángulo (bajo el eje de la cámara) justo por debajo del borde inferior de la pantalla.
-		double halfFovDeg = Minecraft.getInstance().options.fov().get() / 2.0D;
-		double angle = Math.toRadians(Math.min(halfFovDeg + FIRST_PERSON_MARGIN_DEG, 85.0D));
-		double down = FIRST_PERSON_FORWARD * Math.tan(angle);
 		return camera.getPosition()
-			.add(look.x() * FIRST_PERSON_FORWARD, look.y() * FIRST_PERSON_FORWARD, look.z() * FIRST_PERSON_FORWARD)
-			.subtract(up.x() * down, up.y() * down, up.z() * down);
+			.subtract(0.0D, NECK_BELOW_EYE, 0.0D)
+			.add(look.x() * MOUTH_FORWARD_FROM_NECK, look.y() * MOUTH_FORWARD_FROM_NECK, look.z() * MOUTH_FORWARD_FROM_NECK)
+			.add(up.x() * MOUTH_UP_FROM_NECK, up.y() * MOUTH_UP_FROM_NECK, up.z() * MOUTH_UP_FROM_NECK);
 	}
 
-	/** Boca en tercera persona: ojo + adelante y abajo en ejes de la CABEZA (sigue a la cabeza al
-	 * mirar arriba/abajo), ver MOUTH_*. */
+	/** Third-person mouth: neck pivot + (forward, up) rotated with the head. See MOUTH_* above. */
 	private static Vec3 computeMouthOrigin(AbstractClientPlayer player, float partialTick) {
 		Vec3 eye = player.getEyePosition(partialTick);
 		Vec3 look = player.getViewVector(partialTick);
 		Vec3 right = look.cross(new Vec3(0.0D, 1.0D, 0.0D));
 		right = right.lengthSqr() > 1.0E-6D ? right.normalize() : new Vec3(1.0D, 0.0D, 0.0D);
-		// "Arriba" de la cabeza: perpendicular a la mirada en el plano vertical (con look=(0,0,1)
-		// da (0,1,0); con la cabeza inclinada se inclina con ella).
+		// Head "up": perpendicular to the look direction in the vertical plane (look=(0,0,1) gives
+		// (0,1,0); with the head pitched it tilts with it).
 		Vec3 headUp = right.cross(look).normalize();
-		return eye.add(look.scale(MOUTH_FORWARD_OFFSET)).subtract(headUp.scale(MOUTH_DOWN_OFFSET));
+		// The neck is on the body axis, directly below the eye position (the pivot does not tilt).
+		Vec3 neck = eye.subtract(0.0D, NECK_BELOW_EYE, 0.0D);
+		return neck.add(look.scale(MOUTH_FORWARD_FROM_NECK)).add(headUp.scale(MOUTH_UP_FROM_NECK));
 	}
 
 	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, Vec3 start, Vec3 end,

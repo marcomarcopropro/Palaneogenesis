@@ -33,6 +33,14 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
 public final class EyePowerSpawner {
 
+	/** The dotted spark trail is replaced by the continuous ribbon of client.EyeTrailRenderEvents
+	 * (report: "it does not look like a trail, you can see little dots" - separate sprite particles
+	 * cannot form a continuous line while the player moves, see that class for the full reasoning).
+	 * Kept as a switch instead of deleting this class / EyePowerParticle / their registration, so
+	 * nothing else that references them changes and the old behaviour can be restored by flipping
+	 * this to true. */
+	private static final boolean SPAWN_SPARKS = false;
+
 	/** Ver el javadoc de la clase: 5 partículas objetivo por ojo ÷ 14 ticks de vida ≈ 0.357. */
 	private static final float SPAWN_CHANCE_PER_TICK_PER_EYE = 0.357F;
 
@@ -43,7 +51,7 @@ public final class EyePowerSpawner {
 
 	@SubscribeEvent
 	public static void onClientTick(TickEvent.ClientTickEvent event) {
-		if (event.phase != TickEvent.Phase.END) {
+		if (event.phase != TickEvent.Phase.END || !SPAWN_SPARKS) {
 			return;
 		}
 		if (TransformationEffectsClientState.activeEntityIds().isEmpty()) {
