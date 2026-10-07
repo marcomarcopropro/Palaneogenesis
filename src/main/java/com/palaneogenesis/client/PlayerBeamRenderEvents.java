@@ -71,29 +71,41 @@ public class PlayerBeamRenderEvents {
 	 * da una sensación de giro/profundidad en vez de una cruz plana estática. */
 	private static final float ROTATION_DEGREES_PER_TICK = 6.0F;
 
-	/** Aproxima "boca" desde la posición de ojos vanilla ya interpolada - la cabeza no tiene una
-	 * pose separada que trackear más allá de pitch/yaw, así que getEyePosition/getViewVector
-	 * alcanzan. Un poco abajo (boca, no ojos) y un poco adelante (que nazca delante de la cara, no
-	 * adentro de la cabeza / de la cámara en primera persona). Sigue siendo exactamente el mismo
-	 * eje que usa el raycast real del servidor - la cruz -, sólo con este offset fijo aplicado
-	 * tanto al origen visual como (indirectamente, por venir del mismo eye+look) al hit real. */
-	private static final double MOUTH_DOWN_OFFSET = 0.15D;
-	private static final double MOUTH_FORWARD_OFFSET = 0.3D;
+	/** Boca del modelo, medida desde la posición de ojos vanilla ya interpolada y en ejes de la
+	 * CABEZA (no del mundo): la cara del cubo de la cabeza está a 0.234 bloques del centro (4 px de
+	 * 16 por la escala 0.9375 del modelo) y la boca cae ~2 px (0.11) más abajo que los ojos.
+	 *
+	 * FIX (bug reportado: el rayo "se veía frente a la boca y dejaba un espacio gris/transparente"):
+	 * antes el origen estaba 0.30 adelante del ojo y 0.15 abajo en ejes del MUNDO, o sea unos 7 cm
+	 * por delante de la cara y fuera de la boca cuando se miraba arriba/abajo; entre la cara y el
+	 * inicio del rayo se veía el fondo. Ahora el origen queda apenas ADENTRO de la cara
+	 * (MOUTH_FORWARD_OFFSET < 0.234): como el rayo se dibuja después de las entidades y con
+	 * test de profundidad, la cabeza tapa el tramo enterrado y el rayo nace directo de la piel,
+	 * sin hueco. Sigue siendo el mismo eje que usa el raycast del servidor (la cruz). */
+	private static final double MOUTH_DOWN_OFFSET = 0.11D;
+	private static final double MOUTH_FORWARD_OFFSET = 0.20D;
+	/** En tercera persona el rayo también nace más fino que su ancho final, así encaja en la boca
+	 * en vez de tapar media cara. */
+	private static final float THIRD_PERSON_START_WIDTH_SCALE = 0.55F;
 
-	/** FIX (bug reportado: en primera persona el rayo "sale del aire", demasiado adelantado). El
-	 * origen de tercera persona (MOUTH_*: 0.15 abajo, 0.3 adelante del ojo, en ejes del MUNDO)
-	 * cae DENTRO del campo visual de la cámara - a 0.3 bloques y 26 grados abajo, con un FOV
-	 * normal se ve el arranque del rayo flotando en el medio de la pantalla. La boca real está
-	 * por debajo del borde inferior de la pantalla. Ahora, sólo para el jugador local en primera
-	 * persona, el origen se calcula en ejes de la CÁMARA (así sigue abajo del encuadre aunque
-	 * mires arriba o abajo): casi pegado al ojo y bien abajo, de modo que el rayo ENTRA a la
-	 * pantalla por el borde inferior, como saliendo de tu boca. El punto de impacto no cambia:
-	 * sigue siendo el mismo raycast del servidor sobre la cruz. */
-	private static final double FIRST_PERSON_DOWN = 0.30D;
-	private static final double FIRST_PERSON_FORWARD = 0.08D;
+	/** Primera persona (sólo el jugador local): la boca real está por debajo del borde inferior de
+	 * la pantalla, así que el origen se calcula en ejes de la CÁMARA (sigue abajo del encuadre aunque
+	 * mires arriba o abajo) y el rayo ENTRA por el borde inferior - sin tramo flotante ni hueco
+	 * (el bug original) porque el inicio queda siempre fuera de pantalla.
+	 *
+	 * FIX (reporte: "ahora parece salir del torso"): el origen anterior (0.08 adelante, 0.30 abajo)
+	 * hacía que el rayo cruzara el borde inferior a ~0.4 bloques de la cámara, muy cerca, y por
+	 * perspectiva entraba como una columna ancha sobre la hotbar - se lee como algo que sube del
+	 * cuerpo. Ahora el origen está más lejos de la cámara sobre el MISMO rayo de visión del borde
+	 * inferior (mismo punto de entrada en pantalla), pero cruza el borde a ~0.55 bloques y mucho más
+	 * fino: se lee como un haz delgado que sale de la boca. El ángulo se calcula con el FOV real
+	 * (halfFov + FIRST_PERSON_MARGIN_DEG) para que el inicio quede justo fuera de pantalla con
+	 * cualquier FOV. El punto de impacto no cambia: sigue siendo el raycast del servidor. */
+	private static final double FIRST_PERSON_FORWARD = 0.50D;
+	private static final double FIRST_PERSON_MARGIN_DEG = 3.0D;
 	/** En primera persona el rayo nace más fino (fracción de HALF_WIDTH en el origen) y se
 	 * ensancha hasta el ancho normal en el otro extremo. */
-	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.30F;
+	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.15F;
 
 	@SubscribeEvent
 	public static void onRenderLevelStage(RenderLevelStageEvent event) {
@@ -147,7 +159,7 @@ public class PlayerBeamRenderEvents {
 		Minecraft minecraft = Minecraft.getInstance();
 		boolean firstPersonSelf = player == minecraft.player && minecraft.options.getCameraType().isFirstPerson();
 		Vec3 start = firstPersonSelf ? computeFirstPersonOrigin(camera) : computeMouthOrigin(player, partialTick);
-		float startWidthScale = firstPersonSelf ? FIRST_PERSON_START_WIDTH_SCALE : 1.0F;
+		float startWidthScale = firstPersonSelf ? FIRST_PERSON_START_WIDTH_SCALE : THIRD_PERSON_START_WIDTH_SCALE;
 		Vec3 end = state.end;
 
 		Vec3 dir = end.subtract(start);
@@ -182,19 +194,30 @@ public class PlayerBeamRenderEvents {
 	}
 
 	/** Origen del rayo en primera persona: en ejes de la cámara (adelante + abajo), ver
-	 * FIRST_PERSON_DOWN. */
+	* FIRST_PERSON_FORWARD y FIRST_PERSON_MARGIN_DEG. */
 	private static Vec3 computeFirstPersonOrigin(Camera camera) {
 		org.joml.Vector3f look = camera.getLookVector();
 		org.joml.Vector3f up = camera.getUpVector();
+		// Ángulo (bajo el eje de la cámara) justo por debajo del borde inferior de la pantalla.
+		double halfFovDeg = Minecraft.getInstance().options.fov().get() / 2.0D;
+		double angle = Math.toRadians(Math.min(halfFovDeg + FIRST_PERSON_MARGIN_DEG, 85.0D));
+		double down = FIRST_PERSON_FORWARD * Math.tan(angle);
 		return camera.getPosition()
 			.add(look.x() * FIRST_PERSON_FORWARD, look.y() * FIRST_PERSON_FORWARD, look.z() * FIRST_PERSON_FORWARD)
-			.subtract(up.x() * FIRST_PERSON_DOWN, up.y() * FIRST_PERSON_DOWN, up.z() * FIRST_PERSON_DOWN);
+			.subtract(up.x() * down, up.y() * down, up.z() * down);
 	}
 
+	/** Boca en tercera persona: ojo + adelante y abajo en ejes de la CABEZA (sigue a la cabeza al
+	 * mirar arriba/abajo), ver MOUTH_*. */
 	private static Vec3 computeMouthOrigin(AbstractClientPlayer player, float partialTick) {
 		Vec3 eye = player.getEyePosition(partialTick);
 		Vec3 look = player.getViewVector(partialTick);
-		return eye.add(0.0D, -MOUTH_DOWN_OFFSET, 0.0D).add(look.scale(MOUTH_FORWARD_OFFSET));
+		Vec3 right = look.cross(new Vec3(0.0D, 1.0D, 0.0D));
+		right = right.lengthSqr() > 1.0E-6D ? right.normalize() : new Vec3(1.0D, 0.0D, 0.0D);
+		// "Arriba" de la cabeza: perpendicular a la mirada en el plano vertical (con look=(0,0,1)
+		// da (0,1,0); con la cabeza inclinada se inclina con ella).
+		Vec3 headUp = right.cross(look).normalize();
+		return eye.add(look.scale(MOUTH_FORWARD_OFFSET)).subtract(headUp.scale(MOUTH_DOWN_OFFSET));
 	}
 
 	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, Vec3 start, Vec3 end,

@@ -9,12 +9,12 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 /**
- * Stage 4, Paso 1: ParticleTypes propios del mod. ANCIENT_AURA es la partícula orbital que rodea
- * al jugador mientras está transformado (client.AncientAuraParticle/AncientAuraSpawner).
+ * Stage 4, Paso 1: ParticleTypes propios del mod. (ANCIENT_AURA, la partícula orbital del efecto
+ * anterior, se eliminó: el aura son sólo las llamas de ANCIENT_FLAME.)
  *
  * EYE_POWER (agregado en la migración de esta sesión que reemplaza a la EyeFlareRenderEvents
  * vieja): la "estela de poder" que sale de cada ojo (client.EyePowerParticle/EyePowerSpawner) -
- * distinto de ANCIENT_AURA porque necesita su propio tinte de vértice (paleta celeste dada por el
+ * distinto de ANCIENT_FLAME porque necesita su propio tinte de vértice (paleta celeste dada por el
  * owner, ver el javadoc de EyePowerParticle) en vez del violeta/índigo sin tintar del aura, aunque
  * comparte el mismo archivo de sprite (eye_glow.png, reutilizado - ver ese mismo javadoc para por
  * qué no hizo falta un asset nuevo). El "ancla" fija de los ojos (antes EyeFlareRenderEvents,
@@ -29,9 +29,6 @@ import net.minecraftforge.registries.RegistryObject;
 public class ModParticleTypes {
 	public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
 		DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, Palaneogenesis.MOD_ID);
-
-	public static final RegistryObject<SimpleParticleType> ANCIENT_AURA =
-		PARTICLE_TYPES.register("ancient_aura", () -> new SimpleParticleType(false));
 
 	public static final RegistryObject<SimpleParticleType> EYE_POWER =
 		PARTICLE_TYPES.register("eye_power", () -> new SimpleParticleType(false));

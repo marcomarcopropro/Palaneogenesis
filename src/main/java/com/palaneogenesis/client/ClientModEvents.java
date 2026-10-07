@@ -56,13 +56,12 @@ public class ClientModEvents {
 		}
 	}
 
-	/** Stage 4, Paso 1: registra AncientAuraParticle.Provider y EyePowerParticle.Provider, que
+	/** Stage 4, Paso 1: registra EyePowerParticle.Provider y AncientFlameParticle.Provider, que
 	 * además cachean el SpriteSet resultante (ver esos constructores) para que
 	 * client.AncientAuraSpawner/client.EyePowerSpawner puedan construir partículas directo sin
 	 * pasar por level.addParticle(). */
 	@SubscribeEvent
 	public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
-		event.registerSpriteSet(ModParticleTypes.ANCIENT_AURA.get(), AncientAuraParticle.Provider::new);
 		event.registerSpriteSet(ModParticleTypes.EYE_POWER.get(), EyePowerParticle.Provider::new);
 		event.registerSpriteSet(ModParticleTypes.ANCIENT_FLAME.get(), AncientFlameParticle.Provider::new);
 	}

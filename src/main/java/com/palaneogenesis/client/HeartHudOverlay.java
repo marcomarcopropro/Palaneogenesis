@@ -94,10 +94,12 @@ import java.util.Map;
  */
 public final class HeartHudOverlay {
 
-	private static final int TEXT_COLOR = 0xEBF7FD;
-	/** Badge del multiplicador ×N (colores de client.AncientPalette: CORE sobre navy, borde celeste apagado). */
-	private static final int PILL_FILL = 0xFF0A1020;
-	private static final int PILL_BORDER = 0xFF2B7FA8;
+	private static final int TEXT_COLOR = 0xFFFFFF;
+	/** Caja del multiplicador ×N según la imagen de referencia: fondo oscuro, texto blanco, borde
+	 * cian con las barras de arriba/abajo más claras que las laterales y esquinas cortadas. */
+	private static final int PILL_FILL = 0xFF080D1A;
+	private static final int PILL_BORDER_HORIZONTAL = 0xFF3FA6DC;
+	private static final int PILL_BORDER_VERTICAL = 0xFF2A78B0;
 	private static final int HEARTS_PER_ROW = 10;
 	/** Avance horizontal de un corazón al siguiente dentro de la misma fila - mismo valor que ya
 	 * usaba la fila vanilla (8px) y que usaba el sheet viejo, independiente del tamaño real del
@@ -266,30 +268,32 @@ public final class HeartHudOverlay {
 		// pantalla, donde también caen el nivel de XP y el temporizador de salto (los tres se
 		// pisaban). Ahora es un badge (píldora oscura con borde celeste) a la IZQUIERDA de la fila,
 		// centrado verticalmente con los corazones, y el centro queda libre para la cúpula de
-		// client.AncientCoreHudOverlay. Texto a scale=0.5 como antes (el pedido original era "a
-		// mitad de tamaño").
+		// client.AncientCoreHudOverlay. Texto a scale=0.75, blanco, sin sombra (imagen de referencia).
 		if (tens >= 2) {
 			String text = "\u00d7" + tens;
-			float scale = 0.5F;
+			float scale = 0.75F;
 			int textW = Math.round(font.width(text) * scale);
 			int padX = 3;
 			int pillW = textW + padX * 2;
-			int pillH = 8;
+			int pillH = 9;
 			int pillRight = baseX - 3;
 			int pillLeft = pillRight - pillW;
 			int pillTop = baseY + ICON_Y_OFFSET;
 			int pillBottom = pillTop + pillH;
 
-			// Esquinas cortadas de 1 px (dos rects cruzados) = píldora sin textura. Primero el
-			// borde, después el relleno 1 px más chico.
-			guiGraphics.fill(pillLeft + 1, pillTop, pillRight - 1, pillBottom, PILL_BORDER);
-			guiGraphics.fill(pillLeft, pillTop + 1, pillRight, pillBottom - 1, PILL_BORDER);
+			// Esquinas cortadas de 1 px: barras de arriba/abajo (más claras) entre las laterales
+			// (más oscuras), y el relleno adentro.
+			guiGraphics.fill(pillLeft + 1, pillTop, pillRight - 1, pillTop + 1, PILL_BORDER_HORIZONTAL);
+			guiGraphics.fill(pillLeft + 1, pillBottom - 1, pillRight - 1, pillBottom, PILL_BORDER_HORIZONTAL);
+			guiGraphics.fill(pillLeft, pillTop + 1, pillLeft + 1, pillBottom - 1, PILL_BORDER_VERTICAL);
+			guiGraphics.fill(pillRight - 1, pillTop + 1, pillRight, pillBottom - 1, PILL_BORDER_VERTICAL);
 			guiGraphics.fill(pillLeft + 1, pillTop + 1, pillRight - 1, pillBottom - 1, PILL_FILL);
 
 			guiGraphics.pose().pushPose();
-			guiGraphics.pose().translate(pillLeft + padX, pillTop + (pillH - 8 * scale) / 2.0F, 0.0F);
+			// Los dígitos ocupan 7 de las 8 filas de la fuente: se centran en el interior de 7 px.
+			guiGraphics.pose().translate(pillLeft + padX, pillTop + 1.0F + (7.0F - 7.0F * scale) / 2.0F, 0.0F);
 			guiGraphics.pose().scale(scale, scale, 1.0F);
-			guiGraphics.drawString(font, text, 0, 0, TEXT_COLOR, true);
+			guiGraphics.drawString(font, text, 0, 0, TEXT_COLOR, false);
 			guiGraphics.pose().popPose();
 		}
 	};

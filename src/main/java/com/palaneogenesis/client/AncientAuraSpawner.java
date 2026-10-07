@@ -25,6 +25,9 @@ import net.minecraftforge.fml.common.Mod;
  *
  * El primer pulso arranca justo al transformarse (ver TransformationEffectsClientState).
  *
+ * Las chispas orbitales del efecto anterior (AncientAuraParticle) se eliminaron por completo: el
+ * aura son SOLO las líneas/llamas verticales de AncientFlameParticle.
+ *
  * FIX (bug reportado: "si presiono ESC y espero, las partículas se sobrecargan"): ClientTickEvent
  * sigue disparándose con el juego en pausa (ESC en un mundo local), pero el ParticleEngine NO
  * avanza mientras está pausado, así que las partículas ya nacidas no envejecían ni morían y este
@@ -47,10 +50,6 @@ public final class AncientAuraSpawner {
 	private static final float FLAME_RATE_CALM = 0.30F;
 	private static final float FLAME_RATE_PEAK = 1.50F;
 	private static final int BURST_FLAMES = 8;
-
-	/** Chispas finas (client.AncientAuraParticle), probabilidad por tick. */
-	private static final float EMBER_CHANCE_CALM = 0.10F;
-	private static final float EMBER_CHANCE_PEAK = 0.45F;
 
 	private AncientAuraSpawner() {
 	}
@@ -93,10 +92,6 @@ public final class AncientAuraSpawner {
 			}
 			for (int i = 0; i < count; i++) {
 				AncientFlameParticle.spawn(level, living, intensity, false);
-			}
-
-			if (level.random.nextFloat() < Mth.lerp(intensity, EMBER_CHANCE_CALM, EMBER_CHANCE_PEAK)) {
-				AncientAuraParticle.spawn(level, living);
 			}
 		}
 	}

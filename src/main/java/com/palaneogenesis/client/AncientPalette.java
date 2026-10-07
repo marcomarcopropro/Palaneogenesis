@@ -12,7 +12,13 @@ import net.minecraft.util.Mth;
  *   CELESTE  #3CA6D7  celeste brillante (el de la estela de ojos original)
  *   ROYAL    #0067A1  azul rey, para sombras del HUD
  *   VIOLET   #C256E0  violeta del brillo de ojos original (eye_glow.png)
- *   INDIGO   #36064D  índigo oscuro del aura original (ancient_particle.png)
+ *   INDIGO   #36064D  índigo oscuro del aura original
+ *
+ * Colores del HUD (rediseño según la imagen de referencia "Conjunto de activos para HUD"):
+ *   DARK_BLUE #0C2078  azul oscuro de carga (inicio del arco de salto)
+ *   SKY       #60D6F4  celeste completado (final del arco)
+ *   CYAN_RIM  #30A0D6  borde cian/azul claro (caja ×N y contorno de la cúpula)
+ *   MAGENTA   #B040CE  borde magenta (contorno exterior, lado izquierdo de la cúpula)
  */
 public final class AncientPalette {
 
@@ -21,6 +27,10 @@ public final class AncientPalette {
 	public static final float[] ROYAL = rgb(0, 103, 161);
 	public static final float[] VIOLET = rgb(194, 86, 224);
 	public static final float[] INDIGO = rgb(54, 6, 77);
+	public static final float[] DARK_BLUE = rgb(12, 32, 120);
+	public static final float[] SKY = rgb(96, 214, 244);
+	public static final float[] CYAN_RIM = rgb(48, 160, 214);
+	public static final float[] MAGENTA = rgb(176, 64, 206);
 
 	/** Posición (0..1) de cada color en la rampa de energía, ver {@link #energy}. */
 	private static final float STOP_CELESTE = 0.22F;

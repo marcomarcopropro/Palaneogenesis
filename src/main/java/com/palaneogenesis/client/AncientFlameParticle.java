@@ -26,16 +26,18 @@ import net.minecraft.world.phys.Vec3;
  *   su eje es el vertical del mundo. Un billboard normal gira con la cámara y una lengua
  *   estirada se vería torcida al mirar desde arriba/abajo.
  * - Full-bright (0xF000F0): se lee como luz propia, también de noche/en cuevas.
- * - Sigue al dueño casi del todo (FOLLOW_OWNER) pero no del 100 %: al correr o volar deja una
- *   cola detrás, que es el gesto típico de "velocidad + poder".
+ * - ANCLADA al dueño (FIX "las líneas quedan atrás cuando el personaje se mueve"): antes la
+ *   llama guardaba una posición de MUNDO y copiaba sólo el 85 % del desplazamiento del dueño por
+ *   tick, así que al correr se despegaba y quedaba rezagada. Ahora guarda un OFFSET relativo al
+ *   dueño (offX/offY/offZ) y en cada frame se dibuja en lerp(dueño.xo, dueño.x, partialTick) +
+ *   lerp(offsetPrevio, offset, partialTick): exactamente la misma interpolación que usa el modelo
+ *   del jugador, así que la llama acompaña al cuerpo cuadro a cuadro, sin retraso ni temblor.
  * - Se atenúa cerca de la cámara: en primera persona las llamas que pasan a centímetros de
  *   los ojos no tapan la pantalla.
  */
 public class AncientFlameParticle extends TextureSheetParticle {
 
 	private static final int BASE_LIFETIME_TICKS = 22;
-	/** Fracción del desplazamiento del dueño (por tick) que la llama copia. */
-	private static final double FOLLOW_OWNER = 0.85D;
 	/** Cuánto se acerca por tick al eje del cuerpo (las llamas convergen hacia arriba). */
 	private static final double CONVERGE_PER_TICK = 0.02D;
 	private static final float NEAR_FADE_START = 0.45F;
@@ -53,6 +55,16 @@ public class AncientFlameParticle extends TextureSheetParticle {
 	private final float swayDirX;
 	private final float swayDirZ;
 	private final float[] tmpColor = new float[3];
+
+	/** Posición relativa al dueño (bloques) en este tick y en el anterior (para interpolar). */
+	private double offX;
+	private double offY;
+	private double offZ;
+	private double prevOffX;
+	private double prevOffY;
+	private double prevOffZ;
+	/** Dueño resuelto en el último tick (se renueva cada tick por id). */
+	private LivingEntity owner;
 
 	private float riseSpeed = 0.012F;
 	private float halfWidth;
@@ -73,8 +85,15 @@ public class AncientFlameParticle extends TextureSheetParticle {
 		float height = burst
 			? this.random.nextFloat() * 0.15F
 			: (float) Math.pow(this.random.nextFloat(), 1.4D) * owner.getBbHeight() * 0.85F;
-		this.setPos(owner.getX() + Mth.cos(angle) * radius, owner.getY() + height, owner.getZ() + Mth.sin(angle) * radius);
-		// Sin esto el primer frame interpola desde la posición del dueño hasta la de spawn.
+		this.owner = owner;
+		this.offX = Mth.cos(angle) * radius;
+		this.offY = height;
+		this.offZ = Mth.sin(angle) * radius;
+		// Sin esto el primer frame interpola desde (0,0,0) hasta el offset de spawn.
+		this.prevOffX = this.offX;
+		this.prevOffY = this.offY;
+		this.prevOffZ = this.offZ;
+		this.setPos(owner.getX() + this.offX, owner.getY() + this.offY, owner.getZ() + this.offZ);
 		this.xo = this.x;
 		this.yo = this.y;
 		this.zo = this.z;
@@ -121,23 +140,29 @@ public class AncientFlameParticle extends TextureSheetParticle {
 			return;
 		}
 
+		this.owner = owner;
+
 		float t = Mth.clamp((float) this.age / (float) this.lifetime, 0.0F, 1.0F);
 
-		double nx = this.x + (owner.getX() - owner.xo) * FOLLOW_OWNER;
-		double ny = this.y + (owner.getY() - owner.yo) * FOLLOW_OWNER;
-		double nz = this.z + (owner.getZ() - owner.zo) * FOLLOW_OWNER;
+		// Todo el movimiento propio de la llama (subir, converger al eje, ondular) ocurre en
+		// coordenadas RELATIVAS al dueño; el desplazamiento del dueño se suma al dibujar.
+		this.prevOffX = this.offX;
+		this.prevOffY = this.offY;
+		this.prevOffZ = this.offZ;
 
 		this.riseSpeed = Math.min(this.maxRise, this.riseSpeed + this.riseAccel);
-		ny += this.riseSpeed;
+		this.offY += this.riseSpeed;
 
 		double keep = 1.0D - CONVERGE_PER_TICK;
-		nx = owner.getX() + (nx - owner.getX()) * keep;
-		nz = owner.getZ() + (nz - owner.getZ()) * keep;
+		this.offX *= keep;
+		this.offZ *= keep;
 
 		float sway = Mth.cos((this.age + this.swayPhase) * 0.3F) * this.swayAmp;
-		nx += this.swayDirX * sway;
-		nz += this.swayDirZ * sway;
-		this.setPos(nx, ny, nz);
+		this.offX += this.swayDirX * sway;
+		this.offZ += this.swayDirZ * sway;
+
+		// La posición de mundo sólo se usa para la caja de culling del motor de partículas.
+		this.setPos(owner.getX() + this.offX, owner.getY() + this.offY, owner.getZ() + this.offZ);
 
 		float bell = Mth.sin(t * (float) Math.PI);
 		this.alpha = this.peakAlpha * (float) Math.pow(bell, 0.75D);
@@ -152,9 +177,25 @@ public class AncientFlameParticle extends TextureSheetParticle {
 	@Override
 	public void render(VertexConsumer consumer, Camera camera, float partialTick) {
 		Vec3 cam = camera.getPosition();
-		float px = (float) (Mth.lerp((double) partialTick, this.xo, this.x) - cam.x());
-		float py = (float) (Mth.lerp((double) partialTick, this.yo, this.y) - cam.y());
-		float pz = (float) (Mth.lerp((double) partialTick, this.zo, this.z) - cam.z());
+		// Base = posición interpolada del dueño (la misma que usa su modelo y la cámara) + offset
+		// interpolado de la llama: queda pegada al cuerpo sin importar la velocidad.
+		double baseX = this.x;
+		double baseY = this.y;
+		double baseZ = this.z;
+		double offsetX = 0.0D;
+		double offsetY = 0.0D;
+		double offsetZ = 0.0D;
+		if (this.owner != null) {
+			baseX = Mth.lerp((double) partialTick, this.owner.xo, this.owner.getX());
+			baseY = Mth.lerp((double) partialTick, this.owner.yo, this.owner.getY());
+			baseZ = Mth.lerp((double) partialTick, this.owner.zo, this.owner.getZ());
+			offsetX = Mth.lerp((double) partialTick, this.prevOffX, this.offX);
+			offsetY = Mth.lerp((double) partialTick, this.prevOffY, this.offY);
+			offsetZ = Mth.lerp((double) partialTick, this.prevOffZ, this.offZ);
+		}
+		float px = (float) (baseX + offsetX - cam.x());
+		float py = (float) (baseY + offsetY - cam.y());
+		float pz = (float) (baseZ + offsetZ - cam.z());
 
 		float dist = Mth.sqrt(px * px + py * py + pz * pz);
 		float nearFade = Mth.clamp((dist - NEAR_FADE_START) / (NEAR_FADE_END - NEAR_FADE_START), 0.0F, 1.0F);
