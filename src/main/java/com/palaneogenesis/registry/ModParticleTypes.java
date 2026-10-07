@@ -36,6 +36,10 @@ public class ModParticleTypes {
 	public static final RegistryObject<SimpleParticleType> EYE_POWER =
 		PARTICLE_TYPES.register("eye_power", () -> new SimpleParticleType(false));
 
+	/** Llama de energía del aura (client.AncientFlameParticle), ver particles/ancient_flame.json. */
+	public static final RegistryObject<SimpleParticleType> ANCIENT_FLAME =
+		PARTICLE_TYPES.register("ancient_flame", () -> new SimpleParticleType(false));
+
 	public static void register(IEventBus modEventBus) {
 		PARTICLE_TYPES.register(modEventBus);
 	}

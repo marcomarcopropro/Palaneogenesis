@@ -1,6 +1,9 @@
 package com.palaneogenesis.client;
 
+import net.minecraft.client.Minecraft;
+
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,16 +29,46 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TransformationEffectsClientState {
 
 	private static final Set<Integer> ACTIVE_ENTITY_IDS = ConcurrentHashMap.newKeySet();
+	/** Tick de mundo en que este cliente se enteró de que la entidad empezó a mostrar efectos:
+	 * ancla el ritmo de pulsos del aura (ver AncientAuraSpawner), así el primer pulso coincide
+	 * con el momento de transformarse. */
+	private static final Map<Integer, Long> ACTIVATED_AT = new ConcurrentHashMap<>();
+	/** Último ciclo de pulso en que ya se disparó el estallido inicial, por entidad. */
+	private static final Map<Integer, Long> LAST_BURST_CYCLE = new ConcurrentHashMap<>();
 
 	private TransformationEffectsClientState() {
 	}
 
 	public static void update(int entityId, boolean active) {
 		if (active) {
-			ACTIVE_ENTITY_IDS.add(entityId);
+			if (ACTIVE_ENTITY_IDS.add(entityId)) {
+				ACTIVATED_AT.put(entityId, currentGameTime());
+				LAST_BURST_CYCLE.remove(entityId);
+			}
 		} else {
 			ACTIVE_ENTITY_IDS.remove(entityId);
+			ACTIVATED_AT.remove(entityId);
+			LAST_BURST_CYCLE.remove(entityId);
 		}
+	}
+
+	private static long currentGameTime() {
+		return Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0L;
+	}
+
+	/** Ticks transcurridos dentro del ciclo de pulso actual (0 .. cycleTicks-1). */
+	public static int phaseTicks(int entityId, long now, int cycleTicks) {
+		long start = ACTIVATED_AT.getOrDefault(entityId, now);
+		return (int) Math.floorMod(now - start, (long) cycleTicks);
+	}
+
+	/** true UNA sola vez por ciclo de pulso (la primera vez que se pregunta dentro de él): marca
+	 * el estallido de llamas que abre cada pulso. */
+	public static boolean consumeBurst(int entityId, long now, int cycleTicks) {
+		long start = ACTIVATED_AT.getOrDefault(entityId, now);
+		long cycle = Math.floorDiv(now - start, (long) cycleTicks);
+		Long last = LAST_BURST_CYCLE.put(entityId, cycle);
+		return last == null || last != cycle;
 	}
 
 	public static boolean isActive(int entityId) {

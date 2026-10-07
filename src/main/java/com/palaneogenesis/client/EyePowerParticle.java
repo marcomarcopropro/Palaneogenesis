@@ -53,9 +53,12 @@ public class EyePowerParticle extends TextureSheetParticle {
 	private static final int FADE_IN_TICKS = 2;
 
 	/** Ver el javadoc de la clase para la paleta completa. */
-	private static final float[] GLOW = rgb(235, 247, 253);
-	private static final float[] BASE = rgb(60, 166, 215);
-	private static final float[] DEEP = rgb(1, 51, 97);
+	/** Paleta compartida (client.AncientPalette): nace en el destello, se enfría a celeste y la
+	 * cola se funde en el violeta del brillo de los ojos - así estela y brillo fijo se leen como
+	 * una misma energía. (Antes la cola terminaba en azul oscuro #013361.) */
+	private static final float[] GLOW = AncientPalette.CORE;
+	private static final float[] BASE = AncientPalette.CELESTE;
+	private static final float[] DEEP = AncientPalette.VIOLET;
 
 	/** Fracción de vida en la que termina el tramo GLOW->BASE y arranca BASE->DEEP. */
 	private static final float COOLDOWN_SPLIT = 0.3F;

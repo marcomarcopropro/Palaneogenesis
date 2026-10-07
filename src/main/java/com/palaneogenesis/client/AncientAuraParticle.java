@@ -13,6 +13,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
+ * NOTA (rediseño visual del aura): esta partícula pasó a ser sólo la CHISPA fina del aura -
+ * ahora orbita mucho más lento y sube un poco más rápido, y el protagonismo lo tiene
+ * client.AncientFlameParticle (las llamas de energía estilo anime). El anillo orbital rápido
+ * original era lo que daba la sensación de "efecto de poción".
+ *
  * Stage 4, Paso 1 - aura orbital pedida por el owner ("esas ondas alrededor de Steve"), visible
  * TODO el tiempo que el jugador está transformado (confirmado explícitamente, no sólo en el
  * instante de transformar/destransformar).
@@ -40,20 +45,20 @@ public class AncientAuraParticle extends TextureSheetParticle {
 	private static final int BASE_LIFETIME_TICKS = 25;
 
 	/** VELOCIDAD_ORBITA del prototipo (2 rad/s) pasado a rad/tick (÷20). */
-	private static final float BASE_ORBIT_SPEED_PER_TICK = 2.0F / 20.0F;
+	private static final float BASE_ORBIT_SPEED_PER_TICK = 0.5F / 20.0F;
 
 	/** VELOCIDAD_FLOTAR del prototipo (1 bloque/s) pasado a bloques/tick (÷20). */
-	private static final float BASE_FLOAT_SPEED_PER_TICK = 1.0F / 20.0F;
+	private static final float BASE_FLOAT_SPEED_PER_TICK = 1.3F / 20.0F;
 
-	private static final float RADIUS_MIN = 0.4F;
-	private static final float RADIUS_MAX = 0.7F;
+	private static final float RADIUS_MIN = 0.35F;
+	private static final float RADIUS_MAX = 0.60F;
 	private static final float SPAWN_HEIGHT_MIN = 0.0F;
 	private static final float SPAWN_HEIGHT_MAX = 1.0F;
 
 	/** OPACIDAD_MAXIMA del prototipo (1.1 - un poco de "sobregiro" a propósito en su envolvente
 	 * seno, que el clamp de abajo recorta a 1.0 en los frames más brillantes en vez de dejarlo
 	 * en un pico más bajo). */
-	private static final float OPACITY_PEAK = 1.1F;
+	private static final float OPACITY_PEAK = 0.9F;
 
 	private final int ownerId;
 	private final float radius;

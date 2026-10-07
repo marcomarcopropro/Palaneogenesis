@@ -39,7 +39,12 @@ public final class AncientTransformedHealthHudEvents {
 
 	@SubscribeEvent
 	public static void onRenderPlayerHealth(RenderGuiOverlayEvent.Pre event) {
-		if (event.getOverlay() != VanillaGuiOverlay.PLAYER_HEALTH.type()) {
+		// Rediseño visual del HUD: además de la vida vanilla, mientras estás transformado se
+		// cancela la barra + nivel de XP vanilla - client.AncientCoreHudOverlay los redibuja
+		// integrados en la cúpula (con la paleta del mod). Vanilla dibuja barra y número en el
+		// mismo overlay, así que no se puede ocultar sólo el número: se reemplaza todo.
+		if (event.getOverlay() != VanillaGuiOverlay.PLAYER_HEALTH.type()
+			&& event.getOverlay() != VanillaGuiOverlay.EXPERIENCE_BAR.type()) {
 			return;
 		}
 

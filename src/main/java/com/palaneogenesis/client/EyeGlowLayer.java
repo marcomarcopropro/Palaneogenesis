@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 /**
  * Stage 4, Paso 1 (migración post-review de esta sesión) - reemplaza por completo el enfoque de
@@ -61,10 +62,27 @@ public final class EyeGlowLayer extends RenderLayer<AbstractClientPlayer, Player
 		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/particle/eye_glow.png");
 	private static final int FULL_BRIGHT = 0xF000F0;
 
-	private static final float EYE_X_OFFSET = 0.045F;
-	private static final float EYE_Y_OFFSET = -0.30F;
+	/** Textura blanca (se tiñe por vértice) para el punto central del ojo. */
+	private static final ResourceLocation CORE_TEXTURE =
+		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/particle/eye_core.png");
+
+	/** FIX (bug reportado: los puntos que brillan todo el tiempo quedaron desalineados de los
+	 * ojos; en la captura el brillo caía en la frente). Medido sobre el pixel art de la cara
+	 * (layout idéntico en Steve y Alex): el cubo de la cabeza mide 8 px = 0.5 bloques y las
+	 * pupilas ocupan la fila 4 (contando desde arriba) en las columnas 2 y 5 de 0..7, o sea 1.5 px
+	 * a cada lado del centro y 4.5 px bajo la coronilla.
+	 *   X = 1.5 px / 16            = 0.094
+	 *   Y = -(8 - 4.5) px / 16     = -0.219  (en espacio local de head: y=0 es el cuello, más
+	 *                                          negativo es más arriba)
+	 * Antes: X=0.045, Y=-0.30 (3.2 px bajo la coronilla, o sea 1.3 px ARRIBA de las pupilas, y
+	 * demasiado juntos). */
+	private static final float EYE_X_OFFSET = 0.094F;
+	private static final float EYE_Y_OFFSET = -0.219F;
 	private static final float EYE_Z_OFFSET = -0.27F;
-	private static final float HALF_SIZE = 0.09F;
+	/** Halo violeta (textura eye_glow.png tal cual) + punto central celeste-blanco (eye_core.png
+	 * teñido con AncientPalette.CORE): las dos puntas de la paleta compartida en un solo ojo. */
+	private static final float HALO_HALF_SIZE = 0.075F;
+	private static final float CORE_HALF_SIZE = 0.034F;
 
 	public EyeGlowLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
 		super(parent);
@@ -85,26 +103,37 @@ public final class EyeGlowLayer extends RenderLayer<AbstractClientPlayer, Player
 		poseStack.pushPose();
 		getParentModel().head.translateAndRotate(poseStack);
 
-		RenderType renderType = RenderType.entityTranslucentEmissive(EYE_TEXTURE);
-		VertexConsumer consumer = bufferSource.getBuffer(renderType);
 		PoseStack.Pose pose = poseStack.last();
 
-		quad(consumer, pose, -EYE_X_OFFSET, EYE_Y_OFFSET, EYE_Z_OFFSET, HALF_SIZE);
-		quad(consumer, pose, EYE_X_OFFSET, EYE_Y_OFFSET, EYE_Z_OFFSET, HALF_SIZE);
+		// Respiración suave del halo (±12 % de alfa): el brillo "late" en vez de ser un sticker fijo.
+		int haloAlpha = Mth.clamp((int) (255.0F * (0.88F + 0.12F * Mth.sin(ageInTicks * 0.2F))), 0, 255);
+		VertexConsumer haloConsumer = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(EYE_TEXTURE));
+		quad(haloConsumer, pose, -EYE_X_OFFSET, EYE_Y_OFFSET, EYE_Z_OFFSET, HALO_HALF_SIZE, 255, 255, 255, haloAlpha);
+		quad(haloConsumer, pose, EYE_X_OFFSET, EYE_Y_OFFSET, EYE_Z_OFFSET, HALO_HALF_SIZE, 255, 255, 255, haloAlpha);
+
+		// Centro un pelo más adelante que el halo para que no pelee por profundidad con él.
+		int coreR = (int) (AncientPalette.CORE[0] * 255.0F);
+		int coreG = (int) (AncientPalette.CORE[1] * 255.0F);
+		int coreB = (int) (AncientPalette.CORE[2] * 255.0F);
+		VertexConsumer coreConsumer = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(CORE_TEXTURE));
+		quad(coreConsumer, pose, -EYE_X_OFFSET, EYE_Y_OFFSET, EYE_Z_OFFSET - 0.002F, CORE_HALF_SIZE, coreR, coreG, coreB, 255);
+		quad(coreConsumer, pose, EYE_X_OFFSET, EYE_Y_OFFSET, EYE_Z_OFFSET - 0.002F, CORE_HALF_SIZE, coreR, coreG, coreB, 255);
 
 		poseStack.popPose();
 	}
 
-	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, float cx, float cy, float cz, float half) {
-		vertex(consumer, pose, cx - half, cy - half, cz, 0.0F, 1.0F);
-		vertex(consumer, pose, cx + half, cy - half, cz, 1.0F, 1.0F);
-		vertex(consumer, pose, cx + half, cy + half, cz, 1.0F, 0.0F);
-		vertex(consumer, pose, cx - half, cy + half, cz, 0.0F, 0.0F);
+	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, float cx, float cy, float cz, float half,
+			int r, int g, int b, int a) {
+		vertex(consumer, pose, cx - half, cy - half, cz, 0.0F, 1.0F, r, g, b, a);
+		vertex(consumer, pose, cx + half, cy - half, cz, 1.0F, 1.0F, r, g, b, a);
+		vertex(consumer, pose, cx + half, cy + half, cz, 1.0F, 0.0F, r, g, b, a);
+		vertex(consumer, pose, cx - half, cy + half, cz, 0.0F, 0.0F, r, g, b, a);
 	}
 
-	private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v) {
+	private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float u, float v,
+			int r, int g, int b, int a) {
 		consumer.vertex(pose.pose(), x, y, z)
-			.color(255, 255, 255, 255)
+			.color(r, g, b, a)
 			.uv(u, v)
 			.overlayCoords(OverlayTexture.NO_OVERLAY)
 			.uv2(FULL_BRIGHT)

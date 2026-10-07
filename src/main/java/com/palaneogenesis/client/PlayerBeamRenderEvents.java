@@ -80,6 +80,21 @@ public class PlayerBeamRenderEvents {
 	private static final double MOUTH_DOWN_OFFSET = 0.15D;
 	private static final double MOUTH_FORWARD_OFFSET = 0.3D;
 
+	/** FIX (bug reportado: en primera persona el rayo "sale del aire", demasiado adelantado). El
+	 * origen de tercera persona (MOUTH_*: 0.15 abajo, 0.3 adelante del ojo, en ejes del MUNDO)
+	 * cae DENTRO del campo visual de la cámara - a 0.3 bloques y 26 grados abajo, con un FOV
+	 * normal se ve el arranque del rayo flotando en el medio de la pantalla. La boca real está
+	 * por debajo del borde inferior de la pantalla. Ahora, sólo para el jugador local en primera
+	 * persona, el origen se calcula en ejes de la CÁMARA (así sigue abajo del encuadre aunque
+	 * mires arriba o abajo): casi pegado al ojo y bien abajo, de modo que el rayo ENTRA a la
+	 * pantalla por el borde inferior, como saliendo de tu boca. El punto de impacto no cambia:
+	 * sigue siendo el mismo raycast del servidor sobre la cruz. */
+	private static final double FIRST_PERSON_DOWN = 0.30D;
+	private static final double FIRST_PERSON_FORWARD = 0.08D;
+	/** En primera persona el rayo nace más fino (fracción de HALF_WIDTH en el origen) y se
+	 * ensancha hasta el ancho normal en el otro extremo. */
+	private static final float FIRST_PERSON_START_WIDTH_SCALE = 0.30F;
+
 	@SubscribeEvent
 	public static void onRenderLevelStage(RenderLevelStageEvent event) {
 		if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
@@ -116,20 +131,23 @@ public class PlayerBeamRenderEvents {
 			if (!(shooter instanceof AbstractClientPlayer player) || !player.isAlive()) {
 				continue;
 			}
-			renderBeam(player, entry.getValue(), partialTick, time, pose, consumer);
+			renderBeam(player, entry.getValue(), camera, partialTick, time, pose, consumer);
 		}
 
 		poseStack.popPose();
 		buffer.endBatch(renderType);
 	}
 
-	private static void renderBeam(AbstractClientPlayer player, BeamClientState.State state, float partialTick,
-			float time, PoseStack.Pose pose, VertexConsumer consumer) {
+	private static void renderBeam(AbstractClientPlayer player, BeamClientState.State state, Camera camera,
+			float partialTick, float time, PoseStack.Pose pose, VertexConsumer consumer) {
 		// Coordenadas de MUNDO (no relativas al shooter): el poseStack ya viene desplazado
 		// -camPos en #onRenderLevelStage, así que start/end van tal cual, sin restar renderOrigin
 		// como hacía la versión vieja (esa resta era porque RenderPlayerEvent entrega un poseStack
 		// ya relativo a la entidad puntual que se está dibujando; acá no hay tal cosa).
-		Vec3 start = computeMouthOrigin(player, partialTick);
+		Minecraft minecraft = Minecraft.getInstance();
+		boolean firstPersonSelf = player == minecraft.player && minecraft.options.getCameraType().isFirstPerson();
+		Vec3 start = firstPersonSelf ? computeFirstPersonOrigin(camera) : computeMouthOrigin(player, partialTick);
+		float startWidthScale = firstPersonSelf ? FIRST_PERSON_START_WIDTH_SCALE : 1.0F;
 		Vec3 end = state.end;
 
 		Vec3 dir = end.subtract(start);
@@ -159,8 +177,18 @@ public class PlayerBeamRenderEvents {
 		float vStart = vSpan + vScroll;
 		float vEnd = vScroll;
 
-		quad(consumer, pose, start, end, spinRight, HALF_WIDTH, vStart, vEnd);
-		quad(consumer, pose, start, end, spinUp, HALF_WIDTH, vStart, vEnd);
+		quad(consumer, pose, start, end, spinRight, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd);
+		quad(consumer, pose, start, end, spinUp, HALF_WIDTH * startWidthScale, HALF_WIDTH, vStart, vEnd);
+	}
+
+	/** Origen del rayo en primera persona: en ejes de la cámara (adelante + abajo), ver
+	 * FIRST_PERSON_DOWN. */
+	private static Vec3 computeFirstPersonOrigin(Camera camera) {
+		org.joml.Vector3f look = camera.getLookVector();
+		org.joml.Vector3f up = camera.getUpVector();
+		return camera.getPosition()
+			.add(look.x() * FIRST_PERSON_FORWARD, look.y() * FIRST_PERSON_FORWARD, look.z() * FIRST_PERSON_FORWARD)
+			.subtract(up.x() * FIRST_PERSON_DOWN, up.y() * FIRST_PERSON_DOWN, up.z() * FIRST_PERSON_DOWN);
 	}
 
 	private static Vec3 computeMouthOrigin(AbstractClientPlayer player, float partialTick) {
@@ -170,12 +198,13 @@ public class PlayerBeamRenderEvents {
 	}
 
 	private static void quad(VertexConsumer consumer, PoseStack.Pose pose, Vec3 start, Vec3 end,
-			Vec3 widthDir, float halfWidth, float vStart, float vEnd) {
-		Vec3 w = widthDir.scale(halfWidth);
-		vertex(consumer, pose, start.subtract(w), 0.0F, vStart);
-		vertex(consumer, pose, start.add(w), 1.0F, vStart);
-		vertex(consumer, pose, end.add(w), 1.0F, vEnd);
-		vertex(consumer, pose, end.subtract(w), 0.0F, vEnd);
+			Vec3 widthDir, float startHalfWidth, float endHalfWidth, float vStart, float vEnd) {
+		Vec3 ws = widthDir.scale(startHalfWidth);
+		Vec3 we = widthDir.scale(endHalfWidth);
+		vertex(consumer, pose, start.subtract(ws), 0.0F, vStart);
+		vertex(consumer, pose, start.add(ws), 1.0F, vStart);
+		vertex(consumer, pose, end.add(we), 1.0F, vEnd);
+		vertex(consumer, pose, end.subtract(we), 0.0F, vEnd);
 	}
 
 	private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, Vec3 p, float u, float v) {

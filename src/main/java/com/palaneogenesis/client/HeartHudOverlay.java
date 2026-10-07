@@ -94,7 +94,10 @@ import java.util.Map;
  */
 public final class HeartHudOverlay {
 
-	private static final int TEXT_COLOR = 0xFFFFFF;
+	private static final int TEXT_COLOR = 0xEBF7FD;
+	/** Badge del multiplicador ×N (colores de client.AncientPalette: CORE sobre navy, borde celeste apagado). */
+	private static final int PILL_FILL = 0xFF0A1020;
+	private static final int PILL_BORDER = 0xFF2B7FA8;
 	private static final int HEARTS_PER_ROW = 10;
 	/** Avance horizontal de un corazón al siguiente dentro de la misma fila - mismo valor que ya
 	 * usaba la fila vanilla (8px) y que usaba el sheet viejo, independiente del tamaño real del
@@ -257,24 +260,34 @@ public final class HeartHudOverlay {
 		}
 
 		// ×N sólo desde 2 grupos completos de 10 - un ×1 sería redundante con la fila que ya se
-		// ve completa. A mitad de tamaño (pedido explícito): el texto a full scale quedaba
-		// demasiado grande al lado de los íconos de 8x16.
+		// ve completa.
 		//
-		// FIX (alineación pedida explícitamente): la fila ocupa una franja de ICON_LANE_HEIGHT=16px
-		// que arranca en baseY, así que su centro vertical real está en baseY+8 (el ícono de 9px
-		// se dibuja centrado dentro de esa franja, ver ICON_Y_OFFSET, pero el centro de la franja
-		// no cambia). El texto, a scale=0.5, mide 8px*0.5=4px de alto y su origen (textY) es su
-		// borde superior - con textY=baseY+4 el centro del texto quedaba en baseY+6, 2px arriba
-		// del centro de la franja. baseY+6 pone el centro del texto exactamente en baseY+8,
-		// alineado con el centro del corazón.
+		// REDISEÑO VISUAL: antes el texto iba pegado al final de la fila, justo en el centro de la
+		// pantalla, donde también caen el nivel de XP y el temporizador de salto (los tres se
+		// pisaban). Ahora es un badge (píldora oscura con borde celeste) a la IZQUIERDA de la fila,
+		// centrado verticalmente con los corazones, y el centro queda libre para la cúpula de
+		// client.AncientCoreHudOverlay. Texto a scale=0.5 como antes (el pedido original era "a
+		// mitad de tamaño").
 		if (tens >= 2) {
 			String text = "\u00d7" + tens;
 			float scale = 0.5F;
-			float textX = x + 2;
-			float textY = baseY + 6;
+			int textW = Math.round(font.width(text) * scale);
+			int padX = 3;
+			int pillW = textW + padX * 2;
+			int pillH = 8;
+			int pillRight = baseX - 3;
+			int pillLeft = pillRight - pillW;
+			int pillTop = baseY + ICON_Y_OFFSET;
+			int pillBottom = pillTop + pillH;
+
+			// Esquinas cortadas de 1 px (dos rects cruzados) = píldora sin textura. Primero el
+			// borde, después el relleno 1 px más chico.
+			guiGraphics.fill(pillLeft + 1, pillTop, pillRight - 1, pillBottom, PILL_BORDER);
+			guiGraphics.fill(pillLeft, pillTop + 1, pillRight, pillBottom - 1, PILL_BORDER);
+			guiGraphics.fill(pillLeft + 1, pillTop + 1, pillRight - 1, pillBottom - 1, PILL_FILL);
 
 			guiGraphics.pose().pushPose();
-			guiGraphics.pose().translate(textX, textY, 0.0F);
+			guiGraphics.pose().translate(pillLeft + padX, pillTop + (pillH - 8 * scale) / 2.0F, 0.0F);
 			guiGraphics.pose().scale(scale, scale, 1.0F);
 			guiGraphics.drawString(font, text, 0, 0, TEXT_COLOR, true);
 			guiGraphics.pose().popPose();

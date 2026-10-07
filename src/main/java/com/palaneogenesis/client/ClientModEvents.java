@@ -64,6 +64,7 @@ public class ClientModEvents {
 	public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
 		event.registerSpriteSet(ModParticleTypes.ANCIENT_AURA.get(), AncientAuraParticle.Provider::new);
 		event.registerSpriteSet(ModParticleTypes.EYE_POWER.get(), EyePowerParticle.Provider::new);
+		event.registerSpriteSet(ModParticleTypes.ANCIENT_FLAME.get(), AncientFlameParticle.Provider::new);
 	}
 
 	@SubscribeEvent
@@ -79,10 +80,12 @@ public class ClientModEvents {
 		// heart_hud/EXPERIENCE_BAR de la línea de arriba.
 		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "broken_heart_hud", BrokenHeartHudOverlay.HUD);
 
-		// Temporizador del salto (pedido de esta sesión): mismo motivo de anclaje que broken_heart_hud
-		// (se ancla arriba de PLAYER_HEALTH sólo por orden de registro Forge, no por relación real -
-		// ver client.LevitationCooldownHudOverlay, que calcula su propia posición absoluta).
-		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "levitation_cooldown_hud", LevitationCooldownHudOverlay.HUD);
+		// Núcleo del HUD transformado (rediseño visual): cúpula con la barra de salto en el borde,
+		// nivel de XP adentro y barra de XP fina debajo - reemplaza al número suelto del temporizador
+		// de salto. Ver client.AncientCoreHudOverlay. Se ancla arriba de EXPERIENCE_BAR porque la
+		// barra y el nivel vanilla se cancelan mientras estás transformado (ver
+		// client.AncientTransformedHealthHudEvents) y esto los redibuja.
+		event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "ancient_core_hud", AncientCoreHudOverlay.HUD);
 
 		// Stage 4, Paso 1 (parpadeo rojo sincronizado a los latidos del audio de transformación):
 		// se ancla arriba de PLAYER_HEALTH, mismo criterio de "sólo orden de registro, sin

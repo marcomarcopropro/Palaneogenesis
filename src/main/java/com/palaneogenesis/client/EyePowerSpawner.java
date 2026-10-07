@@ -52,7 +52,9 @@ public final class EyePowerSpawner {
 
 		Minecraft minecraft = Minecraft.getInstance();
 		ClientLevel level = minecraft.level;
-		if (level == null) {
+		// Mismo fix que AncientAuraSpawner: ClientTickEvent sigue corriendo con el juego en pausa
+		// (ESC), el ParticleEngine no - sin este corte las partículas se acumulan sin envejecer.
+		if (level == null || minecraft.isPaused()) {
 			return;
 		}
 

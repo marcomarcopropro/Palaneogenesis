@@ -88,7 +88,7 @@ public class PlayerAbilityEvents {
 	 * bajado de 20*60 (1 min) a 20*10. Sigue siendo "una activación y después no se puede volver a
 	 * usar hasta que se cumpla esto" - arranca en el instante en que arranca el salto largo, no
 	 * cuando se suelta la tecla ni cuando termina de caer. */
-	private static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 10;
+	public static final int LEVITATION_COOLDOWN_DURATION_TICKS = 20 * 10;
 	private static final Map<UUID, Integer> LEVITATION_COOLDOWN_TICKS = new HashMap<>();
 
 	public static void setLevitationKeyHeld(ServerPlayer player, boolean held) {
