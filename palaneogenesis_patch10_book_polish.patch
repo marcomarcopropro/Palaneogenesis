@@ -1,0 +1,278 @@
+diff --git a/src/main/java/com/palaneogenesis/client/BookTooltipEvents.java b/src/main/java/com/palaneogenesis/client/BookTooltipEvents.java
+new file mode 100644
+index 0000000..7c84da0
+--- /dev/null
++++ b/src/main/java/com/palaneogenesis/client/BookTooltipEvents.java
+@@ -0,0 +1,89 @@
++package com.palaneogenesis.client;
++
++import com.palaneogenesis.Palaneogenesis;
++import net.minecraft.core.registries.BuiltInRegistries;
++import net.minecraft.nbt.CompoundTag;
++import net.minecraft.network.chat.Component;
++import net.minecraft.network.chat.MutableComponent;
++import net.minecraft.network.chat.Style;
++import net.minecraft.network.chat.TextColor;
++import net.minecraft.network.chat.contents.TranslatableContents;
++import net.minecraft.resources.ResourceLocation;
++import net.minecraft.world.item.ItemStack;
++import net.minecraftforge.api.distmarker.Dist;
++import net.minecraftforge.event.entity.player.ItemTooltipEvent;
++import net.minecraftforge.eventbus.api.SubscribeEvent;
++import net.minecraftforge.fml.common.Mod;
++
++import java.util.List;
++
++/**
++ * Tooltip of the "Book of Palaneogénesis" (Patchouli guide book item with our book id in its NBT).
++ *
++ * - The title (first line) is drawn with a blue gradient instead of plain white.
++ * - Internal labels are hidden: the "Book ID: ..." line Patchouli adds, and the vanilla advanced-tooltip
++ *   lines (registry id and NBT tag count) that only show up with F3+H. The player only sees the
++ *   book's name and subtitle.
++ *
++ * Client only, purely cosmetic. Any other Patchouli book keeps its normal tooltip.
++ */
++@Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
++public class BookTooltipEvents {
++
++	private static final ResourceLocation PATCHOULI_GUIDE_BOOK = new ResourceLocation("patchouli", "guide_book");
++	private static final String BOOK_NBT_KEY = "patchouli:book";
++	private static final String OUR_BOOK_ID = Palaneogenesis.MOD_ID + ":palaneogenesis_book";
++
++	/** Gradient ends (RGB): a vivid medium blue to a soft sky blue - not dark navy, not near-white. */
++	private static final int COLOR_START = 0x2F6BFF;
++	private static final int COLOR_END = 0x5BB8FF;
++
++	@SubscribeEvent
++	public static void onTooltip(ItemTooltipEvent event) {
++		ItemStack stack = event.getItemStack();
++		if (!PATCHOULI_GUIDE_BOOK.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
++			return;
++		}
++		CompoundTag tag = stack.getTag();
++		if (tag == null || !OUR_BOOK_ID.equals(tag.getString(BOOK_NBT_KEY))) {
++			return;
++		}
++		List<Component> lines = event.getToolTip();
++		if (lines.isEmpty()) {
++			return;
++		}
++		lines.set(0, gradient(lines.get(0).getString()));
++		lines.removeIf(BookTooltipEvents::isInternalLine);
++	}
++
++	private static boolean isInternalLine(Component line) {
++		String text = line.getString();
++		if (text.startsWith("Book ID: ") || text.equals(PATCHOULI_GUIDE_BOOK.toString())) {
++			return true;
++		}
++		return line.getContents() instanceof TranslatableContents translatable
++			&& translatable.getKey().equals("item.nbt_tags");
++	}
++
++	private static MutableComponent gradient(String text) {
++		MutableComponent out = Component.empty();
++		int length = text.length();
++		for (int i = 0; i < length; i++) {
++			float t = length <= 1 ? 0.0F : (float) i / (float) (length - 1);
++			out.append(Component.literal(String.valueOf(text.charAt(i)))
++				.withStyle(Style.EMPTY.withColor(TextColor.fromRgb(lerpColor(COLOR_START, COLOR_END, t)))));
++		}
++		return out;
++	}
++
++	private static int lerpColor(int from, int to, float t) {
++		int r = lerp((from >> 16) & 0xFF, (to >> 16) & 0xFF, t);
++		int g = lerp((from >> 8) & 0xFF, (to >> 8) & 0xFF, t);
++		int b = lerp(from & 0xFF, to & 0xFF, t);
++		return (r << 16) | (g << 8) | b;
++	}
++
++	private static int lerp(int a, int b, float t) {
++		return Math.round(a + (b - a) * t);
++	}
++}
+diff --git a/src/main/resources/assets/palaneogenesis/models/item/palaneogenesis_book.json b/src/main/resources/assets/palaneogenesis/models/item/palaneogenesis_book.json
+new file mode 100644
+index 0000000..5bfad69
+--- /dev/null
++++ b/src/main/resources/assets/palaneogenesis/models/item/palaneogenesis_book.json
+@@ -0,0 +1,6 @@
++{
++  "parent": "minecraft:item/generated",
++  "textures": {
++    "layer0": "palaneogenesis:item/palaneogenesis_book"
++  }
++}
+diff --git a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/mobs/kaak_tun.json b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/mobs/kaak_tun.json
+index 32b11e7..38bc7d1 100644
+--- a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/mobs/kaak_tun.json
++++ b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/mobs/kaak_tun.json
+@@ -19,7 +19,6 @@
+             "offset": 0,
+             "rotate": true,
+             "default_rotation": -45,
+-            "name": "entity.palaneogenesis.kaak_tun",
+             "text": "book.palaneogenesis.entry.mobs.kaak_tun.entity"
+         },
+         {
+diff --git a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/ancestral_transformation.json b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/ancestral_transformation.json
+index 8e0a8ea..50a84d9 100644
+--- a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/ancestral_transformation.json
++++ b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/ancestral_transformation.json
+@@ -1,6 +1,6 @@
+ {
+     "name": "book.palaneogenesis.entry.ancestral.name",
+-    "icon": "palaneogenesis:ancient_extract_syringe",
++    "icon": "palaneogenesis:textures/gui/book/number_1.png",
+     "category": "palaneogenesis:transformations",
+     "sortnum": 0,
+     "advancement": "palaneogenesis:book/has_ancient_syringe",
+diff --git a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/empty_hearts.json b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/empty_hearts.json
+index d2f27a5..ca01595 100644
+--- a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/empty_hearts.json
++++ b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/empty_hearts.json
+@@ -1,6 +1,6 @@
+ {
+     "name": "book.palaneogenesis.entry.empty_hearts.name",
+-    "icon": "palaneogenesis:broken_syringe",
++    "icon": "palaneogenesis:textures/gui/book/number_5.png",
+     "category": "palaneogenesis:transformations",
+     "sortnum": 4,
+     "advancement": "palaneogenesis:book/has_ancient_syringe",
+diff --git a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/heart_system.json b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/heart_system.json
+index 8c020a9..1d26f20 100644
+--- a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/heart_system.json
++++ b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/heart_system.json
+@@ -1,6 +1,6 @@
+ {
+     "name": "book.palaneogenesis.entry.heart_system.name",
+-    "icon": "palaneogenesis:blue_heart",
++    "icon": "palaneogenesis:textures/gui/book/number_2.png",
+     "category": "palaneogenesis:transformations",
+     "sortnum": 1,
+     "advancement": "palaneogenesis:book/has_ancient_syringe",
+diff --git a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/kaak_beam.json b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/kaak_beam.json
+index 0e8fad4..ce995bd 100644
+--- a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/kaak_beam.json
++++ b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/kaak_beam.json
+@@ -1,6 +1,6 @@
+ {
+     "name": "book.palaneogenesis.entry.kaak_beam.name",
+-    "icon": "palaneogenesis:kaak_tun_spawn_egg",
++    "icon": "palaneogenesis:textures/gui/book/number_3.png",
+     "category": "palaneogenesis:transformations",
+     "sortnum": 2,
+     "advancement": "palaneogenesis:book/has_ancient_syringe",
+diff --git a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/mega_jump.json b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/mega_jump.json
+index df9c423..ecd981c 100644
+--- a/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/mega_jump.json
++++ b/src/main/resources/assets/palaneogenesis/patchouli_books/palaneogenesis_book/en_us/entries/transformations/mega_jump.json
+@@ -1,6 +1,6 @@
+ {
+     "name": "book.palaneogenesis.entry.mega_jump.name",
+-    "icon": "palaneogenesis:blue_heart",
++    "icon": "palaneogenesis:textures/gui/book/number_4.png",
+     "category": "palaneogenesis:transformations",
+     "sortnum": 3,
+     "advancement": "palaneogenesis:book/has_ancient_syringe",
+diff --git a/src/main/resources/assets/palaneogenesis/textures/gui/book/number_1.png b/src/main/resources/assets/palaneogenesis/textures/gui/book/number_1.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..a7b9a969bc81c3b37a5f065af968f47585d71b4f
+GIT binary patch
+literal 117
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`Hl8kyAr*6y6BejW_-_9({@(v1
+z^)*>DG`6;|PCt7@%3&k-2c}&u2UjpQA7pULY1;AV-$OTUp08VcJC86hTwB4f{OhG~
+QAkZ8JPgg&ebxsLQ08or6<NyEw
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/palaneogenesis/textures/gui/book/number_2.png b/src/main/resources/assets/palaneogenesis/textures/gui/book/number_2.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..fd7291a977bd86534378c562a79dfca672a49628
+GIT binary patch
+literal 137
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`0iG_7Ar*6y6BY;<BneOXZvRn!
+z_K(B8ViK=rYLqgzo!yahT-ARgcf<tC8-F}F0?c^|7;6%pqs0ZfL~reEkeI#l8Pk*s
+k^=n~IzBtV<Y2asI(9e<olxA!A0BAOYr>mdKI;Vst0Qa*k<NyEw
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/palaneogenesis/textures/gui/book/number_3.png b/src/main/resources/assets/palaneogenesis/textures/gui/book/number_3.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..82addc75ea9d96f6c0e76167646d1c0abfe1591b
+GIT binary patch
+literal 133
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`KAtX)Ar*6y6BY;<BneOXZvRn!
+z_K(B8ViK=rYLqgzo!yahT-ARgcf<tC8-F}F0^Ts~F<bO|`nQb^92Zo?0(car@Nq~v
+g@JXapHp(zCShdJ^f7&r68fY$qr>mdKI;Vst073^VM*si-
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/palaneogenesis/textures/gui/book/number_4.png b/src/main/resources/assets/palaneogenesis/textures/gui/book/number_4.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..1b4864d3d21d4325bc8bbe561734b5c96864a01b
+GIT binary patch
+literal 131
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`UY;(FAr*6y6Be*f_-_9({@(v1
+z^*Kd8Q>4y0ok(+HyKs!vV77eTmIRe2La%l)+)YbjII8Ecv2#X1dV)i#;!!;Xt_vor
+ee0vy0m>DAaC1d)ck4*uZ%HZkh=d#Wzp$PyhjVloV
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/palaneogenesis/textures/gui/book/number_5.png b/src/main/resources/assets/palaneogenesis/textures/gui/book/number_5.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..60fc84fd3bb27ae9bb00813f06b01edd87a8679f
+GIT binary patch
+literal 132
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`-kvUwAr*6y6BY;<C>1~X>;FgH
+z?egJXv4UEkDZ3h4C-Al~9Mx0M<k_&ZCrNw)3rK-`x$03pi4?Yk&&p?G8%&QrEIN8%
+dIdcvJL;G2=oqOB0b^?uM@O1TaS?83{1OQA6Eyw@>
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/assets/palaneogenesis/textures/item/palaneogenesis_book.png b/src/main/resources/assets/palaneogenesis/textures/item/palaneogenesis_book.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..5ea93cbb5ae19eb18d997d42531c0a22591e56b9
+GIT binary patch
+literal 565
+zcmV-50?Pe~P)<h;3K|Lk000e1NJLTq000mG000mO1^@s6AM^iV0005%Nkl<ZcmaHp
+zyGtBV6vodTlGP9lA#Th=LM%k0O%{?s1VJqo#l}Xkv2a1`v=%!HK`Sd2D`9IN=$~Mr
+zwko2y7QWxCvM+VKzoU2DUBQKK@60{t`+aBbj3=-B!kxZfSpL|&lDC%!C^Vc-8xtyT
+z^^vPxF8nnP%3dA-gDYY}MHL-_(mOHX-ql&@_X<a%34LgsRimFxNYT#@VGWhHynuLa
+zq>vqzkw`<S&2cr6l-wAR;>swO7Vr$A-^2K*7GX@15C(+HyeW}f$lEXV7S!tNBhbJ`
+zaaB|kohh|7PAN!s5dSuz`>X`(A!>1LL<_k|4nhF~Yi4g=P;dL4u%`eD-L*5ip|GcC
+zrU4);CKQSMk(yss^0};3==JWC`}n20x<Y`YcVl{wkp@hN#Ib=Nl1U}x`tm?dj?c7@
+z*Qght!e13aBL)QQ-~R@Q*i;hN*W+rwzS@_Gr8b?|<0NVBnID#12p|%(Hjz{kfndHV
+zi^{v2em!(OgUsHXxmo-sU89u&gk};kGxFqerwq;1$wl_NaJU5Dp064O@C@&p4&-io
+zFo1+hOZ1>HlggCoc+9?mIfK!C!2tkb^6b#?Jupe%)Nf71Oe#}a6Im+v1qT4#wSRz^
+zgfw&%Up1I*NvN^r>Hz=%|NjQ2C6oXF00v1!K~w_(Fnuxe_=(Ke00000NkvXXu0mjf
+DG!Xw&
+
+literal 0
+HcmV?d00001
+
+diff --git a/src/main/resources/data/palaneogenesis/patchouli_books/palaneogenesis_book/book.json b/src/main/resources/data/palaneogenesis/patchouli_books/palaneogenesis_book/book.json
+index 0b01093..fa6cd40 100644
+--- a/src/main/resources/data/palaneogenesis/patchouli_books/palaneogenesis_book/book.json
++++ b/src/main/resources/data/palaneogenesis/patchouli_books/palaneogenesis_book/book.json
+@@ -4,6 +4,11 @@
+     "subtitle": "book.palaneogenesis.subtitle",
+     "i18n": true,
+     "show_progress": false,
+-    "use_blocky_font": true,
+-    "use_resource_pack": true
++    "use_blocky_font": false,
++    "use_resource_pack": true,
++    "model": "palaneogenesis:palaneogenesis_book",
++    "text_color": "1A1A24",
++    "header_color": "10285C",
++    "link_color": "1F5FBF",
++    "link_hover_color": "0A2F73"
+ }

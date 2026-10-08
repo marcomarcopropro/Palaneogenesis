@@ -1,6 +1,6 @@
 {
     "name": "book.palaneogenesis.entry.heart_system.name",
-    "icon": "palaneogenesis:blue_heart",
+    "icon": "palaneogenesis:textures/gui/book/number_2.png",
     "category": "palaneogenesis:transformations",
     "sortnum": 1,
     "advancement": "palaneogenesis:book/has_ancient_syringe",

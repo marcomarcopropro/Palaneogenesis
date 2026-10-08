@@ -1,6 +1,6 @@
 {
     "name": "book.palaneogenesis.entry.ancestral.name",
-    "icon": "palaneogenesis:ancient_extract_syringe",
+    "icon": "palaneogenesis:textures/gui/book/number_1.png",
     "category": "palaneogenesis:transformations",
     "sortnum": 0,
     "advancement": "palaneogenesis:book/has_ancient_syringe",

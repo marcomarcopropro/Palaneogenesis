@@ -1,6 +1,6 @@
 {
     "name": "book.palaneogenesis.entry.empty_hearts.name",
-    "icon": "palaneogenesis:broken_syringe",
+    "icon": "palaneogenesis:textures/gui/book/number_5.png",
     "category": "palaneogenesis:transformations",
     "sortnum": 4,
     "advancement": "palaneogenesis:book/has_ancient_syringe",

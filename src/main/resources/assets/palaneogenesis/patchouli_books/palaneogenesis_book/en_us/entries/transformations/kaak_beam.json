@@ -1,6 +1,6 @@
 {
     "name": "book.palaneogenesis.entry.kaak_beam.name",
-    "icon": "palaneogenesis:kaak_tun_spawn_egg",
+    "icon": "palaneogenesis:textures/gui/book/number_3.png",
     "category": "palaneogenesis:transformations",
     "sortnum": 2,
     "advancement": "palaneogenesis:book/has_ancient_syringe",

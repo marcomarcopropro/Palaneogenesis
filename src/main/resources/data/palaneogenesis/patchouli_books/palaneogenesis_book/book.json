@@ -4,6 +4,11 @@
     "subtitle": "book.palaneogenesis.subtitle",
     "i18n": true,
     "show_progress": false,
-    "use_blocky_font": true,
-    "use_resource_pack": true
+    "use_blocky_font": false,
+    "use_resource_pack": true,
+    "model": "palaneogenesis:palaneogenesis_book",
+    "text_color": "1A1A24",
+    "header_color": "10285C",
+    "link_color": "1F5FBF",
+    "link_hover_color": "0A2F73"
 }

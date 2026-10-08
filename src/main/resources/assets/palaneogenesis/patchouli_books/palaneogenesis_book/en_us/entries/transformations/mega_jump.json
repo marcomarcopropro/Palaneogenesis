@@ -1,6 +1,6 @@
 {
     "name": "book.palaneogenesis.entry.mega_jump.name",
-    "icon": "palaneogenesis:blue_heart",
+    "icon": "palaneogenesis:textures/gui/book/number_4.png",
     "category": "palaneogenesis:transformations",
     "sortnum": 3,
     "advancement": "palaneogenesis:book/has_ancient_syringe",
