@@ -1,0 +1,26 @@
+{
+    "name": "book.palaneogenesis.entry.ancestral.name",
+    "icon": "palaneogenesis:ancient_extract_syringe",
+    "category": "palaneogenesis:transformations",
+    "sortnum": 0,
+    "advancement": "palaneogenesis:book/has_ancient_syringe",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancestral_transformation.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancestral_transformation.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancestral_transformation.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancestral_transformation.values",
+            "title": "book.palaneogenesis.entry.transformations.ancestral_transformation.values_title"
+        }
+    ]
+}

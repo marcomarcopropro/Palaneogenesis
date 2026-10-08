@@ -1,0 +1,22 @@
+{
+    "name": "book.palaneogenesis.entry.heart_system.name",
+    "icon": "palaneogenesis:blue_heart",
+    "category": "palaneogenesis:transformations",
+    "sortnum": 1,
+    "advancement": "palaneogenesis:book/has_ancient_syringe",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.heart_system.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.heart_system.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.heart_system.values",
+            "title": "book.palaneogenesis.entry.transformations.heart_system.values_title"
+        }
+    ]
+}

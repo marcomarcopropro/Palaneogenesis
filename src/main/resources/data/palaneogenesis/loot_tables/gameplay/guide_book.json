@@ -10,7 +10,7 @@
                     "functions": [
                         {
                             "function": "minecraft:set_nbt",
-                            "tag": "{\"patchouli:book\":\"palaneogenesis:guide\"}"
+                            "tag": "{\"patchouli:book\":\"palaneogenesis:palaneogenesis_book\"}"
                         }
                     ]
                 }

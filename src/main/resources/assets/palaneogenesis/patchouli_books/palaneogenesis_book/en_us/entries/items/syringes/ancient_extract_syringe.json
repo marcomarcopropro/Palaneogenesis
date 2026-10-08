@@ -1,0 +1,23 @@
+{
+    "name": "item.palaneogenesis.ancient_extract_syringe",
+    "icon": "palaneogenesis:ancient_extract_syringe",
+    "category": "palaneogenesis:syringes",
+    "sortnum": 1,
+    "advancement": "palaneogenesis:book/has_blue_heart",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.syringes.ancient_extract_syringe.p1"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:ancient_extract_syringe",
+            "text": "book.palaneogenesis.entry.items.syringes.ancient_extract_syringe.craft_note"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.syringes.ancient_extract_syringe.values",
+            "title": "book.palaneogenesis.entry.items.syringes.ancient_extract_syringe.values_title"
+        }
+    ]
+}

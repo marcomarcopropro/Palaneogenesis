@@ -1,0 +1,22 @@
+{
+    "display": {
+        "icon": {
+            "item": "palaneogenesis:blue_heart"
+        },
+        "title": {
+            "translate": "book.palaneogenesis.name"
+        },
+        "description": {
+            "translate": "book.palaneogenesis.subtitle"
+        },
+        "background": "minecraft:textures/block/lapis_block.png",
+        "show_toast": false,
+        "announce_to_chat": false,
+        "hidden": true
+    },
+    "criteria": {
+        "tick": {
+            "trigger": "minecraft:tick"
+        }
+    }
+}

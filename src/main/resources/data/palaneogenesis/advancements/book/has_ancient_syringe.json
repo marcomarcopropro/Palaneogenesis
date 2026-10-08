@@ -1,0 +1,31 @@
+{
+    "parent": "palaneogenesis:book/has_blue_heart",
+    "display": {
+        "icon": {
+            "item": "palaneogenesis:ancient_extract_syringe"
+        },
+        "title": {
+            "translate": "advancement.palaneogenesis.has_ancient_syringe.title"
+        },
+        "description": {
+            "translate": "advancement.palaneogenesis.has_ancient_syringe.description"
+        },
+        "show_toast": false,
+        "announce_to_chat": false,
+        "hidden": true
+    },
+    "criteria": {
+        "has": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "items": [
+                            "palaneogenesis:ancient_extract_syringe"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,31 @@
+{
+    "parent": "palaneogenesis:book/root",
+    "display": {
+        "icon": {
+            "item": "palaneogenesis:blue_heart"
+        },
+        "title": {
+            "translate": "advancement.palaneogenesis.has_blue_heart.title"
+        },
+        "description": {
+            "translate": "advancement.palaneogenesis.has_blue_heart.description"
+        },
+        "show_toast": false,
+        "announce_to_chat": false,
+        "hidden": true
+    },
+    "criteria": {
+        "has": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "items": [
+                            "palaneogenesis:blue_heart"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}

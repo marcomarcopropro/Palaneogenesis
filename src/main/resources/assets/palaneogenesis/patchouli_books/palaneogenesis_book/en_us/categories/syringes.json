@@ -1,0 +1,7 @@
+{
+    "name": "book.palaneogenesis.category.syringes.name",
+    "description": "book.palaneogenesis.category.syringes.description",
+    "icon": "palaneogenesis:empty_syringe",
+    "sortnum": 0,
+    "parent": "palaneogenesis:items"
+}

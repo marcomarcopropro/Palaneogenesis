@@ -1,0 +1,18 @@
+{
+    "name": "book.palaneogenesis.entry.kaak_beam.name",
+    "icon": "palaneogenesis:kaak_tun_spawn_egg",
+    "category": "palaneogenesis:transformations",
+    "sortnum": 2,
+    "advancement": "palaneogenesis:book/has_ancient_syringe",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.kaak_beam.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.kaak_beam.values",
+            "title": "book.palaneogenesis.entry.transformations.kaak_beam.values_title"
+        }
+    ]
+}

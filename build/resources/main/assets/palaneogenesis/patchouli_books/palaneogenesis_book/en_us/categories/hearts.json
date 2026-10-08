@@ -1,0 +1,7 @@
+{
+    "name": "book.palaneogenesis.category.hearts.name",
+    "description": "book.palaneogenesis.category.hearts.description",
+    "icon": "palaneogenesis:blue_heart",
+    "sortnum": 1,
+    "parent": "palaneogenesis:items"
+}

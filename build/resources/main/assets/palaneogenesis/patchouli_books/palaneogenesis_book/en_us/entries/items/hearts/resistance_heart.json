@@ -1,0 +1,27 @@
+{
+    "name": "item.palaneogenesis.resistance_heart",
+    "icon": "palaneogenesis:resistance_heart",
+    "category": "palaneogenesis:hearts",
+    "sortnum": 3,
+    "advancement": "palaneogenesis:book/has_blue_heart",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.resistance_heart.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.resistance_heart.p2"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:resistance_heart",
+            "text": "book.palaneogenesis.entry.items.hearts.resistance_heart.craft_note"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.resistance_heart.values",
+            "title": "book.palaneogenesis.entry.items.hearts.resistance_heart.values_title"
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+{
+    "name": "item.palaneogenesis.empty_syringe",
+    "icon": "palaneogenesis:empty_syringe",
+    "category": "palaneogenesis:syringes",
+    "sortnum": 0,
+    "advancement": "palaneogenesis:book/has_blue_heart",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.syringes.empty_syringe.p1"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:empty_syringe",
+            "text": "book.palaneogenesis.entry.items.syringes.empty_syringe.craft_note"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.syringes.empty_syringe.values",
+            "title": "book.palaneogenesis.entry.items.syringes.empty_syringe.values_title"
+        }
+    ]
+}

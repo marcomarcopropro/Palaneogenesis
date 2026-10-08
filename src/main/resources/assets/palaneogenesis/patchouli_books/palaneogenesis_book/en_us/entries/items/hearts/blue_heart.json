@@ -1,0 +1,28 @@
+{
+    "name": "item.palaneogenesis.blue_heart",
+    "icon": "palaneogenesis:blue_heart",
+    "category": "palaneogenesis:hearts",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.blue_heart.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.blue_heart.p2"
+        },
+        {
+            "type": "patchouli:spotlight",
+            "item": "palaneogenesis:blue_heart",
+            "link_recipe": false,
+            "title": "book.palaneogenesis.entry.items.hearts.blue_heart.obtain_title",
+            "text": "book.palaneogenesis.entry.items.hearts.blue_heart.obtain"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.blue_heart.values",
+            "title": "book.palaneogenesis.entry.items.hearts.blue_heart.values_title"
+        }
+    ]
+}

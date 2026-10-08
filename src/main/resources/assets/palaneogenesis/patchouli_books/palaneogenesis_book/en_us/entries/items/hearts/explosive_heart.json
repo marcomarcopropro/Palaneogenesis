@@ -1,0 +1,27 @@
+{
+    "name": "item.palaneogenesis.explosive_heart",
+    "icon": "palaneogenesis:explosive_heart",
+    "category": "palaneogenesis:hearts",
+    "sortnum": 1,
+    "advancement": "palaneogenesis:book/has_blue_heart",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.explosive_heart.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.explosive_heart.p2"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "palaneogenesis:explosive_heart",
+            "text": "book.palaneogenesis.entry.items.hearts.explosive_heart.craft_note"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.items.hearts.explosive_heart.values",
+            "title": "book.palaneogenesis.entry.items.hearts.explosive_heart.values_title"
+        }
+    ]
+}
