@@ -63,16 +63,12 @@ public class KaakTunEntity extends AbstractGolem {
 	private int meleeAttackAnimationStartTick = -1;
 	private int releaseAnimationStartTick = -1;
 
-	/** Duplicated from KaakTunAnimations (client package) on purpose rather than imported:
-	 * KaakTunEntity is loaded on dedicated servers too, and client-package classes reference
-	 * net.minecraft.client.* types that don't exist there. Keep these values in sync with
-	 * KaakTunAnimations.ATTACK / .ESPECIAL_ATTACK / .RELEASE's withLength(...) (in ticks, 20/sec)
-	 * if any changes. */
-	private static final int ATTACK_LENGTH_TICKS = 176;
-	// Resynced with KaakTunAnimations.ESPECIAL_ATTACK_LENGTH_TICKS (20 ticks now, was 38) after
-	// the ESPECIAL_ATTACK re-export: the new right_arm keyframes return to rest by 1.0s/20 ticks.
-	private static final int ESPECIAL_ATTACK_LENGTH_TICKS = 20;
-	private static final int RELEASE_LENGTH_TICKS = 6;
+	/** Same values the client animations use: both sides read them from KaakTunSpec (a common,
+	 * client-free class, so this entity can still load on a dedicated server), which removes the
+	 * old hand-synced duplicates. */
+	private static final int ATTACK_LENGTH_TICKS = KaakTunSpec.ATTACK_LENGTH_TICKS;
+	private static final int ESPECIAL_ATTACK_LENGTH_TICKS = KaakTunSpec.ESPECIAL_ATTACK_LENGTH_TICKS;
+	private static final int RELEASE_LENGTH_TICKS = KaakTunSpec.RELEASE_LENGTH_TICKS;
 
 	public KaakTunEntity(EntityType<? extends AbstractGolem> type, Level level) {
 		super(type, level);

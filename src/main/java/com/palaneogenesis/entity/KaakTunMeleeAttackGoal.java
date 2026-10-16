@@ -34,10 +34,10 @@ import net.minecraft.world.entity.LivingEntity;
 public class KaakTunMeleeAttackGoal extends KaakTunAttackGoal {
 
 	/** Tick within a swing (0 = the tick triggerMeleeAttackAnimation() fires) at which the fist
-	 * actually reaches the target and damage applies. Must match KaakTunAnimations.
-	 * ESPECIAL_ATTACK's own "struck out" keyframe (0.75s * 20 ticks/sec) or the hit will visibly
-	 * land before/after the swing again. */
-	private static final int IMPACT_TICK = 15;
+	 * actually reaches the target and damage applies. Defined in KaakTunSpec, which also places
+	 * KaakTunAnimations.ESPECIAL_ATTACK's "struck out" keyframe, so the hit can't visibly land
+	 * before/after the swing. */
+	private static final int IMPACT_TICK = KaakTunSpec.MELEE_IMPACT_TICK;
 
 	/** Was Config#kaakTunMeleeRange (default 3.0). Lowered to 2.0 per request. Keep well under
 	 * KaakTunBeamAttackGoal.BEAM_RANGE so melee only triggers once a target has actually closed

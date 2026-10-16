@@ -1,5 +1,6 @@
 package com.palaneogenesis.client;
 
+import com.palaneogenesis.entity.KaakTunSpec;
 import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
@@ -39,35 +40,13 @@ public final class KaakTunAnimations {
 	private KaakTunAnimations() {
 	}
 
-	/** ATTACK, ESPECIAL_ATTACK and RELEASE durations in ticks (20 ticks/sec), matching their
-	 * AnimationDefinition.Builder.withLength(...) values below exactly - used by
-	 * KaakTunEntity#setupAnimationStates to force-stop an AnimationState once its animation
-	 * has actually finished, so a missed/edge-case stop never leaves a pose stuck. */
-	public static final int ATTACK_LENGTH_TICKS = 176;
-	/** 20 ticks (1.0s) - matches ESPECIAL_ATTACK's new last keyframe below exactly, since the new
-	 * export's right_arm channel now animates all the way back to (0,0,0) instead of ending on the
-	 * struck-out pose. No trailing buffer needed the way the old 38 (from a 1.8751F length) had
-	 * one: the pose is already back at rest by the time this fires, so there's nothing left to pop. */
-	public static final int ESPECIAL_ATTACK_LENGTH_TICKS = 20;
-
-	/** Tick (within the charge, i.e. matches KaakTunEntity#getBeamCharge()) at which left_arm's
-	 * ATTACK keyframe below actually reaches its raised -90 deg pose (0.75s * 20 ticks/sec, per the
-	 * new Blockbench export - was 36 ticks/1.8s before the resync). KaakTunRenderer uses this to
-	 * gate the beam so it can't be drawn before the arm has visibly finished rising - the report
-	 * was that "el rayo sale... antes que levante el brazo". Declared here (not duplicated as a
-	 * literal in the renderer) since both KaakTunAnimations and KaakTunRenderer are client-only,
-	 * so there's no cross-package reason to duplicate it the way KaakTunEntity has to duplicate
-	 * ATTACK_LENGTH_TICKS above. */
-	public static final int ATTACK_ARM_RAISE_TICKS = 15;
-
-	// --- Tune freely, no logic changes needed elsewhere (KaakTunEntity duplicates only
-	// RELEASE_LENGTH_TICKS, to know when to auto-stop releaseAnimationState) ---
-
-	/** How long (in ticks) the arm takes to ease back down to rest once the charge-up hold ends.
-	 * Raise this for a slower/more visible wind-down, lower it for a snappier one; it can never be
-	 * fully instant (1 tick) without reintroducing the original pop, since interpolation needs at
-	 * least two ticks apart to actually interpolate. */
-	public static final int RELEASE_LENGTH_TICKS = 6;
+	// Gameplay-relevant timings are defined ONCE in KaakTunSpec and aliased here (KaakTunEntity and
+	// KaakTunMeleeAttackGoal read the same values), so a new animation can't silently desync
+	// gameplay: change the number in KaakTunSpec, not here.
+	public static final int ATTACK_LENGTH_TICKS = KaakTunSpec.ATTACK_LENGTH_TICKS;
+	public static final int ESPECIAL_ATTACK_LENGTH_TICKS = KaakTunSpec.ESPECIAL_ATTACK_LENGTH_TICKS;
+	public static final int ATTACK_ARM_RAISE_TICKS = KaakTunSpec.ATTACK_ARM_RAISE_TICKS;
+	public static final int RELEASE_LENGTH_TICKS = KaakTunSpec.RELEASE_LENGTH_TICKS;
 
 	/** The left_arm rotation (degrees, X axis) RELEASE eases *from*. Must match ATTACK's held
 	 * rotation below (the value at ATTACK's last left_arm ROTATION keyframe) or there will be a
@@ -96,63 +75,63 @@ public final class KaakTunAnimations {
 	// default - a value like 0.05 (tuned to compensate for the old, wrongly-short 0.75F cycle)
 	// will now stretch a single loop to well over a minute of continuous walking.
 	public static final AnimationDefinition WALK = AnimationDefinition.Builder.withLength(2.25F).looping()
-		.addAnimation("body", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_BODY, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.1F, KeyframeAnimations.degreeVec(90.0F, 5.0F, -90.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("right_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_RIGHT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.1F, KeyframeAnimations.degreeVec(-30.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("right_leg", new AnimationChannel(AnimationChannel.Targets.POSITION,
+		.addAnimation(KaakTunSpec.BONE_RIGHT_LEG, new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.45F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.6F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.9F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("right_leg", new AnimationChannel(AnimationChannel.Targets.SCALE,
+		.addAnimation(KaakTunSpec.BONE_RIGHT_LEG, new AnimationChannel(AnimationChannel.Targets.SCALE,
 			new Keyframe(1.6F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.9F, KeyframeAnimations.scaleVec(1.0F, 0.9F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
 		// left_leg has no ROTATION channel in the export (identity throughout) - nothing to add.
-		.addAnimation("left_leg", new AnimationChannel(AnimationChannel.Targets.POSITION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_LEG, new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.7F, KeyframeAnimations.posVec(0.0F, 0.0F, -1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("left_leg", new AnimationChannel(AnimationChannel.Targets.SCALE,
+		.addAnimation(KaakTunSpec.BONE_LEFT_LEG, new AnimationChannel(AnimationChannel.Targets.SCALE,
 			new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.45F, KeyframeAnimations.scaleVec(1.0F, 0.9F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("left_foot", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_FOOT, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.45F, KeyframeAnimations.degreeVec(-7.5F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.35F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("left_foot", new AnimationChannel(AnimationChannel.Targets.POSITION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_FOOT, new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.45F, KeyframeAnimations.posVec(0.0F, 1.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.7F, KeyframeAnimations.posVec(0.0F, 1.0F, -1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.0F, KeyframeAnimations.posVec(0.0F, 0.0F, -1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.2F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("right_foot", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_RIGHT_FOOT, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(1.6F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.9F, KeyframeAnimations.degreeVec(15.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("right_foot", new AnimationChannel(AnimationChannel.Targets.POSITION,
+		.addAnimation(KaakTunSpec.BONE_RIGHT_FOOT, new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.45F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.6F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.9F, KeyframeAnimations.posVec(0.0F, 1.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(1.1F, KeyframeAnimations.degreeVec(30.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
@@ -160,11 +139,11 @@ public final class KaakTunAnimations {
 		.build();
 
 	public static final AnimationDefinition ATTACK = AnimationDefinition.Builder.withLength(ATTACK_LENGTH_TICKS / 20.0F)
-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0000F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(ATTACK_ARM_RAISE_TICKS / 20.0F, KeyframeAnimations.degreeVec(-90.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.POSITION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0000F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(ATTACK_ARM_RAISE_TICKS / 20.0F, KeyframeAnimations.posVec(0.0F, -2.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
@@ -175,11 +154,11 @@ public final class KaakTunAnimations {
 	 * not part of a longer curve, so there's no neighboring keyframe for CATMULLROM to curve
 	 * through anyway. */
 	public static final AnimationDefinition RELEASE = AnimationDefinition.Builder.withLength(RELEASE_LENGTH_TICKS / 20.0F)
-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(RELEASE_START_ROTATION_X_DEGREES, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(RELEASE_LENGTH_TICKS / 20.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
 		))
-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.POSITION,
+		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.POSITION,
 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, RELEASE_START_POSITION_Y, 0.0F), AnimationChannel.Interpolations.LINEAR),
 			new Keyframe(RELEASE_LENGTH_TICKS / 20.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
 		))
@@ -189,13 +168,13 @@ public final class KaakTunAnimations {
 	// of 0.0 -> 1.8s) AND, unlike before, right_arm animates back to (0,0,0) at 1.0s instead of
 	// staying held on the struck-out pose - see ESPECIAL_ATTACK_LENGTH_TICKS above for why that
 	// removes the need for any trailing buffer on the auto-stop safety net.
-	public static final AnimationDefinition ESPECIAL_ATTACK = AnimationDefinition.Builder.withLength(1.0F)
-		.addAnimation("right_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
+	public static final AnimationDefinition ESPECIAL_ATTACK = AnimationDefinition.Builder.withLength(ESPECIAL_ATTACK_LENGTH_TICKS / 20.0F)
+		.addAnimation(KaakTunSpec.BONE_RIGHT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.25F, KeyframeAnimations.degreeVec(0.0F, 30.0F, 10.0F), AnimationChannel.Interpolations.CATMULLROM),
 			new Keyframe(0.5F, KeyframeAnimations.degreeVec(-36.22F, -4.0F, 4.47F), AnimationChannel.Interpolations.CATMULLROM),
-			new Keyframe(0.75F, KeyframeAnimations.degreeVec(-60.0F, -30.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
-			new Keyframe(1.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+			new Keyframe(KaakTunSpec.MELEE_IMPACT_TICK / 20.0F, KeyframeAnimations.degreeVec(-60.0F, -30.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+			new Keyframe(ESPECIAL_ATTACK_LENGTH_TICKS / 20.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 		))
 		.build();
 }

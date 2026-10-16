@@ -3,6 +3,7 @@ package com.palaneogenesis.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.palaneogenesis.entity.KaakTunEntity;
+import com.palaneogenesis.entity.KaakTunSpec;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -43,9 +44,9 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
 	private static final float WALK_ANIM_SPEED = 1.0F;
 
 	public KaakTunModel(ModelPart root) {
-		this.bone = root.getChild("bone");
-		this.head = this.bone.getChild("head");
-		this.leftArm = this.bone.getChild("left_arm");
+		this.bone = root.getChild(KaakTunSpec.BONE_ROOT);
+		this.head = this.bone.getChild(KaakTunSpec.BONE_HEAD);
+		this.leftArm = this.bone.getChild(KaakTunSpec.BONE_LEFT_ARM);
 	}
 
 	public ModelPart getLeftArm() {
@@ -56,30 +57,30 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
 		MeshDefinition meshdefinition = new MeshDefinition();
 		PartDefinition partdefinition = meshdefinition.getRoot();
 
-		PartDefinition bone = partdefinition.addOrReplaceChild("bone", CubeListBuilder.create(),
+		PartDefinition bone = partdefinition.addOrReplaceChild(KaakTunSpec.BONE_ROOT, CubeListBuilder.create(),
 			PartPose.offset(2.0F, 16.0F, 0.0F));
 
-		bone.addOrReplaceChild("left_leg",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_LEFT_LEG,
 			CubeListBuilder.create().texOffs(36, 4).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)),
 			PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
 
-		bone.addOrReplaceChild("left_foot",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_LEFT_FOOT,
 			CubeListBuilder.create()
 				.texOffs(51, 34).addBox(-0.5F, 0.0F, -1.0F, 1.0F, 1.0F, 2.0F, new CubeDeformation(0.0F))
 				.texOffs(47, 41).addBox(-1.5F, 1.0F, -2.0F, 3.0F, 1.0F, 4.0F, new CubeDeformation(0.0F)),
 			PartPose.offset(0.5F, 6.0F, 0.0F));
 
-		bone.addOrReplaceChild("right_leg",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_RIGHT_LEG,
 			CubeListBuilder.create().texOffs(20, 36).addBox(-2.0F, 0.0F, -1.0F, 4.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)),
 			PartPose.offsetAndRotation(-4.0F, 0.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
 
-		bone.addOrReplaceChild("right_foot",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_RIGHT_FOOT,
 			CubeListBuilder.create()
 				.texOffs(28, 44).addBox(-0.5F, 0.0F, -1.0F, 1.0F, 1.0F, 2.0F, new CubeDeformation(0.0F))
 				.texOffs(47, 41).addBox(-1.5F, 1.0F, -2.0F, 3.0F, 1.0F, 4.0F, new CubeDeformation(0.0F)),
 			PartPose.offset(-4.5F, 6.0F, 0.0F));
 
-		bone.addOrReplaceChild("left_arm",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_LEFT_ARM,
 			CubeListBuilder.create()
 				.texOffs(34, 36).addBox(0.0F, 0.0F, -2.0F, 3.0F, 7.0F, 3.0F, new CubeDeformation(0.0F))
 				.texOffs(20, 29).addBox(1.0F, 7.0F, -1.0F, 1.0F, 5.0F, 1.0F, new CubeDeformation(0.0F))
@@ -89,7 +90,7 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
 				.texOffs(2, 4).addBox(1.0F, 13.0F, 0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)),
 			PartPose.offset(3.0F, -9.0F, 0.25F));
 
-		bone.addOrReplaceChild("right_arm",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_RIGHT_ARM,
 			CubeListBuilder.create()
 				.texOffs(4, 37).addBox(-3.0F, 0.0F, -1.25F, 3.0F, 5.0F, 3.0F, new CubeDeformation(0.0F))
 				.texOffs(43, 19).addBox(-4.0F, 5.0F, -1.25F, 4.0F, 5.0F, 5.0F, new CubeDeformation(0.0F))
@@ -97,14 +98,14 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
 				.texOffs(16, 41).addBox(-4.5F, 10.0F, -1.25F, 1.0F, 3.0F, 5.0F, new CubeDeformation(0.0F)),
 			PartPose.offset(-7.0F, -9.0F, 0.0F));
 
-		bone.addOrReplaceChild("body",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_BODY,
 			CubeListBuilder.create()
 				.texOffs(28, 28).addBox(-1.0F, 2.0F, -3.0F, 2.0F, 2.0F, 6.0F, new CubeDeformation(0.0F))
 				.texOffs(4, 19).addBox(-2.0F, 0.0F, -4.0F, 4.0F, 2.0F, 8.0F, new CubeDeformation(0.0F))
 				.texOffs(4, 4).addBox(-3.0F, -5.0F, -5.0F, 6.0F, 5.0F, 10.0F, new CubeDeformation(0.0F)),
 			PartPose.offsetAndRotation(-2.0F, -4.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
 
-		bone.addOrReplaceChild("head",
+		bone.addOrReplaceChild(KaakTunSpec.BONE_HEAD,
 			CubeListBuilder.create().texOffs(4, 29).addBox(-2.0F, -3.0F, -2.0F, 4.0F, 4.0F, 4.0F, new CubeDeformation(0.0F)),
 			PartPose.offsetAndRotation(-2.0F, -9.0F, -3.0F, 0.0F, -1.5708F, 0.0F));
 

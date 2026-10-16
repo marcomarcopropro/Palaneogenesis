@@ -1,6 +1,7 @@
 package com.palaneogenesis.registry;
 
 import com.palaneogenesis.entity.KaakTunEntity;
+import com.palaneogenesis.entity.KaakTunSpec;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -19,8 +20,8 @@ import net.minecraftforge.registries.RegistryObject;
  * native bbox measures 1.109 wide x 1.25 tall (blocks) and is proportioned much stockier/wider
  * than the golem, so no single uniform scale hits "golem x1.5" on both axes at once without either
  * distorting the model or badly over/undershooting one axis (see the full breakdown in
- * KaakTunRenderer.VISUAL_SCALE's comment). Balanced choice: scale the model by the geometric mean
- * of the two required per-axis scales (2.4765, matching KaakTunRenderer.VISUAL_SCALE), landing
+ * KaakTunSpec.VISUAL_SCALE's comment). Balanced choice: scale the model by the geometric mean
+ * of the two required per-axis scales (2.4765, matching KaakTunSpec.VISUAL_SCALE), landing
  * both width and height clearly above the golem's real size (~2.75 wide x ~3.10 tall rendered)
  * without extreme distortion either way. Sized here as that rendered model size plus the same
  * ~6.7% buffer the previous 1.5F/1.6x2.0F pair used, so swinging limbs (WALK/ATTACK animations
@@ -34,7 +35,7 @@ public class ModEntityTypes {
 
 	public static final RegistryObject<EntityType<KaakTunEntity>> KAAK_TUN =
 		ENTITY_TYPES.register("kaak_tun", () -> EntityType.Builder.of(KaakTunEntity::new, MobCategory.MISC)
-			.sized(2.93F, 3.30F)
+			.sized(KaakTunSpec.HITBOX_WIDTH, KaakTunSpec.HITBOX_HEIGHT)
 			.clientTrackingRange(10)
 			.build("kaak_tun"));
 

@@ -3,6 +3,7 @@ package com.palaneogenesis.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.palaneogenesis.Palaneogenesis;
+import com.palaneogenesis.entity.KaakTunSpec;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -44,8 +45,7 @@ import java.util.Map;
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
 public class PlayerBeamRenderEvents {
 
-	private static final ResourceLocation BEAM_TEXTURE =
-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/beam_kaak.png");
+	private static final ResourceLocation BEAM_TEXTURE = KaakTunSpec.BEAM_TEXTURE;
 	private static final int BEAM_LIGHT = 0xF000F0;
 
 	/** Pedido explícito: más angosto que el halfWidth de Kaak Tun (0.2F en KaakTunRenderer). */

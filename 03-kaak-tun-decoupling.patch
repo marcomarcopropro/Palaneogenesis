@@ -1,0 +1,607 @@
+diff --git a/src/main/java/com/palaneogenesis/client/KaakTunAnimations.java b/src/main/java/com/palaneogenesis/client/KaakTunAnimations.java
+index d8794e2..d845e64 100644
+--- a/src/main/java/com/palaneogenesis/client/KaakTunAnimations.java
++++ b/src/main/java/com/palaneogenesis/client/KaakTunAnimations.java
+@@ -1,5 +1,6 @@
+ package com.palaneogenesis.client;
+ 
++import com.palaneogenesis.entity.KaakTunSpec;
+ import net.minecraft.client.animation.AnimationChannel;
+ import net.minecraft.client.animation.AnimationDefinition;
+ import net.minecraft.client.animation.Keyframe;
+@@ -39,35 +40,13 @@ public final class KaakTunAnimations {
+ 	private KaakTunAnimations() {
+ 	}
+ 
+-	/** ATTACK, ESPECIAL_ATTACK and RELEASE durations in ticks (20 ticks/sec), matching their
+-	 * AnimationDefinition.Builder.withLength(...) values below exactly - used by
+-	 * KaakTunEntity#setupAnimationStates to force-stop an AnimationState once its animation
+-	 * has actually finished, so a missed/edge-case stop never leaves a pose stuck. */
+-	public static final int ATTACK_LENGTH_TICKS = 176;
+-	/** 20 ticks (1.0s) - matches ESPECIAL_ATTACK's new last keyframe below exactly, since the new
+-	 * export's right_arm channel now animates all the way back to (0,0,0) instead of ending on the
+-	 * struck-out pose. No trailing buffer needed the way the old 38 (from a 1.8751F length) had
+-	 * one: the pose is already back at rest by the time this fires, so there's nothing left to pop. */
+-	public static final int ESPECIAL_ATTACK_LENGTH_TICKS = 20;
+-
+-	/** Tick (within the charge, i.e. matches KaakTunEntity#getBeamCharge()) at which left_arm's
+-	 * ATTACK keyframe below actually reaches its raised -90 deg pose (0.75s * 20 ticks/sec, per the
+-	 * new Blockbench export - was 36 ticks/1.8s before the resync). KaakTunRenderer uses this to
+-	 * gate the beam so it can't be drawn before the arm has visibly finished rising - the report
+-	 * was that "el rayo sale... antes que levante el brazo". Declared here (not duplicated as a
+-	 * literal in the renderer) since both KaakTunAnimations and KaakTunRenderer are client-only,
+-	 * so there's no cross-package reason to duplicate it the way KaakTunEntity has to duplicate
+-	 * ATTACK_LENGTH_TICKS above. */
+-	public static final int ATTACK_ARM_RAISE_TICKS = 15;
+-
+-	// --- Tune freely, no logic changes needed elsewhere (KaakTunEntity duplicates only
+-	// RELEASE_LENGTH_TICKS, to know when to auto-stop releaseAnimationState) ---
+-
+-	/** How long (in ticks) the arm takes to ease back down to rest once the charge-up hold ends.
+-	 * Raise this for a slower/more visible wind-down, lower it for a snappier one; it can never be
+-	 * fully instant (1 tick) without reintroducing the original pop, since interpolation needs at
+-	 * least two ticks apart to actually interpolate. */
+-	public static final int RELEASE_LENGTH_TICKS = 6;
++	// Gameplay-relevant timings are defined ONCE in KaakTunSpec and aliased here (KaakTunEntity and
++	// KaakTunMeleeAttackGoal read the same values), so a new animation can't silently desync
++	// gameplay: change the number in KaakTunSpec, not here.
++	public static final int ATTACK_LENGTH_TICKS = KaakTunSpec.ATTACK_LENGTH_TICKS;
++	public static final int ESPECIAL_ATTACK_LENGTH_TICKS = KaakTunSpec.ESPECIAL_ATTACK_LENGTH_TICKS;
++	public static final int ATTACK_ARM_RAISE_TICKS = KaakTunSpec.ATTACK_ARM_RAISE_TICKS;
++	public static final int RELEASE_LENGTH_TICKS = KaakTunSpec.RELEASE_LENGTH_TICKS;
+ 
+ 	/** The left_arm rotation (degrees, X axis) RELEASE eases *from*. Must match ATTACK's held
+ 	 * rotation below (the value at ATTACK's last left_arm ROTATION keyframe) or there will be a
+@@ -96,63 +75,63 @@ public final class KaakTunAnimations {
+ 	// default - a value like 0.05 (tuned to compensate for the old, wrongly-short 0.75F cycle)
+ 	// will now stretch a single loop to well over a minute of continuous walking.
+ 	public static final AnimationDefinition WALK = AnimationDefinition.Builder.withLength(2.25F).looping()
+-		.addAnimation("body", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_BODY, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.1F, KeyframeAnimations.degreeVec(90.0F, 5.0F, -90.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("right_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_RIGHT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.1F, KeyframeAnimations.degreeVec(-30.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("right_leg", new AnimationChannel(AnimationChannel.Targets.POSITION,
++		.addAnimation(KaakTunSpec.BONE_RIGHT_LEG, new AnimationChannel(AnimationChannel.Targets.POSITION,
+ 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.45F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.6F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.9F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("right_leg", new AnimationChannel(AnimationChannel.Targets.SCALE,
++		.addAnimation(KaakTunSpec.BONE_RIGHT_LEG, new AnimationChannel(AnimationChannel.Targets.SCALE,
+ 			new Keyframe(1.6F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.9F, KeyframeAnimations.scaleVec(1.0F, 0.9F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+ 		// left_leg has no ROTATION channel in the export (identity throughout) - nothing to add.
+-		.addAnimation("left_leg", new AnimationChannel(AnimationChannel.Targets.POSITION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_LEG, new AnimationChannel(AnimationChannel.Targets.POSITION,
+ 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.7F, KeyframeAnimations.posVec(0.0F, 0.0F, -1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("left_leg", new AnimationChannel(AnimationChannel.Targets.SCALE,
++		.addAnimation(KaakTunSpec.BONE_LEFT_LEG, new AnimationChannel(AnimationChannel.Targets.SCALE,
+ 			new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.45F, KeyframeAnimations.scaleVec(1.0F, 0.9F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("left_foot", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_FOOT, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.45F, KeyframeAnimations.degreeVec(-7.5F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.35F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("left_foot", new AnimationChannel(AnimationChannel.Targets.POSITION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_FOOT, new AnimationChannel(AnimationChannel.Targets.POSITION,
+ 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.45F, KeyframeAnimations.posVec(0.0F, 1.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.7F, KeyframeAnimations.posVec(0.0F, 1.0F, -1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.0F, KeyframeAnimations.posVec(0.0F, 0.0F, -1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.2F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("right_foot", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_RIGHT_FOOT, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(1.6F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.9F, KeyframeAnimations.degreeVec(15.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("right_foot", new AnimationChannel(AnimationChannel.Targets.POSITION,
++		.addAnimation(KaakTunSpec.BONE_RIGHT_FOOT, new AnimationChannel(AnimationChannel.Targets.POSITION,
+ 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.45F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.6F, KeyframeAnimations.posVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.9F, KeyframeAnimations.posVec(0.0F, 1.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(1.1F, KeyframeAnimations.degreeVec(30.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(2.25F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+@@ -160,11 +139,11 @@ public final class KaakTunAnimations {
+ 		.build();
+ 
+ 	public static final AnimationDefinition ATTACK = AnimationDefinition.Builder.withLength(ATTACK_LENGTH_TICKS / 20.0F)
+-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0000F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(ATTACK_ARM_RAISE_TICKS / 20.0F, KeyframeAnimations.degreeVec(-90.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.POSITION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.POSITION,
+ 			new Keyframe(0.0000F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(ATTACK_ARM_RAISE_TICKS / 20.0F, KeyframeAnimations.posVec(0.0F, -2.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+@@ -175,11 +154,11 @@ public final class KaakTunAnimations {
+ 	 * not part of a longer curve, so there's no neighboring keyframe for CATMULLROM to curve
+ 	 * through anyway. */
+ 	public static final AnimationDefinition RELEASE = AnimationDefinition.Builder.withLength(RELEASE_LENGTH_TICKS / 20.0F)
+-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(RELEASE_START_ROTATION_X_DEGREES, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
+ 			new Keyframe(RELEASE_LENGTH_TICKS / 20.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+ 		))
+-		.addAnimation("left_arm", new AnimationChannel(AnimationChannel.Targets.POSITION,
++		.addAnimation(KaakTunSpec.BONE_LEFT_ARM, new AnimationChannel(AnimationChannel.Targets.POSITION,
+ 			new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, RELEASE_START_POSITION_Y, 0.0F), AnimationChannel.Interpolations.LINEAR),
+ 			new Keyframe(RELEASE_LENGTH_TICKS / 20.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+ 		))
+@@ -189,13 +168,13 @@ public final class KaakTunAnimations {
+ 	// of 0.0 -> 1.8s) AND, unlike before, right_arm animates back to (0,0,0) at 1.0s instead of
+ 	// staying held on the struck-out pose - see ESPECIAL_ATTACK_LENGTH_TICKS above for why that
+ 	// removes the need for any trailing buffer on the auto-stop safety net.
+-	public static final AnimationDefinition ESPECIAL_ATTACK = AnimationDefinition.Builder.withLength(1.0F)
+-		.addAnimation("right_arm", new AnimationChannel(AnimationChannel.Targets.ROTATION,
++	public static final AnimationDefinition ESPECIAL_ATTACK = AnimationDefinition.Builder.withLength(ESPECIAL_ATTACK_LENGTH_TICKS / 20.0F)
++		.addAnimation(KaakTunSpec.BONE_RIGHT_ARM, new AnimationChannel(AnimationChannel.Targets.ROTATION,
+ 			new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.25F, KeyframeAnimations.degreeVec(0.0F, 30.0F, 10.0F), AnimationChannel.Interpolations.CATMULLROM),
+ 			new Keyframe(0.5F, KeyframeAnimations.degreeVec(-36.22F, -4.0F, 4.47F), AnimationChannel.Interpolations.CATMULLROM),
+-			new Keyframe(0.75F, KeyframeAnimations.degreeVec(-60.0F, -30.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
+-			new Keyframe(1.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
++			new Keyframe(KaakTunSpec.MELEE_IMPACT_TICK / 20.0F, KeyframeAnimations.degreeVec(-60.0F, -30.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
++			new Keyframe(ESPECIAL_ATTACK_LENGTH_TICKS / 20.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+ 		))
+ 		.build();
+ }
+diff --git a/src/main/java/com/palaneogenesis/client/KaakTunModel.java b/src/main/java/com/palaneogenesis/client/KaakTunModel.java
+index b9d9075..b3c99fb 100644
+--- a/src/main/java/com/palaneogenesis/client/KaakTunModel.java
++++ b/src/main/java/com/palaneogenesis/client/KaakTunModel.java
+@@ -3,6 +3,7 @@ package com.palaneogenesis.client;
+ import com.mojang.blaze3d.vertex.PoseStack;
+ import com.mojang.blaze3d.vertex.VertexConsumer;
+ import com.palaneogenesis.entity.KaakTunEntity;
++import com.palaneogenesis.entity.KaakTunSpec;
+ import net.minecraft.client.model.HierarchicalModel;
+ import net.minecraft.client.model.geom.ModelPart;
+ import net.minecraft.client.model.geom.PartPose;
+@@ -43,9 +44,9 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
+ 	private static final float WALK_ANIM_SPEED = 1.0F;
+ 
+ 	public KaakTunModel(ModelPart root) {
+-		this.bone = root.getChild("bone");
+-		this.head = this.bone.getChild("head");
+-		this.leftArm = this.bone.getChild("left_arm");
++		this.bone = root.getChild(KaakTunSpec.BONE_ROOT);
++		this.head = this.bone.getChild(KaakTunSpec.BONE_HEAD);
++		this.leftArm = this.bone.getChild(KaakTunSpec.BONE_LEFT_ARM);
+ 	}
+ 
+ 	public ModelPart getLeftArm() {
+@@ -56,30 +57,30 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
+ 		MeshDefinition meshdefinition = new MeshDefinition();
+ 		PartDefinition partdefinition = meshdefinition.getRoot();
+ 
+-		PartDefinition bone = partdefinition.addOrReplaceChild("bone", CubeListBuilder.create(),
++		PartDefinition bone = partdefinition.addOrReplaceChild(KaakTunSpec.BONE_ROOT, CubeListBuilder.create(),
+ 			PartPose.offset(2.0F, 16.0F, 0.0F));
+ 
+-		bone.addOrReplaceChild("left_leg",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_LEFT_LEG,
+ 			CubeListBuilder.create().texOffs(36, 4).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
+ 
+-		bone.addOrReplaceChild("left_foot",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_LEFT_FOOT,
+ 			CubeListBuilder.create()
+ 				.texOffs(51, 34).addBox(-0.5F, 0.0F, -1.0F, 1.0F, 1.0F, 2.0F, new CubeDeformation(0.0F))
+ 				.texOffs(47, 41).addBox(-1.5F, 1.0F, -2.0F, 3.0F, 1.0F, 4.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offset(0.5F, 6.0F, 0.0F));
+ 
+-		bone.addOrReplaceChild("right_leg",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_RIGHT_LEG,
+ 			CubeListBuilder.create().texOffs(20, 36).addBox(-2.0F, 0.0F, -1.0F, 4.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offsetAndRotation(-4.0F, 0.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
+ 
+-		bone.addOrReplaceChild("right_foot",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_RIGHT_FOOT,
+ 			CubeListBuilder.create()
+ 				.texOffs(28, 44).addBox(-0.5F, 0.0F, -1.0F, 1.0F, 1.0F, 2.0F, new CubeDeformation(0.0F))
+ 				.texOffs(47, 41).addBox(-1.5F, 1.0F, -2.0F, 3.0F, 1.0F, 4.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offset(-4.5F, 6.0F, 0.0F));
+ 
+-		bone.addOrReplaceChild("left_arm",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_LEFT_ARM,
+ 			CubeListBuilder.create()
+ 				.texOffs(34, 36).addBox(0.0F, 0.0F, -2.0F, 3.0F, 7.0F, 3.0F, new CubeDeformation(0.0F))
+ 				.texOffs(20, 29).addBox(1.0F, 7.0F, -1.0F, 1.0F, 5.0F, 1.0F, new CubeDeformation(0.0F))
+@@ -89,7 +90,7 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
+ 				.texOffs(2, 4).addBox(1.0F, 13.0F, 0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offset(3.0F, -9.0F, 0.25F));
+ 
+-		bone.addOrReplaceChild("right_arm",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_RIGHT_ARM,
+ 			CubeListBuilder.create()
+ 				.texOffs(4, 37).addBox(-3.0F, 0.0F, -1.25F, 3.0F, 5.0F, 3.0F, new CubeDeformation(0.0F))
+ 				.texOffs(43, 19).addBox(-4.0F, 5.0F, -1.25F, 4.0F, 5.0F, 5.0F, new CubeDeformation(0.0F))
+@@ -97,14 +98,14 @@ public class KaakTunModel extends HierarchicalModel<KaakTunEntity> {
+ 				.texOffs(16, 41).addBox(-4.5F, 10.0F, -1.25F, 1.0F, 3.0F, 5.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offset(-7.0F, -9.0F, 0.0F));
+ 
+-		bone.addOrReplaceChild("body",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_BODY,
+ 			CubeListBuilder.create()
+ 				.texOffs(28, 28).addBox(-1.0F, 2.0F, -3.0F, 2.0F, 2.0F, 6.0F, new CubeDeformation(0.0F))
+ 				.texOffs(4, 19).addBox(-2.0F, 0.0F, -4.0F, 4.0F, 2.0F, 8.0F, new CubeDeformation(0.0F))
+ 				.texOffs(4, 4).addBox(-3.0F, -5.0F, -5.0F, 6.0F, 5.0F, 10.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offsetAndRotation(-2.0F, -4.0F, 0.0F, 0.0F, -1.5708F, 0.0F));
+ 
+-		bone.addOrReplaceChild("head",
++		bone.addOrReplaceChild(KaakTunSpec.BONE_HEAD,
+ 			CubeListBuilder.create().texOffs(4, 29).addBox(-2.0F, -3.0F, -2.0F, 4.0F, 4.0F, 4.0F, new CubeDeformation(0.0F)),
+ 			PartPose.offsetAndRotation(-2.0F, -9.0F, -3.0F, 0.0F, -1.5708F, 0.0F));
+ 
+diff --git a/src/main/java/com/palaneogenesis/client/KaakTunRenderer.java b/src/main/java/com/palaneogenesis/client/KaakTunRenderer.java
+index 503493c..6bcdddf 100644
+--- a/src/main/java/com/palaneogenesis/client/KaakTunRenderer.java
++++ b/src/main/java/com/palaneogenesis/client/KaakTunRenderer.java
+@@ -2,8 +2,8 @@ package com.palaneogenesis.client;
+ 
+ import com.mojang.blaze3d.vertex.PoseStack;
+ import com.mojang.blaze3d.vertex.VertexConsumer;
+-import com.palaneogenesis.Palaneogenesis;
+ import com.palaneogenesis.entity.KaakTunEntity;
++import com.palaneogenesis.entity.KaakTunSpec;
+ import net.minecraft.client.renderer.MultiBufferSource;
+ import net.minecraft.client.renderer.RenderType;
+ import net.minecraft.client.renderer.entity.EntityRendererProvider;
+@@ -26,48 +26,20 @@ import net.minecraft.world.phys.Vec3;
+  */
+ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
+ 
+-	private static final ResourceLocation TEXTURE =
+-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/kaak_tun.png");
+-	private static final ResourceLocation BEAM_TEXTURE =
+-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/beam_kaak.png");
++	// Model/skin-dependent values live in KaakTunSpec (single definition point) - see the swap
++	// procedure there. These are only local aliases.
++	private static final ResourceLocation TEXTURE = KaakTunSpec.TEXTURE;
++	private static final ResourceLocation BEAM_TEXTURE = KaakTunSpec.BEAM_TEXTURE;
+ 	private static final int BEAM_LIGHT = 0xF000F0;
+ 
+-	/** Size-up of the model to make Káak Tun read as "50% bigger than an Iron Golem" per the
+-	 * design doc, computed straight off the real geometry in kaak_tun.bbmodel (not the old
+-	 * eyeballed 1.5F): measuring every cube's from/to gives a native bbox of 1.109 wide x
+-	 * 1.25 tall x 0.625 deep (blocks). The model is proportioned much stockier/wider than
+-	 * Iron Golem (width/height ratio ~0.89 vs the golem's ~0.52), so a single uniform scale
+-	 * can't hit "golem width x1.5" (2.1) AND "golem height x1.5" (4.05) at once without either
+-	 * stretching the model (rejected - would distort the character) or picking one axis and
+-	 * badly overshooting/undershooting the other (width-anchored: 2.1 wide but only 2.37 tall,
+-	 * i.e. shorter than a real golem; height-anchored: 4.05 tall but 3.6 wide).
+-	 * Balanced choice (per request): the geometric mean of the two required per-axis scales
+-	 * (sqrt(1.893 * 3.24) = 2.4765), which lands both axes clearly above the golem's real size
+-	 * without extreme distortion in either: model renders at ~2.75 wide x ~3.10 tall.
+-	 * ModEntityTypes.KAAK_TUN's hitbox (2.93 x 3.30) adds the same ~6.7% buffer the old
+-	 * 1.5F/1.6x2.0F pair used, for limbs swinging out during animations. If this value changes,
+-	 * ModEntityTypes.KAAK_TUN's .sized(...) must be recalculated too (buffer = this x ~1.0667
+-	 * on each axis), or the model/hitbox mismatch (mob catching on terrain sized for a
+-	 * different hitbox) comes right back. */
+-	private static final float VISUAL_SCALE = 2.4765F;
+-
+-	/** Point near the fist, in left_arm's own local unrotated space. Exact centroid of the 3
+-	 * knuckle-detail boxes in KaakTunModel#createBodyLayer's "left_arm" PartDefinition:
+-	 *   addBox(-0.25, 13.0, -2.25, 1,1,1) -> center (0.25, 13.5, -1.75)
+-	 *   addBox( 2.25, 13.0, -2.25, 1,1,1) -> center (2.75, 13.5, -1.75)
+-	 *   addBox( 1.00, 13.0,  0.50, 1,1,1) -> center (1.50, 13.5,  1.00)
+-	 *   average                            = (1.5, 13.5, -0.8333...)
+-	 * Replaces the earlier eyeballed (1.5, 14.0, -0.5) - X was already exact, Y/Z are now computed
+-	 * straight from the same addBox(...) calls the renderer is trying to match, not approximated
+-	 * from the .bbmodel export. 1 unit = 1/16 block, Y-down - standard Minecraft model-space
+-	 * convention. Used by #computeBeamOrigin below. If the beam still doesn't sit exactly on the
+-	 * fist, tune from THIS point, not back toward the old eyeballed one. */
+-	private static final float HAND_LOCAL_X = 1.5F;
+-	private static final float HAND_LOCAL_Y = 13.5F;
+-	private static final float HAND_LOCAL_Z = -0.8333F;
++	private static final float VISUAL_SCALE = KaakTunSpec.VISUAL_SCALE;
++
++	private static final float HAND_LOCAL_X = KaakTunSpec.BEAM_HAND_LOCAL_X;
++	private static final float HAND_LOCAL_Y = KaakTunSpec.BEAM_HAND_LOCAL_Y;
++	private static final float HAND_LOCAL_Z = KaakTunSpec.BEAM_HAND_LOCAL_Z;
+ 
+ 	public KaakTunRenderer(EntityRendererProvider.Context context) {
+-		super(context, new KaakTunModel(context.bakeLayer(KaakTunModelLayer.KAAK_TUN)), 0.6F * VISUAL_SCALE);
++		super(context, new KaakTunModel(context.bakeLayer(KaakTunModelLayer.KAAK_TUN)), KaakTunSpec.SHADOW_RADIUS);
+ 	}
+ 
+ 	@Override
+@@ -92,7 +64,7 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
+ 		// playing - that takes KaakTunAnimations.ATTACK_ARM_RAISE_TICKS ticks. Gating on that
+ 		// same constant (rather than a separate duplicated value) keeps the animation and the
+ 		// beam's visibility from ever being able to drift out of sync.
+-		if (charge < KaakTunAnimations.ATTACK_ARM_RAISE_TICKS || targetId == 0) {
++		if (charge < KaakTunSpec.ATTACK_ARM_RAISE_TICKS || targetId == 0) {
+ 			return;
+ 		}
+ 
+@@ -172,6 +144,9 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
+ 
+ 	private Vec3 computeBeamOrigin(KaakTunEntity entity, float entityYaw) {
+ 		ModelPart leftArm = this.getModel().getLeftArm();
++		// Root bone offset read from the model itself (was hard-coded 2.0 / 16.0 here), so a new
++		// model with a different root offset needs no change in this method.
++		ModelPart rootBone = this.getModel().root();
+ 
+ 		double cos = Math.cos(leftArm.xRot);
+ 		double sin = Math.sin(leftArm.xRot);
+@@ -184,8 +159,8 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
+ 		// to bone) sit at absolute modelX +2 and -2 - symmetric around 0 - confirming modelX=0
+ 		// (and by the same left/right-symmetric construction, modelZ=0) already IS the entity's
+ 		// true horizontal center, unlike Y which has an explicit ground reference (see below).
+-		double modelX = leftArm.x + HAND_LOCAL_X + 2.0D;
+-		double modelY = leftArm.y + rotatedLocalY + 16.0D;
++		double modelX = leftArm.x + HAND_LOCAL_X + (double) rootBone.x;
++		double modelY = leftArm.y + rotatedLocalY + (double) rootBone.y;
+ 		double modelZ = leftArm.z + rotatedLocalZ;
+ 
+ 		// BUGFIX (report: "el rayo esta abajo del pie"): model-space Y=0 is NOT the entity's
+@@ -198,7 +173,7 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
+ 		// whole frame being shifted down by 1.5 blocks was enough to land it below the feet in
+ 		// world space instead of above the head.
+ 		double localOffsetX = -modelX / 16.0D * VISUAL_SCALE * SIDE_SIGN;
+-		double localOffsetY = (24.0D - modelY) / 16.0D * VISUAL_SCALE;
++		double localOffsetY = (KaakTunSpec.MODEL_GROUND_Y - modelY) / 16.0D * VISUAL_SCALE;
+ 		double localOffsetZ = modelZ / 16.0D * VISUAL_SCALE * FORWARD_SIGN;
+ 
+ 		// entityYaw (not entity.getViewYRot()) on purpose: this is the exact same interpolated
+diff --git a/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java b/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java
+index 18be897..1772d23 100644
+--- a/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java
++++ b/src/main/java/com/palaneogenesis/client/PlayerBeamRenderEvents.java
+@@ -3,6 +3,7 @@ package com.palaneogenesis.client;
+ import com.mojang.blaze3d.vertex.PoseStack;
+ import com.mojang.blaze3d.vertex.VertexConsumer;
+ import com.palaneogenesis.Palaneogenesis;
++import com.palaneogenesis.entity.KaakTunSpec;
+ import net.minecraft.client.Camera;
+ import net.minecraft.client.Minecraft;
+ import net.minecraft.client.multiplayer.ClientLevel;
+@@ -44,8 +45,7 @@ import java.util.Map;
+ @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
+ public class PlayerBeamRenderEvents {
+ 
+-	private static final ResourceLocation BEAM_TEXTURE =
+-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/beam_kaak.png");
++	private static final ResourceLocation BEAM_TEXTURE = KaakTunSpec.BEAM_TEXTURE;
+ 	private static final int BEAM_LIGHT = 0xF000F0;
+ 
+ 	/** Pedido explícito: más angosto que el halfWidth de Kaak Tun (0.2F en KaakTunRenderer). */
+diff --git a/src/main/java/com/palaneogenesis/entity/KaakTunEntity.java b/src/main/java/com/palaneogenesis/entity/KaakTunEntity.java
+index 12f4b9f..a40c8f1 100644
+--- a/src/main/java/com/palaneogenesis/entity/KaakTunEntity.java
++++ b/src/main/java/com/palaneogenesis/entity/KaakTunEntity.java
+@@ -63,16 +63,12 @@ public class KaakTunEntity extends AbstractGolem {
+ 	private int meleeAttackAnimationStartTick = -1;
+ 	private int releaseAnimationStartTick = -1;
+ 
+-	/** Duplicated from KaakTunAnimations (client package) on purpose rather than imported:
+-	 * KaakTunEntity is loaded on dedicated servers too, and client-package classes reference
+-	 * net.minecraft.client.* types that don't exist there. Keep these values in sync with
+-	 * KaakTunAnimations.ATTACK / .ESPECIAL_ATTACK / .RELEASE's withLength(...) (in ticks, 20/sec)
+-	 * if any changes. */
+-	private static final int ATTACK_LENGTH_TICKS = 176;
+-	// Resynced with KaakTunAnimations.ESPECIAL_ATTACK_LENGTH_TICKS (20 ticks now, was 38) after
+-	// the ESPECIAL_ATTACK re-export: the new right_arm keyframes return to rest by 1.0s/20 ticks.
+-	private static final int ESPECIAL_ATTACK_LENGTH_TICKS = 20;
+-	private static final int RELEASE_LENGTH_TICKS = 6;
++	/** Same values the client animations use: both sides read them from KaakTunSpec (a common,
++	 * client-free class, so this entity can still load on a dedicated server), which removes the
++	 * old hand-synced duplicates. */
++	private static final int ATTACK_LENGTH_TICKS = KaakTunSpec.ATTACK_LENGTH_TICKS;
++	private static final int ESPECIAL_ATTACK_LENGTH_TICKS = KaakTunSpec.ESPECIAL_ATTACK_LENGTH_TICKS;
++	private static final int RELEASE_LENGTH_TICKS = KaakTunSpec.RELEASE_LENGTH_TICKS;
+ 
+ 	public KaakTunEntity(EntityType<? extends AbstractGolem> type, Level level) {
+ 		super(type, level);
+diff --git a/src/main/java/com/palaneogenesis/entity/KaakTunMeleeAttackGoal.java b/src/main/java/com/palaneogenesis/entity/KaakTunMeleeAttackGoal.java
+index 5f7f0fe..8962f8d 100644
+--- a/src/main/java/com/palaneogenesis/entity/KaakTunMeleeAttackGoal.java
++++ b/src/main/java/com/palaneogenesis/entity/KaakTunMeleeAttackGoal.java
+@@ -34,10 +34,10 @@ import net.minecraft.world.entity.LivingEntity;
+ public class KaakTunMeleeAttackGoal extends KaakTunAttackGoal {
+ 
+ 	/** Tick within a swing (0 = the tick triggerMeleeAttackAnimation() fires) at which the fist
+-	 * actually reaches the target and damage applies. Must match KaakTunAnimations.
+-	 * ESPECIAL_ATTACK's own "struck out" keyframe (0.75s * 20 ticks/sec) or the hit will visibly
+-	 * land before/after the swing again. */
+-	private static final int IMPACT_TICK = 15;
++	 * actually reaches the target and damage applies. Defined in KaakTunSpec, which also places
++	 * KaakTunAnimations.ESPECIAL_ATTACK's "struck out" keyframe, so the hit can't visibly land
++	 * before/after the swing. */
++	private static final int IMPACT_TICK = KaakTunSpec.MELEE_IMPACT_TICK;
+ 
+ 	/** Was Config#kaakTunMeleeRange (default 3.0). Lowered to 2.0 per request. Keep well under
+ 	 * KaakTunBeamAttackGoal.BEAM_RANGE so melee only triggers once a target has actually closed
+diff --git a/src/main/java/com/palaneogenesis/entity/KaakTunSpec.java b/src/main/java/com/palaneogenesis/entity/KaakTunSpec.java
+new file mode 100644
+index 0000000..ed4d67d
+--- /dev/null
++++ b/src/main/java/com/palaneogenesis/entity/KaakTunSpec.java
+@@ -0,0 +1,126 @@
++package com.palaneogenesis.entity;
++
++import com.palaneogenesis.Palaneogenesis;
++import net.minecraft.resources.ResourceLocation;
++
++/**
++ * SINGLE DEFINITION POINT for everything the rest of the code assumes about Káak Tun's model,
++ * animations, size and skin. Gameplay, renderer and registry code read these values; they never
++ * own a copy. Goal (roadmap rule 4): the model and skin adapt to the code, so swapping them
++ * (even many times) never means touching gameplay logic.
++ *
++ * Pure constants, no client-only imports, so it is safe to load on a dedicated server.
++ *
++ * HOW TO SWAP THE MODEL / SKIN:
++ *  1. Replace the geometry in client.KaakTunModel#createBodyLayer (Blockbench Java export).
++ *  2. Replace the keyframes in client.KaakTunAnimations (Blockbench export). Their durations
++ *     come from the TIMING block below, so gameplay and animation cannot drift apart.
++ *  3. Replace the PNG at TEXTURE (or change the path here). Same for BEAM_TEXTURE.
++ *  4. Re-tune this file: bone names (only if the new model names its parts differently),
++ *     VISUAL_SCALE, HITBOX_*, BEAM_HAND_LOCAL_*, MODEL_GROUND_Y and the TIMING block.
++ *
++ * BONE CONTRACT: BONE_ROOT, BONE_HEAD and BONE_LEFT_ARM are REQUIRED (KaakTunModel looks them
++ * up and the renderer anchors the beam on the left arm). The other bones are only animation
++ * targets: vanilla skips an animation channel whose bone does not exist, so a model without
++ * them still loads (that part just won't animate).
++ */
++public final class KaakTunSpec {
++
++	private KaakTunSpec() {
++	}
++
++	// ------------------------------------------------------------------ bones (model part names)
++
++	public static final String BONE_ROOT = "bone";
++	public static final String BONE_HEAD = "head";
++	public static final String BONE_BODY = "body";
++	public static final String BONE_LEFT_ARM = "left_arm";
++	public static final String BONE_RIGHT_ARM = "right_arm";
++	public static final String BONE_LEFT_LEG = "left_leg";
++	public static final String BONE_RIGHT_LEG = "right_leg";
++	public static final String BONE_LEFT_FOOT = "left_foot";
++	public static final String BONE_RIGHT_FOOT = "right_foot";
++
++	// ------------------------------------------------------------------ timing (ticks, 20/sec)
++	// Used by BOTH the client animations (keyframe/animation lengths) and the server-side
++	// gameplay (auto-stop of animation states, melee impact), so they cannot drift apart.
++
++	/** Length of the beam charge-up hold animation (ATTACK). */
++	public static final int ATTACK_LENGTH_TICKS = 176;
++
++	/** Length of the melee punch animation (ESPECIAL_ATTACK): its right_arm channel is back at
++	 * rest exactly at this tick, so no trailing buffer is needed. */
++	public static final int ESPECIAL_ATTACK_LENGTH_TICKS = 20;
++
++	/** Length of the arm ease-down (RELEASE) played when the ATTACK hold ends. Cannot be 1 tick
++	 * without reintroducing the original pop (interpolation needs two ticks apart). */
++	public static final int RELEASE_LENGTH_TICKS = 6;
++
++	/** Tick (within the charge, i.e. KaakTunEntity#getBeamCharge()) at which the left arm has
++	 * visibly finished rising; the renderer does not draw the beam before it. */
++	public static final int ATTACK_ARM_RAISE_TICKS = 15;
++
++	/** Tick within a melee swing at which the fist reaches the target and damage applies. It is
++	 * also the tick of ESPECIAL_ATTACK's "struck out" keyframe (client.KaakTunAnimations reads
++	 * this value), so the hit can never land before/after the visible swing. */
++	public static final int MELEE_IMPACT_TICK = 15;
++
++	// ------------------------------------------------------------------ size
++
++	/** Size-up of the model to make Káak Tun read as "50% bigger than an Iron Golem" per the
++	 * design doc, computed straight off the real geometry in kaak_tun.bbmodel (not the old
++	 * eyeballed 1.5F): measuring every cube's from/to gives a native bbox of 1.109 wide x
++	 * 1.25 tall x 0.625 deep (blocks). The model is proportioned much stockier/wider than
++	 * Iron Golem (width/height ratio ~0.89 vs the golem's ~0.52), so a single uniform scale
++	 * can't hit "golem width x1.5" (2.1) AND "golem height x1.5" (4.05) at once without either
++	 * stretching the model (rejected - would distort the character) or picking one axis and
++	 * badly overshooting/undershooting the other (width-anchored: 2.1 wide but only 2.37 tall,
++	 * i.e. shorter than a real golem; height-anchored: 4.05 tall but 3.6 wide).
++	 * Balanced choice (per request): the geometric mean of the two required per-axis scales
++	 * (sqrt(1.893 * 3.24) = 2.4765), which lands both axes clearly above the golem's real size
++	 * without extreme distortion in either: model renders at ~2.75 wide x ~3.10 tall.
++	 * HITBOX_WIDTH x HITBOX_HEIGHT below (2.93 x 3.30) adds the same ~6.7% buffer the old
++	 * 1.5F/1.6x2.0F pair used, for limbs swinging out during animations. If this value changes,
++	 * HITBOX_WIDTH / HITBOX_HEIGHT must be recalculated too (buffer = this x ~1.0667
++	 * on each axis), or the model/hitbox mismatch (mob catching on terrain sized for a
++	 * different hitbox) comes right back. */
++	public static final float VISUAL_SCALE = 2.4765F;
++
++	/** Shadow radius under the entity: 0.6 (model-native) x VISUAL_SCALE. */
++	public static final float SHADOW_RADIUS = 0.6F * VISUAL_SCALE;
++
++	/** Hitbox width/height (blocks). Rendered model size x ~1.0667 buffer so swinging limbs do
++	 * not poke outside it; recalculate whenever VISUAL_SCALE or the model changes. */
++	public static final float HITBOX_WIDTH = 2.93F;
++	public static final float HITBOX_HEIGHT = 3.30F;
++
++	// ------------------------------------------------------------------ beam anchor
++
++	/** Point near the fist, in left_arm's own local unrotated space. Exact centroid of the 3
++	 * knuckle-detail boxes in KaakTunModel#createBodyLayer's "left_arm" PartDefinition:
++	 *   addBox(-0.25, 13.0, -2.25, 1,1,1) -> center (0.25, 13.5, -1.75)
++	 *   addBox( 2.25, 13.0, -2.25, 1,1,1) -> center (2.75, 13.5, -1.75)
++	 *   addBox( 1.00, 13.0,  0.50, 1,1,1) -> center (1.50, 13.5,  1.00)
++	 *   average                            = (1.5, 13.5, -0.8333...)
++	 * Replaces the earlier eyeballed (1.5, 14.0, -0.5) - X was already exact, Y/Z are now computed
++	 * straight from the same addBox(...) calls the renderer is trying to match, not approximated
++	 * from the .bbmodel export. 1 unit = 1/16 block, Y-down - standard Minecraft model-space
++	 * convention. Used by KaakTunRenderer#computeBeamOrigin. If the beam still doesn't sit exactly on the
++	 * fist, tune from THIS point, not back toward the old eyeballed one. */
++	public static final float BEAM_HAND_LOCAL_X = 1.5F;
++	public static final float BEAM_HAND_LOCAL_Y = 13.5F;
++	public static final float BEAM_HAND_LOCAL_Z = -0.8333F;
++
++	/** Y in model space where the sole of the feet sits (the entity's world-position reference).
++	 * 24 is the Blockbench / vanilla convention; verify it for any new model. */
++	public static final double MODEL_GROUND_Y = 24.0D;
++
++	// ------------------------------------------------------------------ textures
++
++	public static final ResourceLocation TEXTURE =
++		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/kaak_tun.png");
++
++	/** The beam texture (also used by client.PlayerBeamRenderEvents for the player's beam). */
++	public static final ResourceLocation BEAM_TEXTURE =
++		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/beam_kaak.png");
++}
+diff --git a/src/main/java/com/palaneogenesis/registry/ModEntityTypes.java b/src/main/java/com/palaneogenesis/registry/ModEntityTypes.java
+index 3bb477a..5c3eca3 100644
+--- a/src/main/java/com/palaneogenesis/registry/ModEntityTypes.java
++++ b/src/main/java/com/palaneogenesis/registry/ModEntityTypes.java
+@@ -1,6 +1,7 @@
+ package com.palaneogenesis.registry;
+ 
+ import com.palaneogenesis.entity.KaakTunEntity;
++import com.palaneogenesis.entity.KaakTunSpec;
+ import net.minecraft.world.entity.EntityType;
+ import net.minecraft.world.entity.MobCategory;
+ import net.minecraftforge.eventbus.api.IEventBus;
+@@ -19,8 +20,8 @@ import net.minecraftforge.registries.RegistryObject;
+  * native bbox measures 1.109 wide x 1.25 tall (blocks) and is proportioned much stockier/wider
+  * than the golem, so no single uniform scale hits "golem x1.5" on both axes at once without either
+  * distorting the model or badly over/undershooting one axis (see the full breakdown in
+- * KaakTunRenderer.VISUAL_SCALE's comment). Balanced choice: scale the model by the geometric mean
+- * of the two required per-axis scales (2.4765, matching KaakTunRenderer.VISUAL_SCALE), landing
++ * KaakTunSpec.VISUAL_SCALE's comment). Balanced choice: scale the model by the geometric mean
++ * of the two required per-axis scales (2.4765, matching KaakTunSpec.VISUAL_SCALE), landing
+  * both width and height clearly above the golem's real size (~2.75 wide x ~3.10 tall rendered)
+  * without extreme distortion either way. Sized here as that rendered model size plus the same
+  * ~6.7% buffer the previous 1.5F/1.6x2.0F pair used, so swinging limbs (WALK/ATTACK animations
+@@ -34,7 +35,7 @@ public class ModEntityTypes {
+ 
+ 	public static final RegistryObject<EntityType<KaakTunEntity>> KAAK_TUN =
+ 		ENTITY_TYPES.register("kaak_tun", () -> EntityType.Builder.of(KaakTunEntity::new, MobCategory.MISC)
+-			.sized(2.93F, 3.30F)
++			.sized(KaakTunSpec.HITBOX_WIDTH, KaakTunSpec.HITBOX_HEIGHT)
+ 			.clientTrackingRange(10)
+ 			.build("kaak_tun"));
+ 

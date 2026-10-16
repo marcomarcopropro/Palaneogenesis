@@ -2,8 +2,8 @@ package com.palaneogenesis.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.entity.KaakTunEntity;
+import com.palaneogenesis.entity.KaakTunSpec;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -26,48 +26,20 @@ import net.minecraft.world.phys.Vec3;
  */
 public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 
-	private static final ResourceLocation TEXTURE =
-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/kaak_tun.png");
-	private static final ResourceLocation BEAM_TEXTURE =
-		new ResourceLocation(Palaneogenesis.MOD_ID, "textures/entity/beam_kaak.png");
+	// Model/skin-dependent values live in KaakTunSpec (single definition point) - see the swap
+	// procedure there. These are only local aliases.
+	private static final ResourceLocation TEXTURE = KaakTunSpec.TEXTURE;
+	private static final ResourceLocation BEAM_TEXTURE = KaakTunSpec.BEAM_TEXTURE;
 	private static final int BEAM_LIGHT = 0xF000F0;
 
-	/** Size-up of the model to make Káak Tun read as "50% bigger than an Iron Golem" per the
-	 * design doc, computed straight off the real geometry in kaak_tun.bbmodel (not the old
-	 * eyeballed 1.5F): measuring every cube's from/to gives a native bbox of 1.109 wide x
-	 * 1.25 tall x 0.625 deep (blocks). The model is proportioned much stockier/wider than
-	 * Iron Golem (width/height ratio ~0.89 vs the golem's ~0.52), so a single uniform scale
-	 * can't hit "golem width x1.5" (2.1) AND "golem height x1.5" (4.05) at once without either
-	 * stretching the model (rejected - would distort the character) or picking one axis and
-	 * badly overshooting/undershooting the other (width-anchored: 2.1 wide but only 2.37 tall,
-	 * i.e. shorter than a real golem; height-anchored: 4.05 tall but 3.6 wide).
-	 * Balanced choice (per request): the geometric mean of the two required per-axis scales
-	 * (sqrt(1.893 * 3.24) = 2.4765), which lands both axes clearly above the golem's real size
-	 * without extreme distortion in either: model renders at ~2.75 wide x ~3.10 tall.
-	 * ModEntityTypes.KAAK_TUN's hitbox (2.93 x 3.30) adds the same ~6.7% buffer the old
-	 * 1.5F/1.6x2.0F pair used, for limbs swinging out during animations. If this value changes,
-	 * ModEntityTypes.KAAK_TUN's .sized(...) must be recalculated too (buffer = this x ~1.0667
-	 * on each axis), or the model/hitbox mismatch (mob catching on terrain sized for a
-	 * different hitbox) comes right back. */
-	private static final float VISUAL_SCALE = 2.4765F;
+	private static final float VISUAL_SCALE = KaakTunSpec.VISUAL_SCALE;
 
-	/** Point near the fist, in left_arm's own local unrotated space. Exact centroid of the 3
-	 * knuckle-detail boxes in KaakTunModel#createBodyLayer's "left_arm" PartDefinition:
-	 *   addBox(-0.25, 13.0, -2.25, 1,1,1) -> center (0.25, 13.5, -1.75)
-	 *   addBox( 2.25, 13.0, -2.25, 1,1,1) -> center (2.75, 13.5, -1.75)
-	 *   addBox( 1.00, 13.0,  0.50, 1,1,1) -> center (1.50, 13.5,  1.00)
-	 *   average                            = (1.5, 13.5, -0.8333...)
-	 * Replaces the earlier eyeballed (1.5, 14.0, -0.5) - X was already exact, Y/Z are now computed
-	 * straight from the same addBox(...) calls the renderer is trying to match, not approximated
-	 * from the .bbmodel export. 1 unit = 1/16 block, Y-down - standard Minecraft model-space
-	 * convention. Used by #computeBeamOrigin below. If the beam still doesn't sit exactly on the
-	 * fist, tune from THIS point, not back toward the old eyeballed one. */
-	private static final float HAND_LOCAL_X = 1.5F;
-	private static final float HAND_LOCAL_Y = 13.5F;
-	private static final float HAND_LOCAL_Z = -0.8333F;
+	private static final float HAND_LOCAL_X = KaakTunSpec.BEAM_HAND_LOCAL_X;
+	private static final float HAND_LOCAL_Y = KaakTunSpec.BEAM_HAND_LOCAL_Y;
+	private static final float HAND_LOCAL_Z = KaakTunSpec.BEAM_HAND_LOCAL_Z;
 
 	public KaakTunRenderer(EntityRendererProvider.Context context) {
-		super(context, new KaakTunModel(context.bakeLayer(KaakTunModelLayer.KAAK_TUN)), 0.6F * VISUAL_SCALE);
+		super(context, new KaakTunModel(context.bakeLayer(KaakTunModelLayer.KAAK_TUN)), KaakTunSpec.SHADOW_RADIUS);
 	}
 
 	@Override
@@ -92,7 +64,7 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 		// playing - that takes KaakTunAnimations.ATTACK_ARM_RAISE_TICKS ticks. Gating on that
 		// same constant (rather than a separate duplicated value) keeps the animation and the
 		// beam's visibility from ever being able to drift out of sync.
-		if (charge < KaakTunAnimations.ATTACK_ARM_RAISE_TICKS || targetId == 0) {
+		if (charge < KaakTunSpec.ATTACK_ARM_RAISE_TICKS || targetId == 0) {
 			return;
 		}
 
@@ -172,6 +144,9 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 
 	private Vec3 computeBeamOrigin(KaakTunEntity entity, float entityYaw) {
 		ModelPart leftArm = this.getModel().getLeftArm();
+		// Root bone offset read from the model itself (was hard-coded 2.0 / 16.0 here), so a new
+		// model with a different root offset needs no change in this method.
+		ModelPart rootBone = this.getModel().root();
 
 		double cos = Math.cos(leftArm.xRot);
 		double sin = Math.sin(leftArm.xRot);
@@ -184,8 +159,8 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 		// to bone) sit at absolute modelX +2 and -2 - symmetric around 0 - confirming modelX=0
 		// (and by the same left/right-symmetric construction, modelZ=0) already IS the entity's
 		// true horizontal center, unlike Y which has an explicit ground reference (see below).
-		double modelX = leftArm.x + HAND_LOCAL_X + 2.0D;
-		double modelY = leftArm.y + rotatedLocalY + 16.0D;
+		double modelX = leftArm.x + HAND_LOCAL_X + (double) rootBone.x;
+		double modelY = leftArm.y + rotatedLocalY + (double) rootBone.y;
 		double modelZ = leftArm.z + rotatedLocalZ;
 
 		// BUGFIX (report: "el rayo esta abajo del pie"): model-space Y=0 is NOT the entity's
@@ -198,7 +173,7 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 		// whole frame being shifted down by 1.5 blocks was enough to land it below the feet in
 		// world space instead of above the head.
 		double localOffsetX = -modelX / 16.0D * VISUAL_SCALE * SIDE_SIGN;
-		double localOffsetY = (24.0D - modelY) / 16.0D * VISUAL_SCALE;
+		double localOffsetY = (KaakTunSpec.MODEL_GROUND_Y - modelY) / 16.0D * VISUAL_SCALE;
 		double localOffsetZ = modelZ / 16.0D * VISUAL_SCALE * FORWARD_SIGN;
 
 		// entityYaw (not entity.getViewYRot()) on purpose: this is the exact same interpolated
