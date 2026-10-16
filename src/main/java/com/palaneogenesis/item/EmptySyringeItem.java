@@ -1,8 +1,11 @@
 package com.palaneogenesis.item;
 
+import com.palaneogenesis.client.DetransformFlashOverlay;
 import com.palaneogenesis.client.HeartbeatFlashOverlay;
 import com.palaneogenesis.registry.ModItems;
+import com.palaneogenesis.registry.ModSounds;
 import com.palaneogenesis.util.AncientTransformation;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -77,6 +80,8 @@ public class EmptySyringeItem extends Item {
 			// el de otro jugador mirando) - ver el javadoc completo del fix en
 			// client.HeartbeatFlashOverlay#cancel.
 			DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> HeartbeatFlashOverlay::cancel);
+			// Stage 4, Paso 2: parpadeo rojo de destransformación, sólo en la pantalla de quien revierte.
+			DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> DetransformFlashOverlay::play);
 		}
 
 		player.awardStat(Stats.ITEM_USED.get(this));
@@ -171,10 +176,16 @@ public class EmptySyringeItem extends Item {
 
 		// Stage 4, Paso 1: apaga el aura orbital + eye flare para todos los que trackean a este
 		// jugador (ver util.AncientTransformation#broadcastEffects, mismo mecanismo que prende en
-		// AncientExtractSyringeItem#transform). El efecto propio de destransformación en sí
-		// ("daño al revertir", Stage 4 Paso 2) sigue sin implementarse - falta el asset visual,
-		// ver Sección 0.1 del roadmap - esto sólo corta el aura persistente para que no se quede
-		// dibujándose sobre un jugador que ya no está transformado.
+		// AncientExtractSyringeItem#transform), para que no se quede dibujándose sobre un jugador
+		// que ya no está transformado. El efecto propio de destransformación (sonido + parpadeo
+		// rojo) está justo abajo y en item.EmptySyringeItem#use.
 		AncientTransformation.broadcastEffects(player, false);
+
+		// Stage 4, Paso 2: sonido de destransformación (asset del owner, "jeringa.ogg"; el visual es el
+		// parpadeo rojo de client.DetransformFlashOverlay, que dura lo mismo que este audio). Mismo
+		// mecanismo que el sonido de transformación: Level#playSound con excepto=null, lo oyen todos los
+		// clientes en rango. Volumen 1.0 porque el archivo ya está normalizado (pico ~-1 dB).
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+			ModSounds.DETRANSFORMATION.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
 	}
 }

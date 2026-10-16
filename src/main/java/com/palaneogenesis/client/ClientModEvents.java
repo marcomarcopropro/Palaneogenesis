@@ -96,6 +96,8 @@ public class ClientModEvents {
 		// uso dos líneas arriba (ver client.HeartbeatFlashOverlay, que calcula su propio
 		// color/alpha, sin depender de qué overlay vanilla tenga al lado).
 		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "heartbeat_flash", HeartbeatFlashOverlay.HUD);
+		// Stage 4, Paso 2: parpadeo rojo de destransformación (ver client.DetransformFlashOverlay).
+		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "detransform_flash", DetransformFlashOverlay.HUD);
 	}
 
 	@SubscribeEvent

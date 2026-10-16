@@ -28,6 +28,12 @@ public class ModSounds {
 		() -> SoundEvent.createVariableRangeEvent(
 			new ResourceLocation(Palaneogenesis.MOD_ID, "ancient_transformation")));
 
+	/** Stage 4, Paso 2: sonido de destransformación (detransformation.ogg, ~0.85s, asset del owner). */
+	public static final RegistryObject<SoundEvent> DETRANSFORMATION = SOUNDS.register(
+		"detransformation",
+		() -> SoundEvent.createVariableRangeEvent(
+			new ResourceLocation(Palaneogenesis.MOD_ID, "detransformation")));
+
 	public static void register(IEventBus modEventBus) {
 		SOUNDS.register(modEventBus);
 	}

@@ -90,6 +90,21 @@ public final class HeartbeatFlashOverlay {
 		startTimeMs = -1L;
 	}
 
+	/** Stage 4, Paso 6 (cámara): intensidad 0..1 del latido en curso, la misma curva que el
+	 * destello rojo (80ms a tope + 120ms de bajada, por cada uno de los 10 latidos), para que la
+	 * cámara (client.CameraEffectsEvents) pulse exactamente al ritmo del audio y del rojo. 0 si no
+	 * hay secuencia activa. */
+	public static float getPulseIntensity() {
+		if (startTimeMs < 0L) {
+			return 0.0F;
+		}
+		long elapsedMs = System.currentTimeMillis() - startTimeMs;
+		if (elapsedMs > TOTAL_DURATION_MS) {
+			return 0.0F;
+		}
+		return computeAlpha(elapsedMs);
+	}
+
 	public static final IGuiOverlay HUD = (gui, guiGraphics, partialTick, screenWidth, screenHeight) -> {
 		if (startTimeMs < 0L) {
 			return;

@@ -79,20 +79,22 @@ public final class KaakTunSpec {
 	 * Balanced choice (per request): the geometric mean of the two required per-axis scales
 	 * (sqrt(1.893 * 3.24) = 2.4765), which lands both axes clearly above the golem's real size
 	 * without extreme distortion in either: model renders at ~2.75 wide x ~3.10 tall.
-	 * HITBOX_WIDTH x HITBOX_HEIGHT below (2.93 x 3.30) adds the same ~6.7% buffer the old
-	 * 1.5F/1.6x2.0F pair used, for limbs swinging out during animations. If this value changes,
-	 * HITBOX_WIDTH / HITBOX_HEIGHT must be recalculated too (buffer = this x ~1.0667
-	 * on each axis), or the model/hitbox mismatch (mob catching on terrain sized for a
-	 * different hitbox) comes right back. */
+	 * If this value changes, re-check HITBOX_WIDTH / HITBOX_HEIGHT below (see their comment). */
 	public static final float VISUAL_SCALE = 2.4765F;
 
 	/** Shadow radius under the entity: 0.6 (model-native) x VISUAL_SCALE. */
 	public static final float SHADOW_RADIUS = 0.6F * VISUAL_SCALE;
 
-	/** Hitbox width/height (blocks). Rendered model size x ~1.0667 buffer so swinging limbs do
-	 * not poke outside it; recalculate whenever VISUAL_SCALE or the model changes. */
-	public static final float HITBOX_WIDTH = 2.93F;
-	public static final float HITBOX_HEIGHT = 3.30F;
+	/** Hitbox width/height (blocks). Minecraft hitboxes are a SQUARE footprint that does not
+	 * rotate with the mob, but this model is wide and shallow: measured from the geometry in
+	 * KaakTunModel#createBodyLayer at VISUAL_SCALE it is ~2.75 wide (arm to arm) x ~1.35 deep x
+	 * ~3.10 tall. HITBOX_HEIGHT = the real model height. HITBOX_WIDTH = 2.0, roughly the equal-area
+	 * square of 2.75 x 1.35 (sqrt = ~1.93): the arms may poke slightly outside it when the mob faces
+	 * sideways, same as Iron Golem. (The old 2.93 x 3.30 was the arm span plus a buffer on BOTH
+	 * horizontal axes, so it looked far too big around the model.) Recalculate whenever
+	 * VISUAL_SCALE or the model changes. */
+	public static final float HITBOX_WIDTH = 2.0F;
+	public static final float HITBOX_HEIGHT = 3.10F;
 
 	// ------------------------------------------------------------------ beam anchor
 

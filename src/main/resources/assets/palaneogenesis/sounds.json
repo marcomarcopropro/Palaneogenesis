@@ -4,5 +4,11 @@
         "sounds": [
             "palaneogenesis:ancient_transformation"
         ]
+    },
+    "detransformation": {
+        "subtitle": "subtitles.palaneogenesis.detransformation",
+        "sounds": [
+            "palaneogenesis:detransformation"
+        ]
     }
 }

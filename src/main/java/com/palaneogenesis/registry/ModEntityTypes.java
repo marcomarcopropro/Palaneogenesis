@@ -23,11 +23,9 @@ import net.minecraftforge.registries.RegistryObject;
  * KaakTunSpec.VISUAL_SCALE's comment). Balanced choice: scale the model by the geometric mean
  * of the two required per-axis scales (2.4765, matching KaakTunSpec.VISUAL_SCALE), landing
  * both width and height clearly above the golem's real size (~2.75 wide x ~3.10 tall rendered)
- * without extreme distortion either way. Sized here as that rendered model size plus the same
- * ~6.7% buffer the previous 1.5F/1.6x2.0F pair used, so swinging limbs (WALK/ATTACK animations
- * move arms/legs outward) don't poke outside the hitbox. If VISUAL_SCALE changes, this must be
- * recalculated too (buffer = VISUAL_SCALE's rendered dimensions x ~1.0667 each axis), or the
- * model/hitbox mismatch (mob catching on terrain sized for a different hitbox) comes right back.
+ * without extreme distortion either way. The hitbox size (square footprint x height) is defined
+ * in KaakTunSpec.HITBOX_WIDTH / HITBOX_HEIGHT; see the comment there for how it is derived and
+ * what to recalculate if VISUAL_SCALE or the model changes.
  */
 public class ModEntityTypes {
 	public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
