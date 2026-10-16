@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -86,7 +87,13 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 		// it happened to sit near where the raised arm usually is, not because it was tied to it.
 		// This reads left_arm's real current pose instead (see #computeBeamOrigin), so the origin
 		// now genuinely follows the hand through the raise, hold and release.
-		Vec3 start = computeBeamOrigin(entity, entityYaw);
+		// BUGFIX (report: "el rayo a veces sale de cualquier otro lado"): the model is drawn with
+		// the BODY yaw (yBodyRot), not with the entityYaw this method receives (= entity yRot).
+		// They are equal while walking, but when Kaak Tun stands still and only turns its head
+		// toward the target (LookControl), yRot stays stale and the hand offset was rotated by the
+		// wrong angle. Use the same interpolated yaw LivingEntityRenderer#render uses.
+		float bodyYaw = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
+		Vec3 start = computeBeamOrigin(entity, bodyYaw);
 		Vec3 end = target.getEyePosition(partialTicks).subtract(renderOrigin);
 
 		Vec3 dir = end.subtract(start);
@@ -142,7 +149,7 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 	private static final double FORWARD_SIGN = -1.0D;
 	private static final double SIDE_SIGN = -1.0D;
 
-	private Vec3 computeBeamOrigin(KaakTunEntity entity, float entityYaw) {
+	private Vec3 computeBeamOrigin(KaakTunEntity entity, float bodyYaw) {
 		ModelPart leftArm = this.getModel().getLeftArm();
 		// Root bone offset read from the model itself (was hard-coded 2.0 / 16.0 here), so a new
 		// model with a different root offset needs no change in this method.
@@ -176,11 +183,10 @@ public class KaakTunRenderer extends MobRenderer<KaakTunEntity, KaakTunModel> {
 		double localOffsetY = (KaakTunSpec.MODEL_GROUND_Y - modelY) / 16.0D * VISUAL_SCALE;
 		double localOffsetZ = modelZ / 16.0D * VISUAL_SCALE * FORWARD_SIGN;
 
-		// entityYaw (not entity.getViewYRot()) on purpose: this is the exact same interpolated
-		// body/render yaw the model itself is drawn with (passed into #render by the game), so
-		// the hand offset rotates in lockstep with the model instead of the separate head/look
-		// yaw, which can lag or lead it while the golem is still turning to face a target.
-		float yawRadians = entityYaw * ((float) Math.PI / 180F);
+		// bodyYaw = the interpolated yBodyRot the model itself is drawn with (see renderBeam).
+		// NOT the entityYaw handed to #render: that one is the entity's yRot, which differs from
+		// the body yaw whenever the mob turns only its head while standing still.
+		float yawRadians = bodyYaw * ((float) Math.PI / 180F);
 		Vec3 forward = new Vec3(-Math.sin(yawRadians), 0.0D, Math.cos(yawRadians));
 		Vec3 right = new Vec3(Math.cos(yawRadians), 0.0D, Math.sin(yawRadians));
 
