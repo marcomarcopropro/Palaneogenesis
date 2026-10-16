@@ -1,0 +1,6 @@
+{
+    "_comment": "DISABLED on purpose (temporary decision): the Effects category is not part of the book for now. Patchouli only loads files ending in .json, so renaming this file back to effects.json brings it back. Its lang keys (book.palaneogenesis.category.effects.*) are kept in en_us.json for that.",
+    "name": "book.palaneogenesis.category.effects.name",
+    "description": "book.palaneogenesis.category.effects.description",
+    "icon": "minecraft:glowstone_dust"
+}

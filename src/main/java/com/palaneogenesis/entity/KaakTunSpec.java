@@ -92,8 +92,12 @@ public final class KaakTunSpec {
 	 * square of 2.75 x 1.35 (sqrt = ~1.93): the arms may poke slightly outside it when the mob faces
 	 * sideways, same as Iron Golem. (The old 2.93 x 3.30 was the arm span plus a buffer on BOTH
 	 * horizontal axes, so it looked far too big around the model.) Recalculate whenever
-	 * VISUAL_SCALE or the model changes. */
-	public static final float HITBOX_WIDTH = 2.0F;
+	 * VISUAL_SCALE or the model changes.
+	 * Owner playtest (2026-10-16): 2.0 was still a bit too wide, so it was narrowed to 1.7. The
+	 * arms may now poke out a little more when the mob faces sideways; that is accepted. Melee
+	 * range uses centre distance, so it is not affected. Tune only this value if it needs another
+	 * small adjustment. */
+	public static final float HITBOX_WIDTH = 1.7F;
 	public static final float HITBOX_HEIGHT = 3.10F;
 
 	// ------------------------------------------------------------------ beam anchor

@@ -1,8 +1,10 @@
 package com.palaneogenesis.client;
 
 import com.palaneogenesis.Palaneogenesis;
+import com.palaneogenesis.event.AncientTransformationEvents;
 import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ComputeFovModifierEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -35,6 +37,23 @@ public final class CameraEffectsEvents {
 	private static final float DETRANSFORM_SHAKE_SPEED = 0.05F;
 
 	private CameraEffectsEvents() {
+	}
+
+	/**
+	 * Vanilla narrows the FOV in proportion to the movement-speed attribute. The -90 % transformation
+	 * slowdown (event.AncientTransformationEvents) therefore made the camera zoom IN hard, which
+	 * fought the pull-back pulse above (owner playtest, 2026-10-16). While that slowdown modifier is
+	 * present the speed-based FOV modifier is forced to neutral (1.0), so only the pull-back remains.
+	 * The slowdown itself is untouched. Vanilla smooths the FOV modifier over a few ticks, so the
+	 * return to the normal (+30 % speed) FOV when the slowdown ends is gradual, not a jump.
+	 * ComputeFovModifierEvent is Forge's hook for this (fired from
+	 * AbstractClientPlayer#getFieldOfViewModifier, 1.20.1).
+	 */
+	@SubscribeEvent
+	public static void onComputeFovModifier(ComputeFovModifierEvent event) {
+		if (AncientTransformationEvents.hasTransformSlowdown(event.getPlayer())) {
+			event.setNewFovModifier(1.0F);
+		}
 	}
 
 	@SubscribeEvent

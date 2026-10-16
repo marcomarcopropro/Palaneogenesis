@@ -223,6 +223,15 @@ public class AncientTransformationEvents {
 		TRANSFORM_SLOWDOWN_TICKS_REMAINING.put(player.getUUID(), TRANSFORM_SLOWDOWN_TICKS);
 	}
 
+	/** True while the transformation slowdown modifier is on this player. Attribute modifiers
+	 * (transient ones included) are synced to the client, so client.CameraEffectsEvents uses this
+	 * to cancel vanilla's speed-based FOV change for exactly as long as the slowdown lasts. Read-only:
+	 * it changes nothing about the slowdown itself. */
+	public static boolean hasTransformSlowdown(Player player) {
+		AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		return movementSpeed != null && movementSpeed.hasModifier(TRANSFORM_SLOWDOWN);
+	}
+
 	/** Counts the slowdown down and removes it when it ends. It is also removed as soon as the player
 	 * is no longer transformed (de-transformation with the Empty Syringe, or death + respawn, where
 	 * the new Player starts untransformed): that single check covers every early-exit path without
