@@ -1,0 +1,26 @@
+{
+    "name": "book.palaneogenesis.entry.ancient_transformation.name",
+    "icon": "palaneogenesis:textures/gui/book/number_1.png",
+    "category": "palaneogenesis:transformations",
+    "sortnum": 0,
+    "advancement": "palaneogenesis:book/has_ancient_syringe",
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancient_transformation.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancient_transformation.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancient_transformation.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.transformations.ancient_transformation.values",
+            "title": "book.palaneogenesis.entry.transformations.ancient_transformation.values_title"
+        }
+    ]
+}
