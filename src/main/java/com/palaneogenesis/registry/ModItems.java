@@ -7,6 +7,7 @@ import com.palaneogenesis.item.EmptySyringeItem;
 import com.palaneogenesis.item.ExplosiveHeartItem;
 import com.palaneogenesis.item.InvertedHeartItem;
 import com.palaneogenesis.item.ResistanceHeartItem;
+import com.palaneogenesis.item.biomod.BiomodTestItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -17,6 +18,10 @@ import net.minecraftforge.registries.RegistryObject;
 public class ModItems {
 	public static final DeferredRegister<Item> ITEMS =
 		DeferredRegister.create(ForgeRegistries.ITEMS, "palaneogenesis");
+
+	/** Ítem de prueba del spike de Curios (Fase 0 / T0.4). Se borra al terminar el spike. */
+	public static final RegistryObject<Item> BIOMOD_TEST =
+		ITEMS.register("biomod_test", () -> new BiomodTestItem(new Item.Properties().stacksTo(1)));
 
 	public static final RegistryObject<Item> BLUE_HEART =
 		ITEMS.register("blue_heart", () -> new BlueHeartItem(new Item.Properties().stacksTo(64)));

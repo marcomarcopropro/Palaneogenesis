@@ -112,6 +112,11 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    // Curios API (slots de equipamiento) - Fase 0 / T0.1 del documento de diseño
+    maven {
+        name = 'Illusive Soulworks (Curios)'
+        url = 'https://maven.theillusivec4.top/'
+    }
     // Put repositories for dependencies here
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
 
@@ -129,6 +134,10 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // Curios: el jar completo solo en runtime y la API (paquete top.theillusivec4.curios.api) para compilar.
+    runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
+    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
