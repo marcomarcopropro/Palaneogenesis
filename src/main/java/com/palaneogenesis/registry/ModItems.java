@@ -7,6 +7,8 @@ import com.palaneogenesis.item.EmptySyringeItem;
 import com.palaneogenesis.item.ExplosiveHeartItem;
 import com.palaneogenesis.item.InvertedHeartItem;
 import com.palaneogenesis.item.ResistanceHeartItem;
+import com.palaneogenesis.biomod.module.BiomodModule;
+import com.palaneogenesis.item.biomod.BiomodModuleItem;
 import com.palaneogenesis.item.biomod.BiomodTestItem;
 import com.palaneogenesis.item.biomod.NanobotInjectorItem;
 import com.palaneogenesis.item.biomod.SurgicalTweezersItem;
@@ -28,6 +30,36 @@ public class ModItems {
 	/** Pinzas Quirúrgicas (Sección 3): sin durabilidad. */
 	public static final RegistryObject<Item> SURGICAL_TWEEZERS =
 		ITEMS.register("surgical_tweezers", () -> new SurgicalTweezersItem(new Item.Properties().stacksTo(1)));
+
+	/**
+	 * Los 5 módulos de biomodificación (Sección 4, T2.1): stack 1, van en el slot "biomod" de Curios.
+	 * Hasta que haya receta (Fase 9) se obtienen por la pestaña creativa o con /give.
+	 */
+	public static final RegistryObject<Item> PISTON_MODULE =
+		ITEMS.register("piston_module", () -> new BiomodModuleItem(new Item.Properties().stacksTo(1), BiomodModule.PISTON));
+
+	public static final RegistryObject<Item> MEGA_JUMP_MODULE =
+		ITEMS.register("mega_jump_module", () -> new BiomodModuleItem(new Item.Properties().stacksTo(1), BiomodModule.MEGA_JUMP));
+
+	public static final RegistryObject<Item> CHARGE_MODULE =
+		ITEMS.register("charge_module", () -> new BiomodModuleItem(new Item.Properties().stacksTo(1), BiomodModule.CHARGE));
+
+	public static final RegistryObject<Item> PICKAXE_MODULE =
+		ITEMS.register("pickaxe_module", () -> new BiomodModuleItem(new Item.Properties().stacksTo(1), BiomodModule.PICKAXE));
+
+	public static final RegistryObject<Item> DRONE_MODULE =
+		ITEMS.register("drone_module", () -> new BiomodModuleItem(new Item.Properties().stacksTo(1), BiomodModule.DRONES));
+
+	/** Ítem de cada tipo de módulo (lo usa /biomod give). */
+	public static RegistryObject<Item> moduleItem(BiomodModule module) {
+		return switch (module) {
+			case PISTON -> PISTON_MODULE;
+			case MEGA_JUMP -> MEGA_JUMP_MODULE;
+			case CHARGE -> CHARGE_MODULE;
+			case PICKAXE -> PICKAXE_MODULE;
+			case DRONES -> DRONE_MODULE;
+		};
+	}
 
 	/** Ítem de prueba del spike de Curios (Fase 0 / T0.4). Se borra al terminar el spike. */
 	public static final RegistryObject<Item> BIOMOD_TEST =

@@ -98,10 +98,19 @@ public class ClientModEvents {
 		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "heartbeat_flash", HeartbeatFlashOverlay.HUD);
 		// Stage 4, Paso 2: parpadeo rojo de destransformación (ver client.DetransformFlashOverlay).
 		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "detransform_flash", DetransformFlashOverlay.HUD);
+
+		// F2 / T2.6: números de cooldown de las habilidades de biomodificación, a la derecha de la
+		// pantalla (ver client.BiomodCooldownHudOverlay). Se ancla a la hotbar sin relación funcional
+		// con ella: solo es un punto de orden de registro ya probado en este archivo.
+		event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "biomod_cooldowns", BiomodCooldownHudOverlay.HUD);
 	}
 
 	@SubscribeEvent
 	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
 		event.register(BEAM_KEY);
+		// Biomodificación (F2 / T2.3): J = Pistón, K = Pico, L = Embestida, Mega Jump sin tecla.
+		for (KeyMapping key : BiomodKeys.all()) {
+			event.register(key);
+		}
 	}
 }

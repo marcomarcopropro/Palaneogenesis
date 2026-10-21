@@ -1,5 +1,9 @@
 package com.palaneogenesis.biomod;
 
+import com.palaneogenesis.biomod.ability.AbilityId;
+import com.palaneogenesis.biomod.ability.AbilityState;
+import com.palaneogenesis.biomod.ability.AbilityTimers;
+import com.palaneogenesis.biomod.module.BiomodModules;
 import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.network.BiomodSyncPacket;
 import com.palaneogenesis.network.NetworkHandler;
@@ -31,7 +35,12 @@ public final class BiomodState {
 	}
 
 	public static void setInjected(ServerPlayer player) {
-		player.getCapability(Capabilities.BIOMOD_DATA).ifPresent(d -> d.setInjected(true));
+		setInjected(player, true);
+	}
+
+	/** Pone el flag del Inyector en el valor pedido (el comando de depuración también lo apaga). */
+	public static void setInjected(ServerPlayer player, boolean injected) {
+		player.getCapability(Capabilities.BIOMOD_DATA).ifPresent(d -> d.setInjected(injected));
 		sync(player);
 	}
 
@@ -51,11 +60,22 @@ public final class BiomodState {
 		sync(player);
 	}
 
-	/** Server -> dueño: el cliente necesita los dos flags porque Curios también comprueba
-	 * equipar/quitar del lado cliente al mover un ítem en la pantalla. */
+	/**
+	 * Server -> dueño. El cliente necesita los dos flags porque Curios también comprueba
+	 * equipar/quitar del lado cliente al mover un ítem en la pantalla, y (T2.5) los estados y
+	 * tiempos de las habilidades y los conteos de módulos para dibujar el HUD.
+	 */
 	public static void sync(ServerPlayer player) {
-		player.getCapability(Capabilities.BIOMOD_DATA).ifPresent(d ->
+		player.getCapability(Capabilities.BIOMOD_DATA).ifPresent(d -> {
+			AbilityTimers timers = d.getTimers();
+			AbilityState[] states = new AbilityState[AbilityId.COUNT];
+			int[] remaining = new int[AbilityId.COUNT];
+			for (AbilityId id : AbilityId.values()) {
+				states[id.ordinal()] = timers.state(id);
+				remaining[id.ordinal()] = timers.remaining(id);
+			}
 			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-				new BiomodSyncPacket(d.isInjected(), d.isSessionOpen())));
+				new BiomodSyncPacket(d.isInjected(), d.isSessionOpen(), states, remaining, BiomodModules.counts(player)));
+		});
 	}
 }

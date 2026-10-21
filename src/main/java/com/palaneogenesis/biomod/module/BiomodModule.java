@@ -28,4 +28,14 @@ public enum BiomodModule {
 	public int maxUnits() {
 		return maxUnits;
 	}
+
+	/** Busca un módulo por su id ("piston", "mega_jump", ...). Devuelve null si no existe. */
+	public static BiomodModule byId(String id) {
+		for (BiomodModule module : values()) {
+			if (module.id.equals(id)) {
+				return module;
+			}
+		}
+		return null;
+	}
 }

@@ -9,7 +9,8 @@ import net.minecraftforge.network.simple.SimpleChannel;
  * Forge), no uno por feature. */
 public final class NetworkHandler {
 
-	private static final String PROTOCOL_VERSION = "2";
+	/** "3": F2 agrega AbilityKeyPacket y cambia el formato de BiomodSyncPacket (T2.5). */
+	private static final String PROTOCOL_VERSION = "3";
 
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 		new ResourceLocation(Palaneogenesis.MOD_ID, "main"),
@@ -55,5 +56,8 @@ public final class NetworkHandler {
 		// Módulo de biomodificación: server -> dueño, ver biomod.BiomodState#sync.
 		CHANNEL.registerMessage(id(), BiomodSyncPacket.class,
 			BiomodSyncPacket::encode, BiomodSyncPacket::decode, BiomodSyncPacket::handle);
+		// Motor de habilidades (F2 / T2.3): cliente -> servidor, una pulsación de tecla de habilidad.
+		CHANNEL.registerMessage(id(), AbilityKeyPacket.class,
+			AbilityKeyPacket::encode, AbilityKeyPacket::decode, AbilityKeyPacket::handle);
 	}
 }

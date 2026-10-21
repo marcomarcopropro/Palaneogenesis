@@ -1,10 +1,15 @@
 package com.palaneogenesis.capability;
 
+import com.palaneogenesis.biomod.ability.AbilityTimers;
+import com.palaneogenesis.biomod.target.TargetList;
+
 public class BiomodData implements IBiomodData {
 
 	private boolean injected = false;
 	private boolean sessionOpen = false;
 	private int sessionContainerId = -1;
+	private final AbilityTimers timers = new AbilityTimers();
+	private final TargetList targets = TargetList.defaults();
 
 	@Override
 	public boolean isInjected() {
@@ -34,5 +39,15 @@ public class BiomodData implements IBiomodData {
 	@Override
 	public void setSessionContainerId(int containerId) {
 		this.sessionContainerId = containerId;
+	}
+
+	@Override
+	public AbilityTimers getTimers() {
+		return timers;
+	}
+
+	@Override
+	public TargetList getTargets() {
+		return targets;
 	}
 }

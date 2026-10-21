@@ -37,14 +37,25 @@ public class BiomodEvents {
 		}
 	}
 
-	/** Copia solo el flag del Inyector. La sesión no se copia: un jugador nuevo empieza sin sesión. */
+	/**
+	 * Copia el flag del Inyector. La sesión no se copia: un jugador nuevo empieza sin sesión.
+	 * La lista personal de objetivos se copia siempre (es una preferencia, P-13).
+	 * Los cooldowns se copian solo si NO fue una muerte (por ejemplo, al volver del End): al morir
+	 * todos los contadores se reinician a 0 y los estados activos se descartan (P-20).
+	 */
 	@SubscribeEvent
 	public static void onClone(PlayerEvent.Clone event) {
 		Player original = event.getOriginal();
 		original.reviveCaps();
 		original.getCapability(Capabilities.BIOMOD_DATA).ifPresent(old ->
-			event.getEntity().getCapability(Capabilities.BIOMOD_DATA).ifPresent(data ->
-				data.setInjected(old.isInjected())));
+			event.getEntity().getCapability(Capabilities.BIOMOD_DATA).ifPresent(data -> {
+				data.setInjected(old.isInjected());
+				// La lista personal de objetivos es una preferencia: sobrevive a la muerte (P-13).
+				data.getTargets().replaceWith(old.getTargets().view());
+				if (!event.isWasDeath()) {
+					data.getTimers().fromPersistent(old.getTimers().toPersistent());
+				}
+			}));
 		original.invalidateCaps();
 	}
 

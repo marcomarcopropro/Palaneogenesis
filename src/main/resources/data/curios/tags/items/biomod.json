@@ -1,4 +1,11 @@
 {
   "replace": false,
-  "values": ["palaneogenesis:biomod_test"]
+  "values": [
+    "palaneogenesis:piston_module",
+    "palaneogenesis:mega_jump_module",
+    "palaneogenesis:charge_module",
+    "palaneogenesis:pickaxe_module",
+    "palaneogenesis:drone_module",
+    "palaneogenesis:biomod_test"
+  ]
 }

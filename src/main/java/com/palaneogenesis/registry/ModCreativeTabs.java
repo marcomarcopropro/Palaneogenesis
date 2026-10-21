@@ -63,6 +63,11 @@ public class ModCreativeTabs {
 				output.accept(ModItems.KAAK_TUN_SPAWN_EGG.get());
 				output.accept(ModItems.NANOBOT_INJECTOR.get());
 				output.accept(ModItems.SURGICAL_TWEEZERS.get());
+				output.accept(ModItems.PISTON_MODULE.get());
+				output.accept(ModItems.MEGA_JUMP_MODULE.get());
+				output.accept(ModItems.CHARGE_MODULE.get());
+				output.accept(ModItems.PICKAXE_MODULE.get());
+				output.accept(ModItems.DRONE_MODULE.get());
 				output.accept(ModItems.BIOMOD_TEST.get());
 			})
 			.build()

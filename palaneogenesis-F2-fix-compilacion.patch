@@ -1,0 +1,98 @@
+From 5cccb56aff5ad9451c4a3f0454f8b1b7ac4caf01 Mon Sep 17 00:00:00 2001
+From: marcomarcopropro <nibuenaslasiasnosonutiles@gmail.com>
+Date: Wed, 21 Oct 2026 18:35:52 -0300
+Subject: [PATCH] F2 fix: compila con la lista de la config (error de tipos en
+ TargetRules)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+QUÉ ARREGLA
+- El primer gradlew clean build dio un error en TargetRules.java:44:
+  "incompatible types: List<CAP#1> cannot be converted to Collection<String>".
+  La config (ConfigValue<List<? extends String>>) devuelve List<? extends String> y
+  TargetFilter#evaluate pedía Collection<String>.
+- TargetFilter#evaluate ahora recibe Collection<? extends String>. Sin cambio de comportamiento:
+  solo se recorre la lista para comparar textos.
+
+ARCHIVOS
+- CAMBIADOS: biomod/target/TargetFilter, docs/F2_avances.md (estado de verificación)
+
+VERIFICACIÓN
+- Se reprodujo el error exacto compilando una llamada con List<? extends String> contra la firma
+  vieja (mismo mensaje que el build) y contra la nueva (compila y corre).
+- Las 70 comprobaciones de lógica pura siguen sin fallas.
+- NO se volvió a correr gradlew: la sesión no llega a services.gradle.org.
+- El build solo mostró este error, y javac sigue revisando el resto de las clases aunque falle una:
+  el resto del código pasó la comprobación de tipos. No quedó probado ningún comportamiento.
+
+NOTA
+- Los 20 warnings del build son de API deprecada (ResourceLocation, FMLJavaModLoadingContext); casi
+  todos vienen de código anterior a F2. Los dos que son de F2 (TargetCommands, BiomodEvents) usan el
+  mismo constructor que el resto del mod; no se tocaron.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01CEncqphpUcyovtgk5gsMWh
+---
+ docs/F2_avances.md                             | 18 ++++++++++++++----
+ .../biomod/target/TargetFilter.java            |  2 +-
+ 2 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/docs/F2_avances.md b/docs/F2_avances.md
+index ee31f59..b19c503 100644
+--- a/docs/F2_avances.md
++++ b/docs/F2_avances.md
+@@ -5,15 +5,25 @@ cómo probarla, qué se verificó y qué no). Esta página es el resumen.
+ 
+ ## Estado de verificación
+ 
+-**Nada de esto se compiló ni se ejecutó en el juego.** La sesión donde se escribió no tiene acceso a
+-`services.gradle.org`, así que no hubo Gradle ni Forge. Lo que sí se hizo:
++**Primer build real (`gradlew clean build`, en tu máquina):** `compileJava` dio **1 error de tipos** y
++ningún otro, ya corregido en el commit "F2 fix: compila con la lista de la config". Como `javac`
++también revisa los demás archivos, el resto del código de F2 pasó la comprobación de tipos contra
++Minecraft, Forge y Curios (con eso quedan descartados la mayoría de los nombres de API que estaban
++marcados "a confirmar"). Queda sin comprobar:
++
++- Que el build termine entero: se cortó en `compileJava`, así que no corrieron los recursos
++  (`processResources`) ni el empaquetado.
++- Los 12 GameTests (`gradlew runGameTestServer`).
++- Todo el comportamiento en el juego: teclas, HUD, comandos, paquete de red y persistencia.
++
++Lo que se hizo antes, sin Gradle (la sesión no llega a `services.gradle.org`):
+ 
+ - Comprobar la sintaxis de cada archivo con `javac` (sin las librerías de Minecraft).
+ - Probar fuera del juego la lógica pura (`ModuleCounts`, `ModuleCountsCache`, `AbilityTimers`,
+   `TargetFilter`, `TargetList`) con un runner de consola: 70 comprobaciones, 0 fallas.
+ - Validar los JSON de lang, modelos y tag.
+ 
+-**Primer paso al compilar:** `gradlew build`, después `gradlew runGameTestServer`.
++**Siguiente paso:** `gradlew build`, después `gradlew runGameTestServer`.
+ 
+ ## Tareas
+ 
+@@ -42,7 +52,7 @@ cómo probarla, qué se verificó y qué no). Esta página es el resumen.
+    `BiomodSyncPacket`.
+ 6. **La L está en conflicto con Avances** (tecla vanilla). Se resuelve en Controles.
+ 
+-## Nombres de la API que hay que confirmar al compilar (escritos de memoria)
++## Nombres de la API (escritos de memoria; el compilador ya los aceptó, falta verlos funcionar)
+ 
+ - Curios 5.14.1: `CuriosApi.getCuriosInventory`, `getStacksHandler`, `getStacks`, `CurioChangeEvent`.
+ - Minecraft 1.20.1: `OwnableEntity#getOwnerUUID`, `MinecraftServer#isPvpAllowed`,
+diff --git a/src/main/java/com/palaneogenesis/biomod/target/TargetFilter.java b/src/main/java/com/palaneogenesis/biomod/target/TargetFilter.java
+index eb98cd9..e024223 100644
+--- a/src/main/java/com/palaneogenesis/biomod/target/TargetFilter.java
++++ b/src/main/java/com/palaneogenesis/biomod/target/TargetFilter.java
+@@ -47,7 +47,7 @@ public final class TargetFilter {
+ 	 * @param playersAllowed affectPlayers activado Y PvP permitido por el servidor
+ 	 */
+ 	public static Verdict evaluate(boolean isSelf, boolean isPet, boolean isPlayer, String typeId,
+-	                               Collection<String> serverForced, TargetList personal, boolean playersAllowed) {
++	                               Collection<? extends String> serverForced, TargetList personal, boolean playersAllowed) {
+ 		if (isSelf) {
+ 			return Verdict.SELF;
+ 		}
+-- 
+2.43.0
+
