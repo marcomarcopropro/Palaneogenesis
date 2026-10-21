@@ -5,9 +5,15 @@ import com.palaneogenesis.biomod.ability.AbilityId;
 import com.palaneogenesis.biomod.ability.AbilityState;
 import com.palaneogenesis.biomod.ability.AbilityTimers;
 import com.palaneogenesis.biomod.ability.CooldownManager;
+import com.palaneogenesis.biomod.ability.pickaxe.BlockJob;
+import com.palaneogenesis.biomod.ability.pickaxe.PickaxeVolume;
+import com.palaneogenesis.biomod.ability.piston.PistonEffect;
+import com.palaneogenesis.biomod.ability.piston.PistonSettings;
+import com.palaneogenesis.biomod.ability.piston.PistonStrike;
 import com.palaneogenesis.biomod.module.BiomodModule;
 import com.palaneogenesis.biomod.module.ModuleCounts;
 import com.palaneogenesis.biomod.module.ModuleCountsCache;
+import com.palaneogenesis.biomod.module.PendingResync;
 import com.palaneogenesis.biomod.target.TargetFilter;
 import com.palaneogenesis.biomod.target.TargetList;
 import com.palaneogenesis.biomod.target.TargetRules;
@@ -17,6 +23,7 @@ import com.palaneogenesis.config.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.monster.Zombie;
@@ -25,7 +32,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -90,6 +99,28 @@ public class BiomodGameTests {
 		helper.assertTrue(cache.get(jugador, () -> real).get(BiomodModule.PISTON) == 3, "el override gana");
 		cache.clearOverride(jugador);
 		helper.assertTrue(cache.get(jugador, () -> real).get(BiomodModule.PISTON) == 2, "sin override vuelve el real");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pendingResyncSeConsumeUnaSolaVez(GameTestHelper helper) {
+		PendingResync pendiente = new PendingResync();
+		UUID jugador = UUID.randomUUID();
+		UUID otro = UUID.randomUUID();
+
+		helper.assertTrue(!pendiente.consume(jugador), "sin marcar no hay resync");
+		pendiente.mark(jugador);
+		pendiente.mark(jugador);
+		helper.assertTrue(!pendiente.consume(otro), "otro jugador no se ve afectado");
+		helper.assertTrue(pendiente.consume(jugador), "marcado: se consume");
+		helper.assertTrue(!pendiente.consume(jugador), "marcar dos veces no da dos resync");
+
+		pendiente.mark(jugador);
+		pendiente.forget(jugador);
+		helper.assertTrue(!pendiente.consume(jugador), "forget: se desconectó antes del primer tick");
+		pendiente.mark(jugador);
+		pendiente.clear();
+		helper.assertTrue(!pendiente.consume(jugador), "clear: se apagó el servidor");
 		helper.succeed();
 	}
 
@@ -276,6 +307,171 @@ public class BiomodGameTests {
 			List.of("minecraft:villager"), vacia, false) == TargetFilter.Verdict.SERVER_PROTECTED, "forzado, lista personal vacía");
 		helper.assertTrue(TargetFilter.evaluate(false, false, false, "minecraft:villager",
 			List.of(), vacia, false) == TargetFilter.Verdict.VALID, "6: sin forzado y sin lista, es objetivo");
+		helper.succeed();
+	}
+
+	// ---- Pistón de Presión: tiers (T3.1, sin Minecraft) ---------------------------------------
+
+	@GameTest(template = TEMPLATE)
+	public static void pistonEffectNivelesPorUnidades(GameTestHelper helper) {
+		PistonSettings ajustes = PistonSettings.DEFAULTS;
+		PistonEffect ninguno = PistonEffect.forUnits(0, ajustes);
+		helper.assertTrue(ninguno == PistonEffect.NONE && !ninguno.launches() && !ninguno.slows(), "0 unidades: no hace nada");
+
+		PistonEffect uno = PistonEffect.forUnits(1, ajustes);
+		helper.assertTrue(uno.knockbackLevel() == 2, "1 unidad: Empuje de la config");
+		helper.assertTrue(!uno.launches() && !uno.slows() && !uno.stuns() && !uno.isFist(), "1 unidad: solo Empuje");
+		helper.assertTrue(uno.damage(1.0D) == 1.0D, "1 unidad: daño base sin cambios");
+
+		PistonEffect dos = PistonEffect.forUnits(2, ajustes);
+		helper.assertTrue(dos.launches() && dos.launchDistance() == 5.0D, "2 unidades: lanza 5 bloques");
+		helper.assertTrue(dos.slows() && dos.slownessTicks() == 200 && dos.slownessAmplifier() == 0, "2 unidades: Lentitud I 10 s");
+		helper.assertTrue(dos.damage(1.0D) == 7.0D, "2 unidades: base + 6 del brazo");
+		helper.assertTrue(!dos.isFist() && !dos.stuns(), "2 unidades: todavía sin mano ni parálisis");
+
+		PistonEffect tres = PistonEffect.forUnits(3, ajustes);
+		helper.assertTrue(tres.isFist() && tres.stuns() && tres.stunTicks() == 15, "3 unidades: mano con parálisis de 15 ticks");
+		helper.assertTrue(tres.damage(1.0D) == 7.0D && tres.damage(10.0D) == 7.0D, "3 unidades: daño absoluto de la mano");
+		helper.assertTrue(tres.launches() && tres.slows(), "3 unidades conserva el lanzamiento y la Lentitud");
+
+		helper.assertTrue(PistonEffect.forUnits(9, ajustes).equals(tres), "más unidades que el máximo se recortan a 3");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pistonLanzamientoRecorreLaDistanciaPedida(GameTestHelper helper) {
+		for (double distancia : new double[] {1.0D, 5.0D, 12.5D}) {
+			double velocidad = PistonEffect.launchSpeed(distancia);
+			double recorrido = 0.0D;
+			for (int tick = 0; tick < PistonEffect.LAUNCH_AIR_TICKS; tick++) {
+				recorrido += velocidad;
+				velocidad *= PistonEffect.AIR_DRAG;
+			}
+			helper.assertTrue(Math.abs(recorrido - distancia) < 1.0E-9D, "recorre " + distancia + " bloques (dio " + recorrido + ")");
+		}
+		helper.assertTrue(PistonEffect.launchSpeed(0.0D) == 0.0D, "distancia 0: sin velocidad");
+		helper.succeed();
+	}
+
+	// ---- Pistón de Presión: el golpe del activo (T3.2) ----------------------------------------
+
+	@GameTest(template = TEMPLATE)
+	public static void pistonStrikeUnaUnidadSoloEmpuja(GameTestHelper helper) {
+		Player jugador = helper.makeMockPlayer();
+		Zombie zombi = helper.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
+		float antes = zombi.getHealth();
+		boolean golpe = PistonStrike.apply(jugador, zombi, PistonEffect.forUnits(1, PistonSettings.DEFAULTS), 1.0D);
+		helper.assertTrue(golpe, "el golpe conecta");
+		helper.assertTrue(zombi.getHealth() < antes, "el zombi pierde vida");
+		helper.assertTrue(!zombi.hasEffect(MobEffects.MOVEMENT_SLOWDOWN), "1 unidad: sin Lentitud");
+		helper.assertTrue(!PistonStrike.isStriking(), "la marca de golpe en curso se apaga al terminar");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pistonStrikeDosUnidadesLanzaYRalentiza(GameTestHelper helper) {
+		Player jugador = helper.makeMockPlayer();
+		Zombie zombi = helper.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
+		float antes = zombi.getHealth();
+		boolean golpe = PistonStrike.apply(jugador, zombi, PistonEffect.forUnits(2, PistonSettings.DEFAULTS), 1.0D);
+		helper.assertTrue(golpe, "el golpe conecta");
+		helper.assertTrue(antes - zombi.getHealth() >= 6.0F, "2 unidades: base + 6 del brazo");
+		helper.assertTrue(zombi.hasEffect(MobEffects.MOVEMENT_SLOWDOWN), "2 unidades: Lentitud");
+		helper.assertTrue(zombi.getDeltaMovement().y > 0.0D, "queda lanzado hacia arriba");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pistonStrikeTresUnidadesParaliza(GameTestHelper helper) {
+		Player jugador = helper.makeMockPlayer();
+		Zombie zombi = helper.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
+		boolean golpe = PistonStrike.apply(jugador, zombi, PistonEffect.forUnits(3, PistonSettings.DEFAULTS), 1.0D);
+		helper.assertTrue(golpe, "el golpe conecta");
+		var efecto = zombi.getEffect(MobEffects.MOVEMENT_SLOWDOWN);
+		helper.assertTrue(efecto != null && efecto.getAmplifier() == PistonStrike.STUN_AMPLIFIER,
+			"3 unidades: la Lentitud de parálisis es la más fuerte");
+		helper.succeed();
+	}
+
+	// ---- Pico Gigante: volumen y cola de bloques (T3.4, sin Minecraft) ------------------------
+
+	private static String clave(int[] posicion) {
+		return posicion[0] + "," + posicion[1] + "," + posicion[2];
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pickaxeVolumeEsUnPrismaSinRepetidos(GameTestHelper helper) {
+		int[] golpe = {10, 64, -5};
+		int[][] direcciones = {{0, 0, 1}, {0, 0, -1}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
+		for (int[] d : direcciones) {
+			List<int[]> bloques = PickaxeVolume.plan(golpe, d[0], d[1], d[2], PickaxeVolume.WIDTH, PickaxeVolume.DEPTH);
+			helper.assertTrue(bloques.size() == 27, "3x3x3 = 27 bloques");
+			Set<String> distintos = new HashSet<>();
+			for (int[] b : bloques) {
+				distintos.add(clave(b));
+				int profundidad = (b[0] - golpe[0]) * d[0] + (b[1] - golpe[1]) * d[1] + (b[2] - golpe[2]) * d[2];
+				helper.assertTrue(profundidad >= 0 && profundidad < PickaxeVolume.DEPTH, "dentro de la profundidad");
+			}
+			helper.assertTrue(distintos.size() == 27, "sin bloques repetidos");
+			helper.assertTrue(distintos.contains(clave(golpe)), "incluye el bloque que se mira");
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pickaxeVolumeVaDeLoCercanoALoLejano(GameTestHelper helper) {
+		int[] golpe = {0, 0, 0};
+		List<int[]> bloques = PickaxeVolume.plan(golpe, 0, 0, 1, 3, 3);
+		int anterior = 0;
+		for (int[] b : bloques) {
+			helper.assertTrue(b[2] >= anterior, "la profundidad nunca retrocede");
+			anterior = b[2];
+		}
+		helper.assertTrue(bloques.get(0)[2] == 0 && bloques.get(26)[2] == 2, "de la capa 0 a la capa 2");
+		// Una sección de 1 bloque y profundidad 4 es un túnel de un solo bloque.
+		helper.assertTrue(PickaxeVolume.plan(golpe, 0, -1, 0, 1, 4).size() == 4, "1x1x4 = 4 bloques");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void pickaxeVolumeRechazaDireccionesInvalidas(GameTestHelper helper) {
+		int[] golpe = {0, 0, 0};
+		int[][] invalidas = {{0, 0, 0}, {1, 1, 0}, {2, 0, 0}};
+		for (int[] d : invalidas) {
+			boolean fallo = false;
+			try {
+				PickaxeVolume.plan(golpe, d[0], d[1], d[2], 3, 3);
+			} catch (IllegalArgumentException e) {
+				fallo = true;
+			}
+			helper.assertTrue(fallo, "dirección inválida rechazada");
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void blockJobRespetaElPresupuestoPorTick(GameTestHelper helper) {
+		List<int[]> bloques = PickaxeVolume.plan(new int[] {0, 0, 0}, 0, 0, 1, 3, 3);
+		BlockJob trabajo = new BlockJob(bloques);
+		int[] ticks = {0};
+		int rotos = 0;
+		while (!trabajo.isDone()) {
+			int ahora = trabajo.run(10, b -> true);
+			helper.assertTrue(ahora <= 10, "nunca más del presupuesto por tick");
+			rotos += ahora;
+			ticks[0]++;
+		}
+		helper.assertTrue(rotos == 27 && ticks[0] == 3, "27 bloques con presupuesto 10 = 3 ticks (10 + 10 + 7)");
+
+		BlockJob entero = new BlockJob(bloques);
+		helper.assertTrue(entero.run(27, b -> true) == 27 && entero.isDone(), "presupuesto 27: todo en un tick");
+
+		// Los rechazados no gastan presupuesto: con 1 de cada 2 rechazado y presupuesto 5, se rompen 5.
+		BlockJob mitad = new BlockJob(bloques);
+		int[] llamada = {0};
+		int hechos = mitad.run(5, b -> llamada[0]++ % 2 == 0);
+		helper.assertTrue(hechos == 5, "los bloques rechazados no cuentan contra el presupuesto");
+		helper.assertTrue(mitad.remaining() == 27 - 9, "se procesaron 9 posiciones para romper 5");
 		helper.succeed();
 	}
 }

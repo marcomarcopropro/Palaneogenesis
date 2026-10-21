@@ -1,5 +1,6 @@
 package com.palaneogenesis;
 
+import com.palaneogenesis.biomod.BiomodAbilities;
 import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.recipe.WaterIngredient;
 import com.palaneogenesis.entity.KaakTunEntity;
@@ -17,9 +18,11 @@ public class ModSetup {
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() ->
-            CraftingHelper.register(new ResourceLocation(Palaneogenesis.MOD_ID, "water_source"), WaterIngredient.SERIALIZER)
-        );
+        event.enqueueWork(() -> {
+            CraftingHelper.register(new ResourceLocation(Palaneogenesis.MOD_ID, "water_source"), WaterIngredient.SERIALIZER);
+            // Fase 3: las habilidades del módulo de biomodificación se enganchan al AbilityManager.
+            BiomodAbilities.register();
+        });
         // Spawn en aldeas: manejado por KaakTunVillageSpawner (LevelTickEvent), no por
         // SpawnPlacements - las entidades MobCategory.MISC (como esta, igual que el golem de
         // hierro) quedan afuera del ciclo normal de NaturalSpawner, así que ese registro nunca

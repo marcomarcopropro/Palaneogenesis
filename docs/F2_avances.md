@@ -23,7 +23,12 @@ Lo que se hizo antes, sin Gradle (la sesión no llega a `services.gradle.org`):
   `TargetFilter`, `TargetList`) con un runner de consola: 70 comprobaciones, 0 fallas.
 - Validar los JSON de lang, modelos y tag.
 
-**Siguiente paso:** `gradlew build`, después `gradlew runGameTestServer`.
+**Último cambio (resync del login):** no se pudo correr Gradle en la sesión donde se escribió (sin acceso a
+`services.gradle.org`). `PendingResync` (lógica pura) se compiló con `javac` y se probó con un runner
+de consola: 7 comprobaciones, 0 fallas (77 en total con las 70 anteriores). `ModuleCountsEvents` y el
+GameTest nuevo solo pasaron una revisión de sintaxis con `javac`, sin las librerías de Minecraft.
+
+**Siguiente paso:** `gradlew build`, después `gradlew runGameTestServer` (ahora son 13 GameTests).
 
 ## Tareas
 
@@ -38,6 +43,7 @@ Lo que se hizo antes, sin Gradle (la sesión no llega a `services.gradle.org`):
 | T2.7 | `TargetRules`, lista personal persistente, `/palaneogenesis biomod targets` | `/biomod target <entidad>` |
 | T0.5 | `/biomod injected, give, units, cooldown, target` | ver commit |
 | T2.8 | 12 GameTests + estructura vacía | `gradlew runGameTestServer` |
+| fix login | Resincronización de conteos en el primer tick tras el login (`PendingResync`) + 1 GameTest | Entrar al mundo con módulos equipados: el HUD los muestra de inmediato |
 
 ## Decisiones que conviene revisar
 
@@ -61,8 +67,11 @@ Lo que se hizo antes, sin Gradle (la sesión no llega a `services.gradle.org`):
 
 ## Conocido
 
-- Al iniciar sesión, si Curios todavía no cargó el slot cuando se sincroniza, el HUD puede mostrar 0
-  módulos hasta el primer `CurioChangeEvent`.
+- Al iniciar sesión, si Curios todavía no cargó el slot cuando se sincroniza, el HUD podía mostrar 0
+  módulos hasta el primer `CurioChangeEvent`. Se agregó una resincronización defensiva en el primer
+  tick tras el login (commit "F2 fix: resincroniza los conteos en el primer tick tras el login").
+  **Sin confirmar en el juego**: no se sabe si el problema existía de verdad, y el fix no se compiló
+  ni se ejecutó. Si el HUD ya mostraba bien los módulos al entrar, el cambio es inocuo.
 - Ninguna habilidad hace nada todavía: `AbilityManager` valida y registra la pulsación, pero no hay
   handlers hasta F3 (Pico y Pistón), F4 (Mega Jump) y F5 (Embestida).
 - Las texturas de los 5 módulos son provisionales (texturas vanilla).
