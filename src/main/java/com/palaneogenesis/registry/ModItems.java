@@ -8,6 +8,8 @@ import com.palaneogenesis.item.ExplosiveHeartItem;
 import com.palaneogenesis.item.InvertedHeartItem;
 import com.palaneogenesis.item.ResistanceHeartItem;
 import com.palaneogenesis.item.biomod.BiomodTestItem;
+import com.palaneogenesis.item.biomod.NanobotInjectorItem;
+import com.palaneogenesis.item.biomod.SurgicalTweezersItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -18,6 +20,14 @@ import net.minecraftforge.registries.RegistryObject;
 public class ModItems {
 	public static final DeferredRegister<Item> ITEMS =
 		DeferredRegister.create(ForgeRegistries.ITEMS, "palaneogenesis");
+
+	/** Inyector de Nanobots (Sección 2). Hasta que haya receta (Fase 9) se obtiene por la pestaña creativa. */
+	public static final RegistryObject<Item> NANOBOT_INJECTOR =
+		ITEMS.register("nanobot_injector", () -> new NanobotInjectorItem(new Item.Properties().stacksTo(16)));
+
+	/** Pinzas Quirúrgicas (Sección 3): sin durabilidad. */
+	public static final RegistryObject<Item> SURGICAL_TWEEZERS =
+		ITEMS.register("surgical_tweezers", () -> new SurgicalTweezersItem(new Item.Properties().stacksTo(1)));
 
 	/** Ítem de prueba del spike de Curios (Fase 0 / T0.4). Se borra al terminar el spike. */
 	public static final RegistryObject<Item> BIOMOD_TEST =

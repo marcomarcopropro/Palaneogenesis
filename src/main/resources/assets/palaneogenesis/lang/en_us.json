@@ -99,5 +99,12 @@
     "advancement.palaneogenesis.has_blue_heart.title": "Heart of the Guardian",
     "advancement.palaneogenesis.has_blue_heart.description": "Obtain a Blue Heart. Unlocks more pages in the Book of Palaneogénesis.",
     "advancement.palaneogenesis.has_ancient_syringe.title": "Ancient Blood",
-    "advancement.palaneogenesis.has_ancient_syringe.description": "Obtain an Ancient Extract Syringe. Unlocks the transformation pages."
+    "advancement.palaneogenesis.has_ancient_syringe.description": "Obtain an Ancient Extract Syringe. Unlocks the transformation pages.",
+    "item.palaneogenesis.biomod_test": "Biomodification test item",
+    "curios.identifier.biomod": "Biomodification",
+    "item.palaneogenesis.nanobot_injector": "Nanobot Injector",
+    "item.palaneogenesis.surgical_tweezers": "Surgical Tweezers",
+    "message.palaneogenesis.biomod.access_denied": "A Nanobot Catalyst is required to enable the biomechanical interface",
+    "message.palaneogenesis.biomod.injected": "The nanobots have integrated into your body. Biomechanical interface enabled.",
+    "message.palaneogenesis.biomod.already_injected": "You already have the nanobots integrated."
 }

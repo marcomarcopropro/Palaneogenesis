@@ -1,9 +1,11 @@
 package com.palaneogenesis.item.biomod;
 
 import com.palaneogenesis.event.BiomodSpikeState;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import top.theillusivec4.curios.api.SlotContext;
+import top.theillusivec4.curios.api.type.capability.ICurio.DropRule;
 import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
 /**
@@ -25,5 +27,11 @@ public class BiomodTestItem extends Item implements ICurioItem {
 	@Override
 	public boolean canUnequip(SlotContext slotContext, ItemStack stack) {
 		return BiomodSpikeState.allowUnequip;
+	}
+
+	/** Los módulos nunca se sueltan al morir (P-20): son modificaciones biológicas. */
+	@Override
+	public DropRule getDropRule(SlotContext slotContext, DamageSource source, int lootingLevel, boolean recentlyHit, ItemStack stack) {
+		return DropRule.ALWAYS_KEEP;
 	}
 }

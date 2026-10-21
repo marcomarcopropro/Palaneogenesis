@@ -81,5 +81,12 @@
     "advancement.palaneogenesis.has_blue_heart.title": "Corazón del guardián",
     "advancement.palaneogenesis.has_blue_heart.description": "Conseguí un Blue Heart. Desbloquea más páginas del Book of Palaneogénesis.",
     "advancement.palaneogenesis.has_ancient_syringe.title": "Sangre ancestral",
-    "advancement.palaneogenesis.has_ancient_syringe.description": "Conseguí una Ancient Extract Syringe. Desbloquea las páginas de transformaciones."
+    "advancement.palaneogenesis.has_ancient_syringe.description": "Conseguí una Ancient Extract Syringe. Desbloquea las páginas de transformaciones.",
+    "item.palaneogenesis.biomod_test": "Ítem de prueba de Biomodificación",
+    "curios.identifier.biomod": "Biomodificación",
+    "item.palaneogenesis.nanobot_injector": "Inyector de Nanobots",
+    "item.palaneogenesis.surgical_tweezers": "Pinzas Quirúrgicas",
+    "message.palaneogenesis.biomod.access_denied": "Se requiere un Nanobot Catalizador para habilitar la interfaz biomécanica",
+    "message.palaneogenesis.biomod.injected": "Los nanobots se integraron a tu cuerpo. Interfaz biomecánica habilitada.",
+    "message.palaneogenesis.biomod.already_injected": "Ya tenés los nanobots integrados."
 }

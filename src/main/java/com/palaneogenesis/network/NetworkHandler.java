@@ -52,5 +52,8 @@ public final class NetworkHandler {
 		// util.AncientTransformation#broadcastEffects / client.TransformationEffectsClientState.
 		CHANNEL.registerMessage(id(), TransformationEffectsPacket.class,
 			TransformationEffectsPacket::encode, TransformationEffectsPacket::decode, TransformationEffectsPacket::handle);
+		// Módulo de biomodificación: server -> dueño, ver biomod.BiomodState#sync.
+		CHANNEL.registerMessage(id(), BiomodSyncPacket.class,
+			BiomodSyncPacket::encode, BiomodSyncPacket::decode, BiomodSyncPacket::handle);
 	}
 }

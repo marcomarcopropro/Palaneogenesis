@@ -22,6 +22,11 @@ public final class Capabilities {
 		CapabilityManager.get(new CapabilityToken<>() {
 		});
 
+	/** Datos de biomodificación por jugador (ver {@link IBiomodData}). */
+	public static final Capability<IBiomodData> BIOMOD_DATA =
+		CapabilityManager.get(new CapabilityToken<>() {
+		});
+
 	private Capabilities() {
 	}
 
@@ -29,5 +34,6 @@ public final class Capabilities {
 	public static void register(RegisterCapabilitiesEvent event) {
 		event.register(IAncientTransformationData.class);
 		event.register(IHeartArrayData.class);
+		event.register(IBiomodData.class);
 	}
 }

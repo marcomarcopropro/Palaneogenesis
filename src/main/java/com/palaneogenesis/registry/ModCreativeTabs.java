@@ -61,6 +61,9 @@ public class ModCreativeTabs {
 				output.accept(ModItems.EMPTY_SYRINGE.get());
 				output.accept(ModItems.ANCIENT_EXTRACT_SYRINGE.get());
 				output.accept(ModItems.KAAK_TUN_SPAWN_EGG.get());
+				output.accept(ModItems.NANOBOT_INJECTOR.get());
+				output.accept(ModItems.SURGICAL_TWEEZERS.get());
+				output.accept(ModItems.BIOMOD_TEST.get());
 			})
 			.build()
 	);
