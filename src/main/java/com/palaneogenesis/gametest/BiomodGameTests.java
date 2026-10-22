@@ -561,6 +561,34 @@ public class BiomodGameTests {
 	}
 
 	@GameTest(template = TEMPLATE)
+	public static void flightPhaseElEspacioEnElAireSalvaElAterrizaje(GameTestHelper helper) {
+		// Espacio apretado en el aire: el salto queda salvado y se mantiene hasta aterrizar.
+		FlightPhase conEspacio = new FlightPhase();
+		helper.assertTrue(!conEspacio.isRescued(), "al empezar no está salvado");
+		conEspacio.tick(true);
+		conEspacio.tick(false);
+		helper.assertTrue(conEspacio.rescue() && conEspacio.isRescued(), "espacio en el aire: queda salvado");
+		conEspacio.tick(false);
+		helper.assertTrue(conEspacio.isRescued(), "sigue salvado mientras vuela");
+		helper.assertTrue(conEspacio.tick(true) == FlightPhase.Result.LANDED && conEspacio.isRescued(),
+			"aterriza salvado: el aterrizaje no hace daño de caída");
+
+		// Sin espacio: nunca queda salvado, el aterrizaje hace su daño normal.
+		FlightPhase sinEspacio = new FlightPhase();
+		sinEspacio.tick(false);
+		sinEspacio.tick(true);
+		helper.assertTrue(!sinEspacio.isRescued(), "sin espacio: no está salvado");
+
+		// La pulsación que acompaña al despegue (el servidor todavía ve el suelo) NO cuenta.
+		FlightPhase alDespegar = new FlightPhase();
+		alDespegar.tick(true);
+		helper.assertTrue(!alDespegar.rescue() && !alDespegar.isRescued(), "espacio con el servidor viendo el suelo: no cuenta");
+		alDespegar.tick(false);
+		helper.assertTrue(!alDespegar.isRescued(), "y no queda anotada para después");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
 	public static void levitationStateDescartaLaGraciaSiNoEstaTransformado(GameTestHelper helper) {
 		UUID id = UUID.randomUUID();
 

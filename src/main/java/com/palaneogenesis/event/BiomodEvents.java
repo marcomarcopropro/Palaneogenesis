@@ -7,6 +7,7 @@ import com.palaneogenesis.capability.Capabilities;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent;
@@ -23,6 +24,10 @@ import top.theillusivec4.curios.api.event.CurioUnequipEvent;
  *
  * A diferencia de AncientTransformationEvents, acá SÍ hay PlayerEvent.Clone: el Inyector es
  * permanente y no se pierde al morir (P-21).
+ *
+ * Los módulos equipados tampoco se pierden al morir: BiomodModuleItem#getDropRule los deja en el
+ * slot (ALWAYS_KEEP) y Curios los copia al jugador nuevo en su propio PlayerEvent.Clone. Ver
+ * {@link #onCurioEquip} para por qué esa copia tiene que poder pasar por el candado.
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID)
 public class BiomodEvents {
@@ -93,10 +98,25 @@ public class BiomodEvents {
 		});
 	}
 
-	/** Equipar en el slot biomod solo con Inyector y sesión abierta; si no, se deniega. */
+	/**
+	 * Equipar en el slot biomod solo con Inyector y sesión abierta; si no, se deniega.
+	 *
+	 * EXCEPCIÓN: mientras el jugador todavía no tuvo su primer tick (tickCount == 0) no se deniega.
+	 * Es el único momento en que Curios restaura el inventario por su cuenta (al reaparecer tras
+	 * morir, en su PlayerEvent.Clone, y al cargar al jugador desde el disco). Esa restauración
+	 * revalida cada ítem con isItemValid, y isItemValid dispara este mismo evento (fuente de Curios:
+	 * DynamicStackHandler#isItemValid y CurioInventoryWrapper#readTag). Un jugador recién creado
+	 * nunca tiene una sesión de Pinzas abierta, así que sin esta excepción canModify daba false, el
+	 * evento se denegaba, Curios tiraba el módulo a "stacks inválidos" y los devolvía al inventario
+	 * normal en su siguiente tick: al morir, TODOS los módulos quedaban desmontados.
+	 * Una persona no puede equipar nada en el tick 0 (hace falta una pantalla abierta), así que el
+	 * candado de las Pinzas no pierde nada.
+	 */
 	@SubscribeEvent
 	public static void onCurioEquip(CurioEquipEvent event) {
-		if (SLOT_ID.equals(event.getSlotContext().identifier()) && !BiomodState.canModify(event.getEntity())) {
+		LivingEntity wearer = event.getEntity();
+		if (SLOT_ID.equals(event.getSlotContext().identifier()) && wearer.tickCount > 0
+			&& !BiomodState.canModify(wearer)) {
 			event.setResult(Event.Result.DENY);
 		}
 	}

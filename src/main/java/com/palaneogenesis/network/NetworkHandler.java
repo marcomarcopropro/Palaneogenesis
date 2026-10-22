@@ -9,8 +9,10 @@ import net.minecraftforge.network.simple.SimpleChannel;
  * Forge), no uno por feature. */
 public final class NetworkHandler {
 
-	/** "3": F2 agrega AbilityKeyPacket y cambia el formato de BiomodSyncPacket (T2.5). */
-	private static final String PROTOCOL_VERSION = "3";
+	/** "3": F2 agrega AbilityKeyPacket y cambia el formato de BiomodSyncPacket (T2.5).
+	 * "4": F4 agrega MegaJumpRescuePacket (espacio en el aire durante un Mega Jump): un cliente y un
+	 * servidor de versiones distintas ya no se aceptan entre sí. */
+	private static final String PROTOCOL_VERSION = "4";
 
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 		new ResourceLocation(Palaneogenesis.MOD_ID, "main"),
@@ -59,5 +61,9 @@ public final class NetworkHandler {
 		// Motor de habilidades (F2 / T2.3): cliente -> servidor, una pulsación de tecla de habilidad.
 		CHANNEL.registerMessage(id(), AbilityKeyPacket.class,
 			AbilityKeyPacket::encode, AbilityKeyPacket::decode, AbilityKeyPacket::handle);
+		// Mega Jump (F4): cliente -> servidor, espacio apretado en el aire (salva el aterrizaje), ver
+		// biomod.ability.megajump.MegaJumpAbility#rescue. Va al final para no mover los IDs anteriores.
+		CHANNEL.registerMessage(id(), MegaJumpRescuePacket.class,
+			MegaJumpRescuePacket::encode, MegaJumpRescuePacket::decode, MegaJumpRescuePacket::handle);
 	}
 }

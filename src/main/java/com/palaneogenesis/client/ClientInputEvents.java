@@ -3,6 +3,7 @@ package com.palaneogenesis.client;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.network.BeamKeyPacket;
 import com.palaneogenesis.network.LevitationKeyPacket;
+import com.palaneogenesis.network.MegaJumpRescuePacket;
 import com.palaneogenesis.network.NetworkHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -43,6 +44,8 @@ public class ClientInputEvents {
 
 	private static int jumpKeyHeldTicks = 0;
 	private static boolean levitationHoldSent = false;
+	/** Para detectar el flanco de apretar espacio (ver MegaJumpRescuePacket). */
+	private static boolean wasJumpKeyDown = false;
 
 	@SubscribeEvent
 	public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -62,6 +65,16 @@ public class ClientInputEvents {
 		}
 
 		boolean jumpKeyDown = minecraft.options.keyJump.isDown();
+
+		// Mega Jump (F4): cada vez que se APRIETA espacio estando en el aire se le avisa al servidor,
+		// sin umbral de espera (un toque basta). El cliente no sabe si hay un Mega Jump en curso:
+		// el servidor ignora el aviso si no lo hay (MegaJumpAbility#rescue). No se manda con una
+		// pantalla abierta, porque ahí espacio no es salto.
+		if (jumpKeyDown && !wasJumpKeyDown && !player.onGround() && minecraft.screen == null) {
+			NetworkHandler.CHANNEL.sendToServer(new MegaJumpRescuePacket());
+		}
+		wasJumpKeyDown = jumpKeyDown;
+
 		if (jumpKeyDown) {
 			jumpKeyHeldTicks++;
 			// Recién acá, al cruzar el umbral, es cuando el servidor se entera de que hay una

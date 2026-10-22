@@ -48,6 +48,13 @@ import java.util.UUID;
  * motivo, tampoco hace falta sincronizar en el respawn (a diferencia de HeartArrayEvents): el
  * Player nuevo y su LocalPlayer correspondiente arrancan los dos en false por default, ya
  * coinciden sin necesidad de un paquete.
+ *
+ * ESO VALE SOLO PARA EL FLAG. El aura y el brillo de ojos viven aparte, en
+ * client.TransformationEffectsClientState (un Set de IDs de entidad), y ese set solo se
+ * actualiza con paquetes: nada lo limpiaba al morir. El jugador reaparece con la MISMA ID de
+ * entidad, así que seguía figurando como transformado en los clientes (el suyo y los que lo
+ * miraban) y mostraba aura y ojos sin estar transformado. Ver #onPlayerRespawn y
+ * #onStartTracking.
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID)
 public class AncientTransformationEvents {
@@ -92,9 +99,24 @@ public class AncientTransformationEvents {
 		if (!(event.getTarget() instanceof Player trackedPlayer)) {
 			return;
 		}
-		if (AncientTransformation.isTransformed(trackedPlayer)) {
-			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> newTracker),
-				new TransformationEffectsPacket(trackedPlayer.getId(), true));
+		// Se manda el estado real, también cuando es false: un cliente que dejó de ver a este jugador
+		// mientras estaba transformado (por ejemplo, porque murió) todavía lo tiene anotado como
+		// activo, y sin este false seguiría dibujándole aura y ojos al volver a verlo.
+		NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> newTracker),
+			new TransformationEffectsPacket(trackedPlayer.getId(), AncientTransformation.isTransformed(trackedPlayer)));
+	}
+
+	/**
+	 * Al reaparecer (tras morir, o al volver del End) el flag arranca en false (ver la nota de la
+	 * clase), pero los clientes todavía tienen la ID de este jugador en
+	 * client.TransformationEffectsClientState como activa. Se avisa el estado real a todos los que
+	 * lo trackean y al propio jugador. Los clientes que lo empiecen a ver más tarde se enteran por
+	 * #onStartTracking.
+	 */
+	@SubscribeEvent
+	public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+		if (event.getEntity() instanceof ServerPlayer player) {
+			AncientTransformation.broadcastEffects(player, AncientTransformation.isTransformed(player));
 		}
 	}
 

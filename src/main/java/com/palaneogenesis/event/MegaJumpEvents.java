@@ -2,6 +2,7 @@ package com.palaneogenesis.event;
 
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpAbility;
+import com.palaneogenesis.util.LevitationState;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
@@ -12,13 +13,13 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * Eventos del Mega Jump: el tick del salto (hueco del techo y detección del aterrizaje), la
- * anulación OPCIONAL del daño de caída del aterrizaje y la limpieza al desconectarse o apagar el
- * servidor.
+ * anulación del daño de caída del aterrizaje y la limpieza al desconectarse o apagar el servidor.
  *
- * La anulación está apagada (MegaJumpAbility.NEGATE_FALL_DAMAGE = false): la caída del aterrizaje hace
- * su daño normal y solo se sobrevive con la levitación del Ancient (ver MegaJumpAbility). Si se
- * activa, LivingFallEvent se dispara al tocar el suelo, antes del PlayerTickEvent (END) de ese mismo
- * tick: el salto todavía está registrado y la caída se anula; después el tick cierra el salto.
+ * La caída del aterrizaje se anula solo si el jugador apretó espacio en el aire durante el salto
+ * (MegaJumpAbility#isRescued), o siempre si MegaJumpAbility.NEGATE_FALL_DAMAGE está activo (hoy
+ * false). Sin espacio la caída hace su daño normal y desde 80 bloques mata (ver MegaJumpAbility).
+ * LivingFallEvent se dispara al tocar el suelo, antes del PlayerTickEvent (END) de ese mismo tick: el
+ * salto todavía está registrado y la caída se anula; después el tick cierra el salto.
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID)
 public class MegaJumpEvents {
@@ -32,9 +33,13 @@ public class MegaJumpEvents {
 
 	@SubscribeEvent
 	public static void onLivingFall(LivingFallEvent event) {
-		if (MegaJumpAbility.NEGATE_FALL_DAMAGE && event.getEntity() instanceof ServerPlayer player
-			&& MegaJumpAbility.isFlying(player)) {
+		if (event.getEntity() instanceof ServerPlayer player && MegaJumpAbility.isFlying(player)
+			&& (MegaJumpAbility.NEGATE_FALL_DAMAGE || MegaJumpAbility.isRescued(player))) {
 			event.setCanceled(true);
+			// Un evento cancelado ya no llega a PlayerAbilityEvents#onLivingFall: si la levitación del
+			// Ancient había dejado una gracia pendiente, se consume acá. Si no, quedaría sin gastar y
+			// le regalaría la próxima caída, que no tiene nada que ver con este salto.
+			LevitationState.consumeGrace(player.getUUID());
 		}
 	}
 

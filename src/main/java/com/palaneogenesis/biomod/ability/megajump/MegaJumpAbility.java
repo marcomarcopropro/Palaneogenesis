@@ -36,10 +36,14 @@ import java.util.UUID;
  * ceilingWidth x ceilingWidth en el techo a medida que sube (CeilingJob) y, si sobrevive al
  * aterrizaje, genera un impacto en círculo que daña a lo que TargetRules acepte.
  *
- * El aterrizaje NO está protegido: la caída hace su daño normal, y desde 80 bloques mata. Esa es la
- * regla de diseño (pedida por el dueño del mod): se sobrevive manteniendo espacio en el aire siendo
- * el Ancient, porque su levitación deja una "gracia" que cancela la próxima caída (LevitationState,
- * PlayerAbilityEvents). Sin esa levitación el salto mata. El agua amortigua como en vanilla.
+ * El aterrizaje NO está protegido por defecto: la caída hace su daño normal, y desde 80 bloques
+ * mata. Regla de diseño (pedida por el dueño del mod): apretar espacio en el aire, antes de tocar el
+ * suelo, salva del daño de caída del aterrizaje; no apretarlo lo deja pasar y mata. Funciona para
+ * cualquier jugador con el módulo (no hace falta estar transformado). El cliente avisa cada
+ * pulsación de espacio en el aire con network.MegaJumpRescuePacket y {@link #rescue} la anota; el
+ * daño lo cancela event.MegaJumpEvents. Aparte, la levitación del Ancient (mantener espacio, ver
+ * LevitationState y PlayerAbilityEvents) sigue dejando su propia "gracia" que cancela la próxima
+ * caída; las dos cosas no se pisan. El agua amortigua como en vanilla.
  *
  * Cooldown al activar (cooldownTicks con 1 unidad, cooldownTicksMulti con 2 o más). Si el jugador no
  * está en el suelo (o va montado, volando, etc.) no pasa nada y el cooldown NO se gasta (5.D).
@@ -47,7 +51,10 @@ import java.util.UUID;
  * Interpretaciones a confirmar contra la Sección 5 (la config no dice todo):
  * - Hay que estar en el suelo para activarlo.
  * - 1 y 2 unidades usan el impacto de diameter1/damage1; con 3, el de diameter3/damage3.
- * - El aterrizaje no está protegido por el módulo (ver arriba y NEGATE_FALL_DAMAGE).
+ * - El aterrizaje solo queda protegido si el jugador apretó espacio en el aire (ver arriba). Cuenta
+ *   cualquier pulsación desde que el servidor vio el despegue hasta que toca el suelo: la regla
+ *   pedida dice "antes de llegar al suelo" y no fija una ventana. Si se quiere acotar (por ejemplo
+ *   solo la caída), se cambia en {@link #rescue}.
  * - El hueco del techo NO suelta drops (CEILING_DROPS): son hasta maxCeilingBlocks bloques.
  * - Respeta protección de otros mods (BlockEvent.BreakEvent) y no rompe bloques con block entity.
  * - Si el jugador cae al agua, muere, cambia de dimensión o se desconecta, el salto se cierra sin impacto.
@@ -57,9 +64,10 @@ import java.util.UUID;
 public final class MegaJumpAbility implements AbilityHandler {
 
 	/**
-	 * Si el módulo anula él mismo el daño de caída del aterrizaje de su salto. false (regla de diseño
-	 * actual): la caída hace su daño normal y se sobrevive con la levitación del Ancient. Con true el
-	 * salto es seguro para cualquiera, incluso sin transformarse. Lo lee MegaJumpEvents.
+	 * Si el módulo anula SIEMPRE el daño de caída del aterrizaje de su salto, sin importar el espacio.
+	 * false (regla de diseño actual): la caída hace su daño normal salvo que el jugador haya apretado
+	 * espacio en el aire (ver {@link #isRescued}). Con true el salto es seguro para cualquiera. Lo lee
+	 * MegaJumpEvents.
 	 */
 	public static final boolean NEGATE_FALL_DAMAGE = false;
 	/** Si el hueco del techo suelta los drops de los bloques. */
@@ -129,6 +137,24 @@ public final class MegaJumpAbility implements AbilityHandler {
 	/** true mientras el jugador está en un Mega Jump (lo usa MegaJumpEvents si NEGATE_FALL_DAMAGE está activo). */
 	public static boolean isFlying(ServerPlayer player) {
 		return FLIGHTS.containsKey(player.getUUID());
+	}
+
+	/**
+	 * El jugador apretó espacio estando en el aire (lo llama network.MegaJumpRescuePacket). Si tiene
+	 * un Mega Jump en curso y el servidor ya lo vio despegar, el aterrizaje de ese salto no le hace
+	 * daño de caída. Sin salto en curso no hace nada.
+	 */
+	public static void rescue(ServerPlayer player) {
+		Flight flight = FLIGHTS.get(player.getUUID());
+		if (flight != null) {
+			flight.phase.rescue();
+		}
+	}
+
+	/** true si el jugador tiene un Mega Jump en curso y ya apretó espacio en el aire (lo lee MegaJumpEvents). */
+	public static boolean isRescued(ServerPlayer player) {
+		Flight flight = FLIGHTS.get(player.getUUID());
+		return flight != null && flight.phase.isRescued();
 	}
 
 	/** Avanza el salto en curso del jugador, si tiene uno (lo llama MegaJumpEvents cada tick). */

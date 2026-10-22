@@ -56,7 +56,8 @@ public final class LevitationState {
 	 * en Ancient. Si ya no lo está (murió y volvió a aparecer sin la transformación, o revirtió con la
 	 * jeringa vacía) se descartan. Sin esto, una gracia pendiente de antes de perder la
 	 * transformación dejaría pasar gratis el próximo aterrizaje, por ejemplo el de un Mega Jump, que
-	 * por diseño solo se sobrevive con la levitación del Ancient. Se llama cada tick de servidor.
+	 * por diseño solo se salva apretando espacio en el aire (MegaJumpAbility#rescue), no con una
+	 * gracia vieja. Se llama cada tick de servidor.
 	 */
 	public static void discardUnlessTransformed(UUID id, boolean transformed) {
 		if (!transformed) {

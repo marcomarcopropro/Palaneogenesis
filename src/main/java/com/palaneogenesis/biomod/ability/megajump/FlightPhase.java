@@ -8,6 +8,9 @@ package com.palaneogenesis.biomod.ability.megajump;
  * el cliente, y esa información llega unos ticks DESPUÉS del despegue. Durante esos ticks el
  * servidor todavía ve "en el suelo" aunque el jugador ya salió disparado; eso no es un aterrizaje.
  * Solo cuenta como aterrizaje tocar el suelo DESPUÉS de haber estado en el aire.
+ *
+ * También recuerda si el jugador apretó espacio en el aire ({@link #rescue()}): eso es lo que
+ * decide si el aterrizaje hace daño de caída (ver MegaJumpEvents).
  */
 public final class FlightPhase {
 
@@ -30,6 +33,7 @@ public final class FlightPhase {
 
 	private int ticks;
 	private boolean airborne;
+	private boolean rescued;
 
 	/** Avanza un tick con el estado actual del suelo. */
 	public Result tick(boolean onGround) {
@@ -45,6 +49,27 @@ public final class FlightPhase {
 			return Result.LANDED;
 		}
 		return ticks > AIRBORNE_TIMEOUT_TICKS ? Result.ABORTED : Result.FLYING;
+	}
+
+	/**
+	 * El jugador apretó espacio durante el salto: regla de diseño del Mega Jump (pedida por el
+	 * dueño del mod), apretar espacio antes de tocar el suelo salva del daño de caída del
+	 * aterrizaje, y no apretarlo no lo evita. Solo cuenta si el servidor ya vio al jugador en el
+	 * aire: la misma pulsación que acompaña al despegue llega cuando todavía se lo ve en el suelo
+	 * y no debe contar como el espacio del final.
+	 *
+	 * @return true si el salto quedó salvado (ahora o desde antes)
+	 */
+	public boolean rescue() {
+		if (airborne) {
+			rescued = true;
+		}
+		return rescued;
+	}
+
+	/** true si el jugador ya apretó espacio en el aire durante este salto. */
+	public boolean isRescued() {
+		return rescued;
 	}
 
 	/** Ticks transcurridos desde el despegue. */
