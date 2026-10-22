@@ -5,6 +5,9 @@ import com.palaneogenesis.biomod.ability.AbilityId;
 import com.palaneogenesis.biomod.ability.AbilityState;
 import com.palaneogenesis.biomod.ability.AbilityTimers;
 import com.palaneogenesis.biomod.ability.CooldownManager;
+import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
+import com.palaneogenesis.biomod.ability.megajump.MegaJumpEffect;
+import com.palaneogenesis.biomod.ability.megajump.MegaJumpSettings;
 import com.palaneogenesis.biomod.ability.pickaxe.BlockJob;
 import com.palaneogenesis.biomod.ability.pickaxe.PickaxeVolume;
 import com.palaneogenesis.biomod.ability.piston.PistonEffect;
@@ -332,7 +335,7 @@ public class BiomodGameTests {
 		PistonEffect tres = PistonEffect.forUnits(3, ajustes);
 		helper.assertTrue(tres.isFist() && tres.stuns() && tres.stunTicks() == 15, "3 unidades: mano con parálisis de 15 ticks");
 		helper.assertTrue(tres.damage(1.0D) == 7.0D && tres.damage(10.0D) == 7.0D, "3 unidades: daño absoluto de la mano");
-		helper.assertTrue(tres.launches() && tres.slows(), "3 unidades conserva el lanzamiento y la Lentitud");
+		helper.assertTrue(!tres.launches() && tres.knockbackLevel() == 0 && tres.slows(), "3 unidades: sin lanzamiento ni Empuje, conserva la Lentitud");
 
 		helper.assertTrue(PistonEffect.forUnits(9, ajustes).equals(tres), "más unidades que el máximo se recortan a 3");
 		helper.succeed();
@@ -390,6 +393,7 @@ public class BiomodGameTests {
 		var efecto = zombi.getEffect(MobEffects.MOVEMENT_SLOWDOWN);
 		helper.assertTrue(efecto != null && efecto.getAmplifier() == PistonStrike.STUN_AMPLIFIER,
 			"3 unidades: la Lentitud de parálisis es la más fuerte");
+		helper.assertTrue(zombi.getDeltaMovement().lengthSqr() == 0.0D, "3 unidades: el objetivo queda quieto, sin empuje ni lanzamiento");
 		helper.succeed();
 	}
 
@@ -472,6 +476,65 @@ public class BiomodGameTests {
 		int hechos = mitad.run(5, b -> llamada[0]++ % 2 == 0);
 		helper.assertTrue(hechos == 5, "los bloques rechazados no cuentan contra el presupuesto");
 		helper.assertTrue(mitad.remaining() == 27 - 9, "se procesaron 9 posiciones para romper 5");
+		helper.succeed();
+	}
+
+	// ---- Mega Jump: niveles, altura y hueco del techo (F4, sin Minecraft) ---------------------
+
+	@GameTest(template = TEMPLATE)
+	public static void megaJumpEffectNivelesPorUnidades(GameTestHelper helper) {
+		MegaJumpSettings ajustes = MegaJumpSettings.DEFAULTS;
+		helper.assertTrue(MegaJumpEffect.forUnits(0, ajustes) == MegaJumpEffect.NONE, "0 unidades: no hace nada");
+
+		MegaJumpEffect uno = MegaJumpEffect.forUnits(1, ajustes);
+		helper.assertTrue(uno.cooldownTicks() == 600, "1 unidad: cooldown de 30 s");
+		helper.assertTrue(uno.impactDiameter() == 10.0D && uno.impactDamage() == 2.0D, "1 unidad: impacto de 10 bloques y 1 corazón");
+
+		MegaJumpEffect dos = MegaJumpEffect.forUnits(2, ajustes);
+		helper.assertTrue(dos.cooldownTicks() == 300, "2 unidades: cooldown de 15 s");
+		helper.assertTrue(dos.impactDiameter() == 10.0D && dos.impactDamage() == 2.0D, "2 unidades: mismo impacto que con 1");
+
+		MegaJumpEffect tres = MegaJumpEffect.forUnits(3, ajustes);
+		helper.assertTrue(tres.cooldownTicks() == 300, "3 unidades: cooldown de 15 s");
+		helper.assertTrue(tres.impactDiameter() == 25.0D && tres.impactDamage() == 6.0D, "3 unidades: impacto de 25 bloques y 3 corazones");
+		helper.assertTrue(tres.ceilingWidth() == 3 && tres.maxCeilingBlocks() == 800, "hueco 3x3 con tope de 800 bloques");
+		helper.assertTrue(MegaJumpEffect.forUnits(9, ajustes).equals(tres), "más unidades que el máximo se recortan a 3");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void megaJumpLanzamientoAlcanzaLaAltura(GameTestHelper helper) {
+		helper.assertTrue(Math.abs(MegaJumpEffect.apex(0.42D) - 1.25D) < 0.01D, "un salto vanilla (0.42) llega a 1.25 bloques");
+		for (double altura : new double[] {1.25D, 10.0D, 80.0D, 250.0D}) {
+			double v0 = MegaJumpEffect.launchVelocity(altura);
+			helper.assertTrue(Math.abs(MegaJumpEffect.apex(v0) - altura) < 0.01D, "el salto alcanza la altura pedida: " + altura);
+		}
+		helper.assertTrue(MegaJumpEffect.launchVelocity(0.0D) == 0.0D, "altura 0: sin velocidad");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void ceilingJobAvanzaPorCapasYRespetaElTope(GameTestHelper helper) {
+		// Columna 3x3 de y=10 a y=20, todo rompible: 9 bloques por capa.
+		CeilingJob trabajo = new CeilingJob(10, 20, 3, 800);
+		int[] maxY = {0};
+		int primera = trabajo.advance(11, 5, 5, (x, y, z) -> {
+			maxY[0] = Math.max(maxY[0], y);
+			return x >= 4 && x <= 6 && z >= 4 && z <= 6;
+		});
+		helper.assertTrue(primera == 18 && maxY[0] == 11, "hasta la capa 11: 2 capas x 9 bloques, sin pasarse");
+		helper.assertTrue(trabajo.advance(11, 5, 5, (x, y, z) -> true) == 0, "sin capas nuevas no rompe nada");
+		trabajo.advance(99, 5, 5, (x, y, z) -> true);
+		helper.assertTrue(trabajo.isDone() && trabajo.nextY() == 21 && trabajo.broken() == 99, "11 capas x 9 = 99 y se detiene en endY");
+
+		// Tope: con 20 bloques como máximo se rompen exactamente 20.
+		CeilingJob tope = new CeilingJob(0, 100, 3, 20);
+		helper.assertTrue(tope.advance(100, 0, 0, (x, y, z) -> true) == 20 && tope.isDone(), "el tope corta a los 20 bloques");
+
+		// Lo que el breaker rechaza (aire, protegido) no gasta el tope.
+		CeilingJob rechazos = new CeilingJob(0, 100, 3, 10);
+		int[] llamada = {0};
+		helper.assertTrue(rechazos.advance(100, 0, 0, (x, y, z) -> llamada[0]++ % 2 == 0) == 10, "los rechazados no cuentan contra el tope");
 		helper.succeed();
 	}
 }

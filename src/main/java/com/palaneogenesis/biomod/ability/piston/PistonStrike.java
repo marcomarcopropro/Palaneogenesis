@@ -6,6 +6,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * El golpe del activo del Pistón: daño, Empuje o lanzamiento, Lentitud y parálisis, según el
@@ -47,6 +48,10 @@ public final class PistonStrike {
 			if (effect.launches()) {
 				double speed = PistonEffect.launchSpeed(effect.launchDistance());
 				target.setDeltaMovement(away[0] * speed, PistonEffect.LAUNCH_LIFT, away[1] * speed);
+				target.hurtMarked = true;
+			} else if (effect.isFist()) {
+				// Parálisis: el golpe de mano no empuja. hurt() ya metió el retroceso vanilla: se anula.
+				target.setDeltaMovement(Vec3.ZERO);
 				target.hurtMarked = true;
 			} else {
 				knock(attacker, target, effect.knockbackLevel() * KNOCKBACK_PER_LEVEL);

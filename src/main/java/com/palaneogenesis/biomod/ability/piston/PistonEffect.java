@@ -12,8 +12,9 @@ import com.palaneogenesis.biomod.module.BiomodModule;
  *   <li>1 unidad: Empuje (knockbackLevel) en los golpes (pasivo) y en el activo.</li>
  *   <li>2 unidades: el activo, además, lanza al objetivo launchDistance bloques, le pone Lentitud y
  *       suma armExtraDamage al daño base ("brazo").</li>
- *   <li>3 unidades: además, el golpe es de "mano": hace fistDamage de daño (absoluto, reemplaza al
- *       daño base + brazo) y paraliza fistStunTicks ticks.</li>
+ *   <li>3 unidades: el golpe es de "mano": hace fistDamage de daño (absoluto, reemplaza al
+ *       daño base + brazo) y paraliza fistStunTicks ticks. NO empuja ni lanza (el objetivo se
+ *       queda clavado donde está, para que la parálisis se vea); conserva la Lentitud larga.</li>
  * </ul>
  */
 public record PistonEffect(
@@ -45,8 +46,8 @@ public record PistonEffect(
 		boolean fist = clamped >= 3;
 		return new PistonEffect(
 			clamped,
-			settings.knockbackLevel(),
-			arm ? settings.launchDistance() : 0.0D,
+			fist ? 0 : settings.knockbackLevel(),
+			(arm && !fist) ? settings.launchDistance() : 0.0D,
 			arm ? settings.slownessTicks() : 0,
 			arm ? settings.slownessAmplifier() : 0,
 			arm ? settings.armExtraDamage() : 0.0D,
