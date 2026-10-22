@@ -218,6 +218,12 @@ public class PlayerAbilityEvents {
 		tickCooldown(player);
 
 		boolean keyHeld = LEVITATION_KEY_HELD.contains(id);
+		boolean transformed = AncientTransformation.isTransformed(player);
+
+		// Sin transformación no puede quedar gracia de caída ni altura de referencia de un vuelo
+		// anterior (ver LevitationState#discardUnlessTransformed). Va antes del chequeo de suelo: al
+		// reaparecer tras morir el jugador ya está en el suelo y esa rama retorna enseguida.
+		LevitationState.discardUnlessTransformed(id, transformed);
 
 		if (player.onGround()) {
 			// Piso: resetea todo para el próximo vuelo, tope incluido. El enfriamiento NO se
@@ -227,7 +233,6 @@ public class PlayerAbilityEvents {
 			return;
 		}
 
-		boolean transformed = AncientTransformation.isTransformed(player);
 		boolean alreadyFlying = LevitationState.isTracking(id);
 		boolean onCooldown = LEVITATION_COOLDOWN_TICKS.containsKey(id);
 		// Comportamiento pedido: tocás espacio (eso es el salto vainilla, no toca nada de esto) y

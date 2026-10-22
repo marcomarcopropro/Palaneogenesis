@@ -33,8 +33,13 @@ import java.util.UUID;
 /**
  * Mega Jump (T4.x). Al apretar la tecla (sin tecla por defecto: se asigna en Controles) el jugador
  * sale disparado hacia arriba height bloques (MegaJumpEffect#launchVelocity), abre un hueco de
- * ceilingWidth x ceilingWidth en el techo a medida que sube (CeilingJob) y, al aterrizar, no recibe
- * daño de caída: en su lugar genera un impacto en círculo que daña a lo que TargetRules acepte.
+ * ceilingWidth x ceilingWidth en el techo a medida que sube (CeilingJob) y, si sobrevive al
+ * aterrizaje, genera un impacto en círculo que daña a lo que TargetRules acepte.
+ *
+ * El aterrizaje NO está protegido: la caída hace su daño normal, y desde 80 bloques mata. Esa es la
+ * regla de diseño (pedida por el dueño del mod): se sobrevive manteniendo espacio en el aire siendo
+ * el Ancient, porque su levitación deja una "gracia" que cancela la próxima caída (LevitationState,
+ * PlayerAbilityEvents). Sin esa levitación el salto mata. El agua amortigua como en vanilla.
  *
  * Cooldown al activar (cooldownTicks con 1 unidad, cooldownTicksMulti con 2 o más). Si el jugador no
  * está en el suelo (o va montado, volando, etc.) no pasa nada y el cooldown NO se gasta (5.D).
@@ -42,17 +47,21 @@ import java.util.UUID;
  * Interpretaciones a confirmar contra la Sección 5 (la config no dice todo):
  * - Hay que estar en el suelo para activarlo.
  * - 1 y 2 unidades usan el impacto de diameter1/damage1; con 3, el de diameter3/damage3.
- * - El salto anula el daño de caída de ese aterrizaje (sin eso un salto de 80 bloques mata).
+ * - El aterrizaje no está protegido por el módulo (ver arriba y NEGATE_FALL_DAMAGE).
  * - El hueco del techo NO suelta drops (CEILING_DROPS): son hasta maxCeilingBlocks bloques.
  * - Respeta protección de otros mods (BlockEvent.BreakEvent) y no rompe bloques con block entity.
  * - Si el jugador cae al agua, muere, cambia de dimensión o se desconecta, el salto se cierra sin impacto.
+ * - El aterrizaje solo cuenta si el jugador antes estuvo en el aire (FlightPhase): el servidor se entera
+ *   del suelo por lo que informa el cliente, atrasado, y en los primeros ticks todavía ve "en el suelo".
  */
 public final class MegaJumpAbility implements AbilityHandler {
 
-	/** Ticks mínimos de vuelo antes de poder contar un aterrizaje (el del despegue no cuenta). */
-	public static final int MIN_FLIGHT_TICKS = 2;
-	/** Seguro: un salto que dura más que esto (1 min) se cierra solo, sin impacto. */
-	public static final int MAX_FLIGHT_TICKS = 1200;
+	/**
+	 * Si el módulo anula él mismo el daño de caída del aterrizaje de su salto. false (regla de diseño
+	 * actual): la caída hace su daño normal y se sobrevive con la levitación del Ancient. Con true el
+	 * salto es seguro para cualquiera, incluso sin transformarse. Lo lee MegaJumpEvents.
+	 */
+	public static final boolean NEGATE_FALL_DAMAGE = false;
 	/** Si el hueco del techo suelta los drops de los bloques. */
 	public static final boolean CEILING_DROPS = false;
 
@@ -60,7 +69,8 @@ public final class MegaJumpAbility implements AbilityHandler {
 		final ResourceKey<Level> dimension;
 		final MegaJumpEffect effect;
 		final CeilingJob ceiling;
-		int ticks;
+		/** Cuándo termina el salto: lleva la cuenta de ticks y de si ya estuvo en el aire. */
+		final FlightPhase phase = new FlightPhase();
 
 		Flight(ResourceKey<Level> dimension, MegaJumpEffect effect, CeilingJob ceiling) {
 			this.dimension = dimension;
@@ -116,7 +126,7 @@ public final class MegaJumpAbility implements AbilityHandler {
 		breakCeiling(player, flight, effect.launchVelocity());
 	}
 
-	/** true mientras el jugador está en un Mega Jump (lo usa MegaJumpEvents para anular la caída). */
+	/** true mientras el jugador está en un Mega Jump (lo usa MegaJumpEvents si NEGATE_FALL_DAMAGE está activo). */
 	public static boolean isFlying(ServerPlayer player) {
 		return FLIGHTS.containsKey(player.getUUID());
 	}
@@ -127,15 +137,19 @@ public final class MegaJumpAbility implements AbilityHandler {
 		if (flight == null) {
 			return;
 		}
-		flight.ticks++;
 		if (!player.isAlive() || player.level().dimension() != flight.dimension
-			|| flight.ticks > MAX_FLIGHT_TICKS || player.isInWater() || player.isInLava()
+			|| player.isInWater() || player.isInLava()
 			|| player.isPassenger() || player.getAbilities().flying) {
 			FLIGHTS.remove(player.getUUID());
 			return;
 		}
+		FlightPhase.Result phase = flight.phase.tick(player.onGround());
+		if (phase == FlightPhase.Result.ABORTED) {
+			FLIGHTS.remove(player.getUUID());
+			return;
+		}
 		breakCeiling(player, flight, player.getDeltaMovement().y);
-		if (flight.ticks >= MIN_FLIGHT_TICKS && player.onGround()) {
+		if (phase == FlightPhase.Result.LANDED) {
 			FLIGHTS.remove(player.getUUID());
 			impact(player, flight.effect);
 		}

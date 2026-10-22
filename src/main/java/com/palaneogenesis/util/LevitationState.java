@@ -50,4 +50,17 @@ public final class LevitationState {
 		START_Y.remove(id);
 		FALL_DAMAGE_GRACE.remove(id);
 	}
+
+	/**
+	 * La gracia de caída y la altura de referencia solo valen mientras el jugador está transformado
+	 * en Ancient. Si ya no lo está (murió y volvió a aparecer sin la transformación, o revirtió con la
+	 * jeringa vacía) se descartan. Sin esto, una gracia pendiente de antes de perder la
+	 * transformación dejaría pasar gratis el próximo aterrizaje, por ejemplo el de un Mega Jump, que
+	 * por diseño solo se sobrevive con la levitación del Ancient. Se llama cada tick de servidor.
+	 */
+	public static void discardUnlessTransformed(UUID id, boolean transformed) {
+		if (!transformed) {
+			clear(id);
+		}
+	}
 }

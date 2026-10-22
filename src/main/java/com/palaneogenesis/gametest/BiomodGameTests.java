@@ -6,6 +6,7 @@ import com.palaneogenesis.biomod.ability.AbilityState;
 import com.palaneogenesis.biomod.ability.AbilityTimers;
 import com.palaneogenesis.biomod.ability.CooldownManager;
 import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
+import com.palaneogenesis.biomod.ability.megajump.FlightPhase;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpEffect;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpSettings;
 import com.palaneogenesis.biomod.ability.pickaxe.BlockJob;
@@ -23,6 +24,7 @@ import com.palaneogenesis.biomod.target.TargetRules;
 import com.palaneogenesis.capability.BiomodDataProvider;
 import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.config.Config;
+import com.palaneogenesis.util.LevitationState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -38,6 +40,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.UUID;
 
 /**
@@ -510,6 +513,75 @@ public class BiomodGameTests {
 			helper.assertTrue(Math.abs(MegaJumpEffect.apex(v0) - altura) < 0.01D, "el salto alcanza la altura pedida: " + altura);
 		}
 		helper.assertTrue(MegaJumpEffect.launchVelocity(0.0D) == 0.0D, "altura 0: sin velocidad");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void flightPhaseSoloAterrizaDespuesDeEstarEnElAire(GameTestHelper helper) {
+		// El servidor ve "en el suelo" los primeros ticks (el cliente informa atrasado): eso NO es aterrizar.
+		FlightPhase atrasado = new FlightPhase();
+		boolean[] suelo = {true, true, false, false, false, true};
+		FlightPhase.Result[] esperado = {FlightPhase.Result.FLYING, FlightPhase.Result.FLYING, FlightPhase.Result.FLYING,
+			FlightPhase.Result.FLYING, FlightPhase.Result.FLYING, FlightPhase.Result.LANDED};
+		for (int i = 0; i < suelo.length; i++) {
+			helper.assertTrue(atrasado.tick(suelo[i]) == esperado[i], "tick " + (i + 1) + ": resultado esperado con el cliente atrasado");
+		}
+		helper.assertTrue(atrasado.hasBeenAirborne() && atrasado.ticks() == suelo.length, "cuenta ticks y recuerda que estuvo en el aire");
+
+		// Sin atraso: en el aire desde el primer tick, y vuelve al suelo en el segundo (techo bajo): sí es un aterrizaje.
+		FlightPhase rapido = new FlightPhase();
+		helper.assertTrue(rapido.tick(false) == FlightPhase.Result.FLYING, "primer tick en el aire: sigue");
+		helper.assertTrue(rapido.tick(true) == FlightPhase.Result.LANDED, "suelo tras haber estado en el aire: aterrizó");
+
+		// Despega tarde pero a tiempo (en el último tick de espera): no se abandona.
+		FlightPhase tarde = new FlightPhase();
+		for (int i = 1; i < FlightPhase.AIRBORNE_TIMEOUT_TICKS; i++) {
+			helper.assertTrue(tarde.tick(true) == FlightPhase.Result.FLYING, "esperando el despegue: tick " + i);
+		}
+		helper.assertTrue(tarde.tick(false) == FlightPhase.Result.FLYING, "despega justo en el último tick de espera");
+		helper.assertTrue(tarde.tick(true) == FlightPhase.Result.LANDED, "y después aterriza normalmente");
+
+		// Nunca despega (techo pegado, etc.): se abandona pasado el tiempo de espera, sin impacto.
+		FlightPhase quieto = new FlightPhase();
+		FlightPhase.Result ultimo = FlightPhase.Result.FLYING;
+		for (int i = 0; i < FlightPhase.AIRBORNE_TIMEOUT_TICKS; i++) {
+			ultimo = quieto.tick(true);
+		}
+		helper.assertTrue(ultimo == FlightPhase.Result.FLYING, "dentro del tiempo de espera todavía no se abandona");
+		helper.assertTrue(quieto.tick(true) == FlightPhase.Result.ABORTED, "pasado el tiempo de espera sin despegar: abandonado");
+
+		// Seguro de duración máxima: un vuelo eterno se cierra solo.
+		FlightPhase eterno = new FlightPhase();
+		FlightPhase.Result fin = FlightPhase.Result.FLYING;
+		for (int i = 0; i <= FlightPhase.MAX_FLIGHT_TICKS; i++) {
+			fin = eterno.tick(false);
+		}
+		helper.assertTrue(fin == FlightPhase.Result.ABORTED, "un vuelo de más de 1 minuto se cierra solo");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void levitationStateDescartaLaGraciaSiNoEstaTransformado(GameTestHelper helper) {
+		UUID id = UUID.randomUUID();
+
+		// Transformado: la altura de referencia y la gracia de caída se conservan.
+		LevitationState.getOrStartTracking(id, 64.0D);
+		LevitationState.markGrace(id);
+		LevitationState.discardUnlessTransformed(id, true);
+		helper.assertTrue(LevitationState.isTracking(id), "transformado: sigue la altura de referencia");
+		helper.assertTrue(LevitationState.consumeGrace(id), "transformado: la gracia sigue pendiente");
+
+		// Ya sin transformación (murió y reapareció, o revirtió): se descarta todo, la gracia incluida.
+		LevitationState.getOrStartTracking(id, 64.0D);
+		LevitationState.markGrace(id);
+		LevitationState.discardUnlessTransformed(id, false);
+		helper.assertTrue(!LevitationState.isTracking(id), "sin transformación: se descarta la altura de referencia");
+		helper.assertTrue(!LevitationState.consumeGrace(id), "sin transformación: la gracia pendiente no deja pasar el aterrizaje");
+
+		// Sin nada pendiente no pasa nada.
+		LevitationState.discardUnlessTransformed(id, false);
+		helper.assertTrue(!LevitationState.isTracking(id) && !LevitationState.consumeGrace(id), "sin estado previo: nada que descartar");
+		LevitationState.clear(id);
 		helper.succeed();
 	}
 

@@ -12,10 +12,13 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * Eventos del Mega Jump: el tick del salto (hueco del techo y detección del aterrizaje), la
- * anulación del daño de caída del aterrizaje y la limpieza al desconectarse o apagar el servidor.
+ * anulación OPCIONAL del daño de caída del aterrizaje y la limpieza al desconectarse o apagar el
+ * servidor.
  *
- * LivingFallEvent se dispara al tocar el suelo, antes del PlayerTickEvent (END) de ese mismo tick:
- * el salto todavía está registrado y la caída se anula; después el tick cierra el salto con el impacto.
+ * La anulación está apagada (MegaJumpAbility.NEGATE_FALL_DAMAGE = false): la caída del aterrizaje hace
+ * su daño normal y solo se sobrevive con la levitación del Ancient (ver MegaJumpAbility). Si se
+ * activa, LivingFallEvent se dispara al tocar el suelo, antes del PlayerTickEvent (END) de ese mismo
+ * tick: el salto todavía está registrado y la caída se anula; después el tick cierra el salto.
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID)
 public class MegaJumpEvents {
@@ -29,7 +32,8 @@ public class MegaJumpEvents {
 
 	@SubscribeEvent
 	public static void onLivingFall(LivingFallEvent event) {
-		if (event.getEntity() instanceof ServerPlayer player && MegaJumpAbility.isFlying(player)) {
+		if (MegaJumpAbility.NEGATE_FALL_DAMAGE && event.getEntity() instanceof ServerPlayer player
+			&& MegaJumpAbility.isFlying(player)) {
 			event.setCanceled(true);
 		}
 	}
