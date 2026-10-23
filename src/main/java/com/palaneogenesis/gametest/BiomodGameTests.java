@@ -5,6 +5,9 @@ import com.palaneogenesis.biomod.ability.AbilityId;
 import com.palaneogenesis.biomod.ability.AbilityState;
 import com.palaneogenesis.biomod.ability.AbilityTimers;
 import com.palaneogenesis.biomod.ability.CooldownManager;
+import com.palaneogenesis.biomod.ability.charge.ChargeEffect;
+import com.palaneogenesis.biomod.ability.charge.ChargeSession;
+import com.palaneogenesis.biomod.ability.charge.ChargeSettings;
 import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
 import com.palaneogenesis.biomod.ability.megajump.FlightPhase;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpEffect;
@@ -635,6 +638,53 @@ public class BiomodGameTests {
 		CeilingJob rechazos = new CeilingJob(0, 100, 3, 10);
 		int[] llamada = {0};
 		helper.assertTrue(rechazos.advance(100, 0, 0, (x, y, z) -> llamada[0]++ % 2 == 0) == 10, "los rechazados no cuentan contra el tope");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void embestidaElDanoEsElBaseDeCaminarOCorrerPorLaVelocidad(GameTestHelper helper) {
+		ChargeSettings config = ChargeSettings.DEFAULTS;
+		// Caminando (4.3 bloques/s): daño base 1.0 x velocidad. Corriendo (5.6): daño base 5.0 x velocidad.
+		helper.assertTrue(Math.abs(ChargeEffect.damage(false, 4.3D, config) - 4.3D) < 1.0E-9, "caminando: 1.0 x 4.3");
+		helper.assertTrue(Math.abs(ChargeEffect.damage(true, 5.6D, config) - 28.0D) < 1.0E-9, "corriendo: 5.0 x 5.6");
+		helper.assertTrue(ChargeEffect.damage(true, 0.0D, config) == 0.0D && ChargeEffect.damage(true, -3.0D, config) == 0.0D,
+			"sin velocidad (o con velocidad negativa) no hay daño");
+		// Solo golpea yendo a una velocidad mínima: caminar normal sí, arrastrarse (agachado, ~1.3) no.
+		helper.assertTrue(ChargeEffect.canHit(4.3D) && !ChargeEffect.canHit(1.3D), "velocidad mínima para golpear");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void embestidaSuavizaLaVelocidadYFrenaTrasElImpacto(GameTestHelper helper) {
+		// El servidor recibe las posiciones a ráfagas (0, el doble, 0, el doble): el promedio converge a la velocidad real.
+		ChargeSession corriendo = new ChargeSession();
+		for (int i = 0; i < 40; i++) {
+			corriendo.update(i % 2 == 0 ? 0.0D : 0.56D, 0.0D);
+		}
+		double real = 0.28D * ChargeEffect.TICKS_PER_SECOND;
+		helper.assertTrue(Math.abs(corriendo.speedBlocksPerSecond() - real) < 2.0D, "ráfagas de 0 y 0.56: velocidad cerca de 5.6 b/s, fue " + corriendo.speedBlocksPerSecond());
+		helper.assertTrue(corriendo.hasDirection() && corriendo.dirX() == 1.0D && corriendo.dirZ() == 0.0D, "recuerda la dirección de la carrera");
+
+		// Quieto no cambia la dirección ya conocida.
+		corriendo.update(0.0D, 0.0D);
+		helper.assertTrue(corriendo.dirX() == 1.0D, "quieto un tick: la dirección se conserva");
+
+		// Frenada: dura exactamente los ticks pedidos y luego deja golpear.
+		ChargeSession frenada = new ChargeSession();
+		frenada.brake(3);
+		helper.assertTrue(frenada.isBraking(), "frena tras el impacto");
+		int ticksFrenando = 0;
+		while (frenada.tickBrake()) {
+			ticksFrenando++;
+		}
+		helper.assertTrue(ticksFrenando == 3 && !frenada.isBraking(), "frena exactamente 3 ticks, y después vuelve a poder golpear");
+
+		// Sin frenada pedida, no frena.
+		helper.assertTrue(!new ChargeSession().tickBrake(), "sin impacto no hay frenada");
+
+		// Teletransporte: la velocidad medida se descarta.
+		corriendo.resetSpeed();
+		helper.assertTrue(corriendo.speedBlocksPerSecond() == 0.0D, "resetSpeed deja la velocidad en 0");
 		helper.succeed();
 	}
 }

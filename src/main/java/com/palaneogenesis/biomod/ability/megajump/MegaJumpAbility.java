@@ -1,5 +1,6 @@
 package com.palaneogenesis.biomod.ability.megajump;
 
+import com.mojang.logging.LogUtils;
 import com.palaneogenesis.biomod.ability.AbilityHandler;
 import com.palaneogenesis.biomod.ability.AbilityId;
 import com.palaneogenesis.biomod.ability.AbilityState;
@@ -25,6 +26,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.level.BlockEvent;
+import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -70,6 +72,13 @@ public final class MegaJumpAbility implements AbilityHandler {
 	 * MegaJumpEvents.
 	 */
 	public static final boolean NEGATE_FALL_DAMAGE = false;
+	/**
+	 * Ticks que el aterrizaje de un salto salvado sigue protegido DESPUÉS de cerrarse el salto. Es una
+	 * red de seguridad para el daño de caída (ver {@link #protectsLanding}): el salto se cierra en el
+	 * tick del aterrizaje y la protección no tiene que depender de qué pasa primero dentro de ese tick.
+	 */
+	public static final int LANDING_SHIELD_TICKS = 5;
+	private static final Logger LOGGER = LogUtils.getLogger();
 	/** Si el hueco del techo suelta los drops de los bloques. */
 	public static final boolean CEILING_DROPS = false;
 
@@ -89,6 +98,8 @@ public final class MegaJumpAbility implements AbilityHandler {
 
 	/** Saltos en curso por jugador. */
 	private static final Map<UUID, Flight> FLIGHTS = new HashMap<>();
+	/** Hasta qué tick de juego sigue protegido el aterrizaje de un salto salvado que ya se cerró. */
+	private static final Map<UUID, Long> LANDING_SHIELD_UNTIL = new HashMap<>();
 
 	/** Los valores actuales de la config del Mega Jump. */
 	public static MegaJumpSettings settings() {
@@ -146,15 +157,34 @@ public final class MegaJumpAbility implements AbilityHandler {
 	 */
 	public static void rescue(ServerPlayer player) {
 		Flight flight = FLIGHTS.get(player.getUUID());
-		if (flight != null) {
-			flight.phase.rescue();
+		if (flight == null) {
+			LOGGER.debug("[megajump] {} apretó espacio en el aire sin Mega Jump en curso: se ignora", player.getName().getString());
+			return;
 		}
+		boolean rescued = flight.phase.rescue();
+		LOGGER.info("[megajump] {} apretó espacio: tick {} del salto, servidor ya lo vio en el aire = {}, salvado = {}",
+			player.getName().getString(), flight.phase.ticks(), flight.phase.hasBeenAirborne(), rescued);
 	}
 
 	/** true si el jugador tiene un Mega Jump en curso y ya apretó espacio en el aire (lo lee MegaJumpEvents). */
 	public static boolean isRescued(ServerPlayer player) {
 		Flight flight = FLIGHTS.get(player.getUUID());
 		return flight != null && flight.phase.isRescued();
+	}
+
+	/**
+	 * true si el daño de caída de este jugador tiene que anularse por el Mega Jump: tiene un salto en
+	 * curso salvado (o con NEGATE_FALL_DAMAGE), o acaba de aterrizar un salto salvado (ver
+	 * {@link #LANDING_SHIELD_TICKS}). Lo leen los dos puntos por donde puede llegar la caída
+	 * (MegaJumpEvents#onLivingFall y MegaJumpEvents#onLivingAttack).
+	 */
+	public static boolean protectsLanding(ServerPlayer player) {
+		Flight flight = FLIGHTS.get(player.getUUID());
+		if (flight != null) {
+			return NEGATE_FALL_DAMAGE || flight.phase.isRescued();
+		}
+		Long until = LANDING_SHIELD_UNTIL.get(player.getUUID());
+		return until != null && player.level().getGameTime() <= until;
 	}
 
 	/** Avanza el salto en curso del jugador, si tiene uno (lo llama MegaJumpEvents cada tick). */
@@ -177,6 +207,11 @@ public final class MegaJumpAbility implements AbilityHandler {
 		breakCeiling(player, flight, player.getDeltaMovement().y);
 		if (phase == FlightPhase.Result.LANDED) {
 			FLIGHTS.remove(player.getUUID());
+			if (flight.phase.isRescued()) {
+				LANDING_SHIELD_UNTIL.put(player.getUUID(), player.level().getGameTime() + LANDING_SHIELD_TICKS);
+			}
+			LOGGER.info("[megajump] {} aterrizó tras {} ticks: salvado = {}", player.getName().getString(),
+				flight.phase.ticks(), flight.phase.isRescued());
 			impact(player, flight.effect);
 		}
 	}
@@ -184,11 +219,13 @@ public final class MegaJumpAbility implements AbilityHandler {
 	/** Olvida el salto de un jugador que se desconectó. */
 	public static void forget(UUID player) {
 		FLIGHTS.remove(player);
+		LANDING_SHIELD_UNTIL.remove(player);
 	}
 
 	/** Olvida todos los saltos (al apagar el servidor). */
 	public static void clear() {
 		FLIGHTS.clear();
+		LANDING_SHIELD_UNTIL.clear();
 	}
 
 	// ---- Hueco del techo ------------------------------------------------------------------

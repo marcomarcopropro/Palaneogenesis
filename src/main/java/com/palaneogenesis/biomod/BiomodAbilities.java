@@ -2,6 +2,7 @@ package com.palaneogenesis.biomod;
 
 import com.palaneogenesis.biomod.ability.AbilityId;
 import com.palaneogenesis.biomod.ability.AbilityManager;
+import com.palaneogenesis.biomod.ability.charge.ChargeAbility;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpAbility;
 import com.palaneogenesis.biomod.ability.pickaxe.PickaxeAbility;
 import com.palaneogenesis.biomod.ability.piston.PistonAbility;
@@ -20,5 +21,6 @@ public final class BiomodAbilities {
 		AbilityManager.register(AbilityId.PISTON, new PistonAbility());
 		AbilityManager.register(AbilityId.PICKAXE, new PickaxeAbility());
 		AbilityManager.register(AbilityId.MEGA_JUMP, new MegaJumpAbility());
+		AbilityManager.register(AbilityId.CHARGE, new ChargeAbility());
 	}
 }

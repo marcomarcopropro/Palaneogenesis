@@ -46,6 +46,10 @@ public class ClientInputEvents {
 	private static boolean levitationHoldSent = false;
 	/** Para detectar el flanco de apretar espacio (ver MegaJumpRescuePacket). */
 	private static boolean wasJumpKeyDown = false;
+	/** Ticks que faltan para repetir el aviso mientras se MANTIENE espacio en el aire. */
+	private static int rescueResendTicks = 0;
+	/** Cada cuántos ticks se repite el aviso de espacio mantenido (ver onClientTick). */
+	private static final int RESCUE_RESEND_INTERVAL_TICKS = 4;
 
 	@SubscribeEvent
 	public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -67,11 +71,18 @@ public class ClientInputEvents {
 		boolean jumpKeyDown = minecraft.options.keyJump.isDown();
 
 		// Mega Jump (F4): cada vez que se APRIETA espacio estando en el aire se le avisa al servidor,
-		// sin umbral de espera (un toque basta). El cliente no sabe si hay un Mega Jump en curso:
-		// el servidor ignora el aviso si no lo hay (MegaJumpAbility#rescue). No se manda con una
-		// pantalla abierta, porque ahí espacio no es salto.
-		if (jumpKeyDown && !wasJumpKeyDown && !player.onGround() && minecraft.screen == null) {
-			NetworkHandler.CHANNEL.sendToServer(new MegaJumpRescuePacket());
+		// sin umbral de espera (un toque basta). Si espacio ya venía apretado (se mantiene), el aviso se
+		// repite cada pocos ticks: el servidor ignora el que llega antes de verlo despegar, y quien
+		// mantiene espacio no tiene un flanco nuevo que lo reenvíe. El cliente no sabe si hay un Mega
+		// Jump en curso: el servidor ignora el aviso si no lo hay (MegaJumpAbility#rescue). No se manda
+		// con una pantalla abierta, porque ahí espacio no es salto.
+		if (jumpKeyDown && !player.onGround() && minecraft.screen == null) {
+			if (!wasJumpKeyDown || --rescueResendTicks <= 0) {
+				NetworkHandler.CHANNEL.sendToServer(new MegaJumpRescuePacket());
+				rescueResendTicks = RESCUE_RESEND_INTERVAL_TICKS;
+			}
+		} else {
+			rescueResendTicks = 0;
 		}
 		wasJumpKeyDown = jumpKeyDown;
 
