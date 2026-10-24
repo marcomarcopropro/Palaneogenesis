@@ -106,10 +106,10 @@ public class BiomodConfig {
 		b.pop();
 
 		b.push("drones");
-		dronesRegenAmplifier = i(b, "Amplificador de la Regeneración del dron de soporte (0 = nivel I). Default 0.", "regenAmplifier", 0, 0, 10);
-		dronesResistanceAmplifier = i(b, "Amplificador de la Resistencia del dron de soporte con otra transformación (0 = nivel I). Default 0.", "resistanceAmplifier", 0, 0, 10);
+		dronesRegenAmplifier = i(b, "Amplificador de la Regeneración del dron de soporte en forma vanilla (0 = nivel I). Default 0.", "regenAmplifier", 0, 0, 10);
+		dronesResistanceAmplifier = i(b, "Amplificador de la Resistencia del dron de soporte con el jugador transformado (0 = nivel I). Default 0.", "resistanceAmplifier", 0, 0, 10);
 		dronesFireIntervalTicks = i(b, "Cada dron de ataque dispara una flecha cada tantos ticks, escalonados. Default 60 (3 s).", "fireIntervalTicks", 60, 1, 1200);
-		dronesTargetMemoryTicks = i(b, "Cuánto queda marcado un objetivo golpeado. Default 100 (5 s).", "targetMemoryTicks", 100, 1, 1200);
+		dronesTargetMemoryTicks = i(b, "Cuánto sigue marcado un objetivo que los drones no pueden ver ni alcanzar (mientras lo ven, siguen atacándolo hasta que muere). Default 100 (5 s).", "targetMemoryTicks", 100, 1, 1200);
 		dronesSlownessTicks = i(b, "Duración de la Lentitud de la flecha con 4 o 5 drones. Default 40 (2 s).", "slownessTicks", 40, 0, 1200);
 		dronesSlownessAmplifier = i(b, "Amplificador de esa Lentitud (4 = nivel V). Default 4.", "slownessAmplifier", 4, 0, 10);
 		dronesEnchantedAppleIntervalTicks = i(b, "Cada cuánto el dron 5 da el efecto de la Manzana Dorada Encantada. Default 3600 (3 min).", "enchantedAppleIntervalTicks", 3600, 1, 1728000);

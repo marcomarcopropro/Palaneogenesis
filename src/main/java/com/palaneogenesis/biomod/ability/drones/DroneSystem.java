@@ -26,11 +26,14 @@ import java.util.UUID;
 
 /**
  * Flotilla de Drones (F6, módulo pasivo: sin tecla ni cooldown). Mientras el jugador esté inyectado y
- * tenga al menos un dron equipado (ver DroneLoadout para qué hace cada uno):
- * - Soporte: Regeneración (y Resistencia si está transformado), renovadas cada segundo.
- * - Ataque: cada dron dispara una flecha cada fireIntervalTicks al último objetivo que el jugador
- *   golpeó (DroneTargetMemory), siempre que TargetRules lo acepte, esté a tiro y a la vista.
- * - Dron 5: el efecto de la Manzana Dorada Encantada cada enchantedAppleIntervalTicks.
+ * tenga al menos un dron equipado (ver DroneLoadout para el reparto según la cantidad):
+ * - Soporte: Regeneración si el jugador es Steve vanilla, o Resistencia si está transformado (una u otra),
+ *   renovada cada segundo.
+ * - Ataque: desde que el jugador golpea a algo, los drones lo atacan SOLOS hasta que muere: cada dron
+ *   dispara una flecha cada fireIntervalTicks (escalonados: 1, 2, 1, 2...) mientras TargetRules lo acepte
+ *   y esté a tiro y a la vista. Si lo pierden de vista o de alcance, la marca se olvida pasados
+ *   targetMemoryTicks (DroneTargetMemory).
+ * - Manzana: el efecto de la Manzana Dorada Encantada cada enchantedAppleIntervalTicks.
  *
  * Los drones no son entidades: orbitan al jugador como puntos calculados en cada tick (DronePosition) y se
  * dibujan con partículas; las flechas nacen en esos puntos. Un modelo propio queda para cuando exista el
@@ -85,7 +88,8 @@ public final class DroneSystem {
 
 	/** Marca al objetivo que el jugador acaba de golpear (lo llama event.DroneEvents). */
 	public static void mark(ServerPlayer player, LivingEntity target) {
-		if (target == player || units(player) < 2 || !TargetRules.isValidTarget(player, target)) {
+		if (target == player || new DroneLoadout(units(player)).attackDrones() == 0
+			|| !TargetRules.isValidTarget(player, target)) {
 			return;
 		}
 		DroneSettings settings = settings();
@@ -96,7 +100,7 @@ public final class DroneSystem {
 	/** Avanza los drones del jugador un tick (lo llama event.DroneEvents). */
 	public static void tick(ServerPlayer player) {
 		DroneLoadout loadout = new DroneLoadout(units(player));
-		if (!loadout.hasSupport()) {
+		if (loadout.units() == 0) {
 			MARKS.remove(player.getUUID());
 			return;
 		}
@@ -106,10 +110,10 @@ public final class DroneSystem {
 		long now = level.getGameTime();
 		DroneSettings settings = settings();
 
-		if (player.tickCount % 20 == 0) {
+		if (loadout.hasSupport() && player.tickCount % 20 == 0) {
 			support(player, settings);
 		}
-		if (loadout.givesEnchantedApple()) {
+		if (loadout.hasEnchantedApple()) {
 			enchantedApple(player, settings, now);
 		}
 		if (now % PARTICLE_INTERVAL_TICKS == 0) {
@@ -124,11 +128,13 @@ public final class DroneSystem {
 	}
 
 	private static void support(ServerPlayer player, DroneSettings settings) {
-		player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, SUPPORT_EFFECT_TICKS,
-			settings.regenAmplifier(), true, false, true));
+		// Una cosa o la otra: Regeneración en forma vanilla, Resistencia transformado.
 		if (AncientTransformation.isTransformed(player)) {
 			player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, SUPPORT_EFFECT_TICKS,
 				settings.resistanceAmplifier(), true, false, true));
+		} else {
+			player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, SUPPORT_EFFECT_TICKS,
+				settings.regenAmplifier(), true, false, true));
 		}
 	}
 
@@ -162,12 +168,14 @@ public final class DroneSystem {
 		}
 		if (player.distanceToSqr(target) > RANGE * RANGE || !TargetRules.isValidTarget(player, target)
 			|| !player.hasLineOfSight(target)) {
+			// Fuera de alcance o sin verlo: no dispara, y la marca se va apagando.
 			return;
 		}
+		// A tiro: la marca no vence mientras tanto, los drones siguen hasta que muera.
+		memory.keep(now, settings.targetMemoryTicks());
 		for (int k = 0; k < loadout.attackDrones(); k++) {
 			if (DroneLoadout.shouldFire(now, k, loadout.attackDrones(), settings.fireIntervalTicks())) {
-				// El dron 0 es el de soporte: el de ataque k ocupa la posición k + 1 de la órbita.
-				Vec3 from = DronePosition.at(player, k + 1, loadout.units(), now, ORBIT_RADIUS, ORBIT_HEIGHT, ORBIT_SPEED);
+				Vec3 from = DronePosition.at(player, loadout.attackSlot(k), loadout.units(), now, ORBIT_RADIUS, ORBIT_HEIGHT, ORBIT_SPEED);
 				fire(player, level, target, from, loadout.slowsTargets(), settings);
 			}
 		}

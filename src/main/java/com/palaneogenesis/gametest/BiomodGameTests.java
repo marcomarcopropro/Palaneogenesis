@@ -710,25 +710,57 @@ public class BiomodGameTests {
 
 	@GameTest(template = TEMPLATE)
 	public static void dronesCadaCantidadTraeLoSuyo(GameTestHelper helper) {
-		helper.assertTrue(!new DroneLoadout(0).hasSupport() && new DroneLoadout(0).attackDrones() == 0, "sin drones no hay nada");
+		DroneLoadout cero = new DroneLoadout(0);
+		helper.assertTrue(!cero.hasSupport() && cero.attackDrones() == 0 && !cero.hasEnchantedApple(), "sin drones no hay nada");
+		// 1 dron: solo soporte.
 		DroneLoadout uno = new DroneLoadout(1);
-		helper.assertTrue(uno.hasSupport() && uno.attackDrones() == 0 && !uno.slowsTargets() && !uno.givesEnchantedApple(),
+		helper.assertTrue(uno.hasSupport() && uno.attackDrones() == 0 && !uno.slowsTargets() && !uno.hasEnchantedApple(),
 			"1 dron: solo soporte");
+		// 2 drones: 2 de ataque y NADA de soporte (no se conserva lo del dron 1).
+		DroneLoadout dos = new DroneLoadout(2);
+		helper.assertTrue(!dos.hasSupport() && dos.attackDrones() == 2 && !dos.slowsTargets() && !dos.hasEnchantedApple(),
+			"2 drones: 2 de ataque, sin soporte");
+		// 3 drones: 2 de ataque + 1 de soporte.
 		DroneLoadout tres = new DroneLoadout(3);
-		helper.assertTrue(tres.attackDrones() == 2 && !tres.slowsTargets(), "3 drones: 2 de ataque, flecha sin Lentitud");
+		helper.assertTrue(tres.hasSupport() && tres.attackDrones() == 2 && !tres.slowsTargets() && !tres.hasEnchantedApple(),
+			"3 drones: 2 de ataque y 1 de soporte");
+		// 4 drones: 4 de ataque, sin soporte, con Lentitud.
 		DroneLoadout cuatro = new DroneLoadout(4);
-		helper.assertTrue(cuatro.attackDrones() == 3 && cuatro.slowsTargets() && !cuatro.givesEnchantedApple(),
-			"4 drones: 3 de ataque, la flecha deja Lentitud");
+		helper.assertTrue(!cuatro.hasSupport() && cuatro.attackDrones() == 4 && cuatro.slowsTargets() && !cuatro.hasEnchantedApple(),
+			"4 drones: 4 de ataque, sin soporte, flecha con Lentitud");
+		// 5 drones: 4 de ataque + la Manzana Dorada Encantada, sin soporte.
 		DroneLoadout cinco = new DroneLoadout(5);
-		helper.assertTrue(cinco.attackDrones() == 4 && cinco.slowsTargets() && cinco.givesEnchantedApple(),
-			"5 drones: 4 de ataque, Lentitud y Manzana Dorada Encantada");
+		helper.assertTrue(!cinco.hasSupport() && cinco.attackDrones() == 4 && cinco.slowsTargets() && cinco.hasEnchantedApple(),
+			"5 drones: 4 de ataque y la Manzana, sin soporte");
 		helper.assertTrue(new DroneLoadout(9).units() == 5 && new DroneLoadout(-2).units() == 0, "se recorta entre 0 y 5");
+		// Posiciones de la órbita: el soporte primero, después los de ataque, la Manzana al final.
+		helper.assertTrue(tres.attackSlot(0) == 1 && tres.attackSlot(1) == 2, "con soporte, el ataque empieza en la posición 1");
+		helper.assertTrue(dos.attackSlot(0) == 0 && cinco.attackSlot(3) == 3 && cinco.appleSlot() == 4,
+			"sin soporte el ataque empieza en la 0; la Manzana ocupa la última");
 		helper.succeed();
 	}
 
 	@GameTest(template = TEMPLATE)
 	public static void dronesDisparanEscalonados(GameTestHelper helper) {
-		// 4 drones de ataque, una flecha cada 60 ticks por dron: en 60 ticks salen 4, nunca dos en el mismo tick.
+		// Con 2 drones de ataque y 60 ticks de intervalo: 1, 2, 1, 2... un disparo cada 30 ticks, alternados.
+		int primero = -1;
+		int anterior = -1;
+		int disparos = 0;
+		for (long t = 0; t < 240; t++) {
+			for (int k = 0; k < 2; k++) {
+				if (DroneLoadout.shouldFire(t, k, 2, 60)) {
+					helper.assertTrue(k != anterior, "tick " + t + ": no dispara dos veces seguidas el mismo dron");
+					anterior = k;
+					if (primero < 0) {
+						primero = k;
+					}
+					disparos++;
+				}
+			}
+		}
+		helper.assertTrue(disparos == 8, "en 240 ticks salen 8 disparos (uno cada 30), fueron " + disparos);
+
+		// 4 drones: en 60 ticks sale una flecha de cada uno, nunca dos en el mismo tick.
 		int[] porDron = new int[4];
 		for (long t = 0; t < 60; t++) {
 			int enEsteTick = 0;
@@ -743,26 +775,37 @@ public class BiomodGameTests {
 		for (int k = 0; k < 4; k++) {
 			helper.assertTrue(porDron[k] == 1, "el dron " + k + " dispara exactamente una vez por intervalo");
 		}
-		// Valores fuera de rango no disparan.
 		helper.assertTrue(!DroneLoadout.shouldFire(0, 0, 0, 60) && !DroneLoadout.shouldFire(0, 4, 4, 60)
 			&& !DroneLoadout.shouldFire(0, 0, 4, 0), "sin drones, índice inválido o intervalo 0: no dispara");
 		helper.succeed();
 	}
 
 	@GameTest(template = TEMPLATE)
-	public static void dronesLaMarcaDelObjetivoSeOlvidaYSeReemplaza(GameTestHelper helper) {
+	public static void dronesLaMarcaDuraMientrasLoVeanYSeReemplaza(GameTestHelper helper) {
 		DroneTargetMemory memoria = new DroneTargetMemory();
 		UUID a = UUID.randomUUID();
 		UUID b = UUID.randomUUID();
 		helper.assertTrue(memoria.current(0) == null, "al empezar no hay objetivo");
 		memoria.mark(a, 10, 100);
 		helper.assertTrue(a.equals(memoria.current(109)), "sigue marcado dentro de la memoria");
-		helper.assertTrue(memoria.current(110) == null, "pasada la memoria se olvida");
-		memoria.mark(a, 200, 100);
-		memoria.mark(b, 250, 100);
-		helper.assertTrue(b.equals(memoria.current(251)), "golpear a otro reemplaza la marca");
+		helper.assertTrue(memoria.current(110) == null, "si no lo pueden alcanzar, pasada la memoria se olvida");
+
+		// Mientras lo ven, la marca se renueva cada tick y NO vence aunque pase mucho más que la memoria.
+		memoria.mark(a, 1000, 100);
+		for (long t = 1000; t < 5000; t++) {
+			memoria.keep(t, 100);
+			helper.assertTrue(a.equals(memoria.current(t)), "tick " + t + ": a tiro, sigue marcado");
+		}
+		helper.assertTrue(a.equals(memoria.current(5098)) && memoria.current(5099) == null,
+			"al perderlo de vista, vence a los 100 ticks de la última vez que lo vieron (tick 4999)");
+
+		// Golpear a otro reemplaza la marca; keep sin objetivo no hace nada.
+		memoria.mark(a, 6000, 100);
+		memoria.mark(b, 6050, 100);
+		helper.assertTrue(b.equals(memoria.current(6051)), "golpear a otro reemplaza la marca");
 		memoria.clear();
-		helper.assertTrue(memoria.current(251) == null, "clear() la borra");
+		memoria.keep(6060, 100);
+		helper.assertTrue(memoria.current(6061) == null, "clear() la borra y keep() no la resucita");
 		helper.succeed();
 	}
 }
