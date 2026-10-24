@@ -103,6 +103,7 @@
     "hud.palaneogenesis.biomod.ability.mega_jump": "Mega Jump",
     "hud.palaneogenesis.biomod.ability.charge": "Embestida",
     "hud.palaneogenesis.biomod.ability.pickaxe": "Pico",
+    "hud.palaneogenesis.biomod.drone.apple": "Manzana encantada",
     "hud.palaneogenesis.biomod.state.ready": "Lista",
     "hud.palaneogenesis.biomod.state.active": "Activa",
     "command.palaneogenesis.biomod.targets.list": "Entidades protegidas (tu lista): %s. Protegidas por el servidor: %s.",

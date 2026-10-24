@@ -27,11 +27,13 @@ public class BiomodInputEvents {
 		Minecraft minecraft = Minecraft.getInstance();
 		if (minecraft.player == null) {
 			ClientBiomodSync.reset();
+			ClientDroneSync.reset();
 			return;
 		}
 		// T2.5: descuenta los cooldowns de la copia local (no mientras el juego está en pausa).
 		if (!minecraft.isPaused()) {
 			ClientBiomodSync.tick(minecraft.player);
+			ClientDroneSync.tick();
 		}
 		for (AbilityId ability : AbilityId.values()) {
 			KeyMapping key = BiomodKeys.forAbility(ability);

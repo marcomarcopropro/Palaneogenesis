@@ -68,7 +68,7 @@ public class DroneEvents {
 	@SubscribeEvent
 	public static void onDeath(LivingDeathEvent event) {
 		if (event.getEntity() instanceof ServerPlayer player) {
-			DroneSystem.forget(player.getUUID());
+			DroneSystem.onDeath(player);
 		}
 	}
 

@@ -6,6 +6,8 @@ import com.palaneogenesis.biomod.module.BiomodModules;
 import com.palaneogenesis.biomod.target.TargetRules;
 import com.palaneogenesis.config.BiomodConfig;
 import com.palaneogenesis.config.Config;
+import com.palaneogenesis.network.DroneAppleSyncPacket;
+import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.util.AncientTransformation;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -19,6 +21,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +36,9 @@ import java.util.UUID;
  *   dispara una flecha cada fireIntervalTicks (escalonados: 1, 2, 1, 2...) mientras TargetRules lo acepte
  *   y esté a tiro y a la vista. Si lo pierden de vista o de alcance, la marca se olvida pasados
  *   targetMemoryTicks (DroneTargetMemory).
- * - Manzana: el efecto de la Manzana Dorada Encantada cada enchantedAppleIntervalTicks.
+ * - Manzana: el efecto de la Manzana Dorada Encantada cada enchantedAppleIntervalTicks. El tiempo que falta
+ *   se manda al HUD del dueño (DroneAppleSyncPacket); si el dron deja de estar equipado, el reloj se borra y
+ *   al volver a equiparlo cuenta un intervalo completo.
  *
  * Los drones no son entidades: orbitan al jugador como puntos calculados en cada tick (DronePosition) y se
  * dibujan con partículas; las flechas nacen en esos puntos. Un modelo propio queda para cuando exista el
@@ -60,6 +65,8 @@ public final class DroneSystem {
 	private static final int PARTICLE_INTERVAL_TICKS = 5;
 	/** Duración de los efectos de soporte: algo más que el intervalo de renovación (20) para que no parpadeen. */
 	private static final int SUPPORT_EFFECT_TICKS = 60;
+	/** Cada cuántos ticks se le vuelve a mandar al HUD lo que falta para la Manzana, por si el cliente se desfasó. */
+	private static final int APPLE_RESYNC_TICKS = 200;
 
 	private static final Map<UUID, DroneTargetMemory> MARKS = new HashMap<>();
 	/** Tick de juego en que el dron 5 da su próxima Manzana Dorada Encantada. */
@@ -78,7 +85,8 @@ public final class DroneSystem {
 			c.dronesTargetMemoryTicks.get(),
 			c.dronesSlownessTicks.get(),
 			c.dronesSlownessAmplifier.get(),
-			c.dronesEnchantedAppleIntervalTicks.get());
+			c.dronesEnchantedAppleIntervalTicks.get(),
+			c.dronesArrowBaseDamage.get());
 	}
 
 	/** Cuántos drones tiene equipados el jugador (0 si no está inyectado). */
@@ -100,6 +108,9 @@ public final class DroneSystem {
 	/** Avanza los drones del jugador un tick (lo llama event.DroneEvents). */
 	public static void tick(ServerPlayer player) {
 		DroneLoadout loadout = new DroneLoadout(units(player));
+		if (!loadout.hasEnchantedApple()) {
+			dropApple(player);
+		}
 		if (loadout.units() == 0) {
 			MARKS.remove(player.getUUID());
 			return;
@@ -138,17 +149,26 @@ public final class DroneSystem {
 		}
 	}
 
-	/** Los efectos de la Manzana Dorada Encantada de vanilla 1.20.1. */
+	/**
+	 * Los efectos de la Manzana Dorada Encantada de vanilla 1.20.1, cada enchantedAppleIntervalTicks; la
+	 * primera vez, pasado un intervalo completo desde que se equipa el dron. Cada cambio del reloj (primera
+	 * cuenta, Manzana dada) y, cada APPLE_RESYNC_TICKS, el tiempo que falta, se le manda al HUD del dueño.
+	 */
 	private static void enchantedApple(ServerPlayer player, DroneSettings settings, long now) {
 		Long next = NEXT_APPLE.get(player.getUUID());
 		if (next == null) {
 			NEXT_APPLE.put(player.getUUID(), now + settings.enchantedAppleIntervalTicks());
+			sendApple(player, settings.enchantedAppleIntervalTicks());
 			return;
 		}
 		if (now < next) {
+			if (now % APPLE_RESYNC_TICKS == 0) {
+				sendApple(player, (int) (next - now));
+			}
 			return;
 		}
 		NEXT_APPLE.put(player.getUUID(), now + settings.enchantedAppleIntervalTicks());
+		sendApple(player, settings.enchantedAppleIntervalTicks());
 		player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 400, 1));
 		player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 6000, 0));
 		player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 6000, 0));
@@ -187,6 +207,7 @@ public final class DroneSystem {
 		arrow.setOwner(player);
 		arrow.addTag(ARROW_TAG);
 		arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
+		arrow.setBaseDamage(settings.arrowBaseDamage());
 		if (slows && settings.slownessTicks() > 0) {
 			arrow.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, settings.slownessTicks(),
 				settings.slownessAmplifier()));
@@ -196,6 +217,26 @@ public final class DroneSystem {
 		arrow.shoot(aim.x, aim.y + aim.horizontalDistance() * 0.1D, aim.z, ARROW_SPEED, ARROW_INACCURACY);
 		level.addFreshEntity(arrow);
 		level.playSound(null, from.x, from.y, from.z, SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 0.5F, 1.4F);
+	}
+
+	/** El dron de la Manzana ya no está: se borra su reloj y el HUD deja de mostrar el temporizador. */
+	private static void dropApple(ServerPlayer player) {
+		if (NEXT_APPLE.remove(player.getUUID()) != null) {
+			sendApple(player, DroneAppleSyncPacket.NONE);
+		}
+	}
+
+	private static void sendApple(ServerPlayer player, int remainingTicks) {
+		NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new DroneAppleSyncPacket(remainingTicks));
+	}
+
+	/** El jugador murió: se olvida todo y el HUD borra el temporizador (si el dron sigue equipado, vuelve a contar al reaparecer). */
+	public static void onDeath(ServerPlayer player) {
+		boolean hadApple = NEXT_APPLE.containsKey(player.getUUID());
+		forget(player.getUUID());
+		if (hadApple) {
+			sendApple(player, DroneAppleSyncPacket.NONE);
+		}
 	}
 
 	/** Olvida el estado de los drones de un jugador (se desconectó o murió). */

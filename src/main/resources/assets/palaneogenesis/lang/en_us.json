@@ -121,6 +121,7 @@
     "hud.palaneogenesis.biomod.ability.mega_jump": "Mega Jump",
     "hud.palaneogenesis.biomod.ability.charge": "Charge",
     "hud.palaneogenesis.biomod.ability.pickaxe": "Pickaxe",
+    "hud.palaneogenesis.biomod.drone.apple": "Enchanted Apple",
     "hud.palaneogenesis.biomod.state.ready": "Ready",
     "hud.palaneogenesis.biomod.state.active": "Active",
     "command.palaneogenesis.biomod.targets.list": "Protected entities (your list): %s. Protected by the server: %s.",

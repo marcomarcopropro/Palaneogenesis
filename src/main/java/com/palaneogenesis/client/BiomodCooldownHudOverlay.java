@@ -26,6 +26,9 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  * - ACTIVA con duración: segundos que faltan. ACTIVA sin duración (Mega Jump en el aire): solo el
  *   texto "Activa".
  * - LISTA: el texto "Lista".
+ *
+ * Al final de la columna, si hay un dron de la Manzana (5 drones), una línea más con los segundos que faltan
+ * para su próxima Manzana Dorada Encantada (ClientDroneSync). Es un pasivo: no tiene estados ni "Lista".
  */
 public final class BiomodCooldownHudOverlay {
 
@@ -57,6 +60,10 @@ public final class BiomodCooldownHudOverlay {
 				lines++;
 			}
 		}
+		boolean apple = ClientDroneSync.hasApple();
+		if (apple) {
+			lines++;
+		}
 		if (lines == 0) {
 			return;
 		}
@@ -72,6 +79,11 @@ public final class BiomodCooldownHudOverlay {
 			int x = screenWidth - MARGIN_RIGHT - font.width(line);
 			guiGraphics.drawString(font, line, x, y, color, true);
 			y += LINE_HEIGHT;
+		}
+		if (apple) {
+			Component line = Component.literal(seconds(ClientDroneSync.appleRemainingTicks()) + " ")
+				.append(Component.translatable("hud.palaneogenesis.biomod.drone.apple"));
+			guiGraphics.drawString(font, line, screenWidth - MARGIN_RIGHT - font.width(line), y, COLOR_ACTIVE, true);
 		}
 	};
 

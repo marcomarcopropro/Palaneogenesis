@@ -51,6 +51,7 @@ public class BiomodConfig {
 	public final ForgeConfigSpec.IntValue dronesSlownessTicks;
 	public final ForgeConfigSpec.IntValue dronesSlownessAmplifier;
 	public final ForgeConfigSpec.IntValue dronesEnchantedAppleIntervalTicks;
+	public final ForgeConfigSpec.DoubleValue dronesArrowBaseDamage;
 
 	public final ForgeConfigSpec.BooleanValue targetsAffectPlayers;
 	public final ForgeConfigSpec.ConfigValue<List<? extends String>> targetsForcedProtected;
@@ -111,8 +112,9 @@ public class BiomodConfig {
 		dronesFireIntervalTicks = i(b, "Cada dron de ataque dispara una flecha cada tantos ticks, escalonados. Default 60 (3 s).", "fireIntervalTicks", 60, 1, 1200);
 		dronesTargetMemoryTicks = i(b, "Cuánto sigue marcado un objetivo que los drones no pueden ver ni alcanzar (mientras lo ven, siguen atacándolo hasta que muere). Default 100 (5 s).", "targetMemoryTicks", 100, 1, 1200);
 		dronesSlownessTicks = i(b, "Duración de la Lentitud de la flecha con 4 o 5 drones. Default 40 (2 s).", "slownessTicks", 40, 0, 1200);
-		dronesSlownessAmplifier = i(b, "Amplificador de esa Lentitud (4 = nivel V). Default 4.", "slownessAmplifier", 4, 0, 10);
+		dronesSlownessAmplifier = i(b, "Amplificador de esa Lentitud (3 = nivel IV). Default 3.", "slownessAmplifier", 3, 0, 10);
 		dronesEnchantedAppleIntervalTicks = i(b, "Cada cuánto el dron 5 da el efecto de la Manzana Dorada Encantada. Default 3600 (3 min).", "enchantedAppleIntervalTicks", 3600, 1, 1728000);
+		dronesArrowBaseDamage = d(b, "Daño base de la flecha de los drones (una flecha de arco normal es 2.0; el daño real es este valor x la velocidad, 3.0 al salir). Default 1.0 = 3 puntos de daño, la mitad de una flecha normal.", "arrowBaseDamage", 1.0D, 0.0D, 20.0D);
 		b.pop();
 
 		b.push("targets");

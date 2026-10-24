@@ -25,6 +25,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
@@ -42,8 +43,8 @@ import java.util.UUID;
  * Volver a apretar la tecla durante el modo lo cancela. El cooldown empieza al terminar o al
  * cancelar (P-7), no al activar: lo lleva AbilityTimers (startActive con el cooldown de después).
  * El jugador conserva el control todo el tiempo. Mientras dura sube su velocidad base (ChargeEffect
- * #BASE_SPEED_BOOST, en todas las fases) y no recibe daño físico (#isPhysicalDamage, que cancela
- * event.ChargeEvents).
+ * #BASE_SPEED_BOOST, en todas las fases) y no recibe daño cuerpo a cuerpo (#isPhysicalDamage, que cancela
+ * event.ChargeEvents); los proyectiles SÍ lo dañan.
  *
  * El modo se cierra solo si el jugador muere, cambia de dimensión, se desconecta o se queda sin el
  * módulo equipado; o por tiempo (AbilityEvents / onExpired).
@@ -234,13 +235,17 @@ public final class ChargeAbility implements AbilityHandler {
 	}
 
 	/**
-	 * Daño físico: el que llega por contacto directo, golpes de mobs y de jugadores, y proyectiles
-	 * (flechas, tridentes, bolas de los mobs). Durante la Embestida el jugador no lo recibe. El fuego, las
-	 * explosiones, la magia, la caída y el vacío NO cuentan como físicos y siguen haciendo daño.
+	 * Daño físico = SOLO cuerpo a cuerpo: el golpe de un mob o de un jugador. Durante la Embestida el
+	 * jugador no lo recibe. NINGÚN proyectil cuenta como físico (flechas, tridentes, bolas de los mobs...):
+	 * hacen daño con normalidad. Tampoco el fuego, las explosiones, la magia, la caída ni el vacío.
+	 *
+	 * El tipo de daño no alcanza por sí solo: si la entidad que golpea directo es un proyectil (por ejemplo
+	 * un mob de otro mod que dispara usando el daño de golpe), tampoco es cuerpo a cuerpo.
 	 */
 	public static boolean isPhysicalDamage(DamageSource source) {
-		return source.is(DamageTypes.MOB_ATTACK) || source.is(DamageTypes.MOB_ATTACK_NO_AGGRO)
-			|| source.is(DamageTypes.PLAYER_ATTACK) || source.is(DamageTypeTags.IS_PROJECTILE);
+		boolean meleeType = source.is(DamageTypes.MOB_ATTACK) || source.is(DamageTypes.MOB_ATTACK_NO_AGGRO)
+			|| source.is(DamageTypes.PLAYER_ATTACK);
+		return meleeType && !source.is(DamageTypeTags.IS_PROJECTILE) && !(source.getDirectEntity() instanceof Projectile);
 	}
 
 	/** Olvida la Embestida de un jugador que se desconectó. */

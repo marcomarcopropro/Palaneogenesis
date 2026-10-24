@@ -27,8 +27,9 @@ public class ChargeEvents {
 	}
 
 	/**
-	 * Durante la Embestida el jugador no recibe daño físico (ChargeAbility#isPhysicalDamage). Se cancela el
-	 * ataque entero, así que tampoco hay retroceso ni invulnerabilidad gastada. Prioridad alta para
+	 * Durante la Embestida el jugador no recibe daño cuerpo a cuerpo (ChargeAbility#isPhysicalDamage); los
+	 * proyectiles NO se frenan. Se cancela el ataque entero, así que tampoco hay retroceso ni invulnerabilidad
+	 * gastada. Prioridad alta para
 	 * decidir antes que los demás handlers (corazones, escudos, etc.).
 	 */
 	@SubscribeEvent(priority = EventPriority.HIGHEST)

@@ -10,6 +10,7 @@ import com.palaneogenesis.biomod.ability.charge.ChargeEffect;
 import com.palaneogenesis.biomod.ability.charge.ChargeSession;
 import com.palaneogenesis.biomod.ability.charge.ChargeSettings;
 import com.palaneogenesis.biomod.ability.drones.DroneLoadout;
+import com.palaneogenesis.biomod.ability.drones.DroneSettings;
 import com.palaneogenesis.biomod.ability.drones.DroneTargetMemory;
 import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
 import com.palaneogenesis.biomod.ability.megajump.FlightPhase;
@@ -30,15 +31,22 @@ import com.palaneogenesis.biomod.target.TargetRules;
 import com.palaneogenesis.capability.BiomodDataProvider;
 import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.config.Config;
+import com.palaneogenesis.network.DroneAppleSyncPacket;
 import com.palaneogenesis.util.LevitationState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.Unpooled;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -696,9 +704,18 @@ public class BiomodGameTests {
 	public static void embestidaNoRecibeDanoFisicoPeroSiElResto(GameTestHelper helper) {
 		DamageSources fuentes = helper.getLevel().damageSources();
 		Zombie zombi = helper.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
-		// Físico: el golpe de un mob (el zombi que embestís), el de un jugador y los proyectiles.
+		// Físico = SOLO cuerpo a cuerpo: el golpe de un mob (el zombi que embestís) y el de un jugador.
 		helper.assertTrue(ChargeAbility.isPhysicalDamage(fuentes.mobAttack(zombi)), "el golpe de un zombi es físico");
-		helper.assertTrue(ChargeAbility.isPhysicalDamage(fuentes.mobProjectile(zombi, zombi)), "un proyectil de mob es físico");
+		// Ningún proyectil lo es: ni el de un mob ni una flecha (con o sin dueño).
+		Arrow flecha = new Arrow(helper.getLevel(), 0.0D, 0.0D, 0.0D);
+		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.mobProjectile(zombi, zombi)), "un proyectil de mob NO es físico");
+		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.arrow(flecha, zombi)), "una flecha disparada por un mob NO es física");
+		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.arrow(flecha, null)), "una flecha sin dueño NO es física");
+		// Un golpe cuyo agresor directo es un proyectil tampoco es cuerpo a cuerpo (mobs de otros mods).
+		DamageSource golpeDeProyectil = new DamageSource(
+			helper.getLevel().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DamageTypes.MOB_ATTACK), flecha, zombi);
+		helper.assertTrue(!ChargeAbility.isPhysicalDamage(golpeDeProyectil),
+			"un 'golpe' dado por un proyectil NO es cuerpo a cuerpo");
 		// No físico: sigue haciendo daño durante la Embestida.
 		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.magic()), "la magia no es física");
 		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.onFire()) && !ChargeAbility.isPhysicalDamage(fuentes.fall()),
@@ -806,6 +823,28 @@ public class BiomodGameTests {
 		memoria.clear();
 		memoria.keep(6060, 100);
 		helper.assertTrue(memoria.current(6061) == null, "clear() la borra y keep() no la resucita");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesFlechaConLaMitadDelDanoYLentitudIV(GameTestHelper helper) {
+		// Valores por defecto (DroneSettings.DEFAULTS, que repite los de BiomodConfig): Lentitud IV (amplificador 3, no 4) y flecha con la
+		// mitad del daño de una de arco normal (base 1.0 en vez de 2.0).
+		helper.assertTrue(DroneSettings.DEFAULTS.slownessAmplifier() == 3, "la Lentitud de la flecha es IV (amplificador 3)");
+		helper.assertTrue(DroneSettings.DEFAULTS.arrowBaseDamage() == 1.0D, "el daño base de la flecha de los drones es 1.0");
+		Arrow normal = new Arrow(helper.getLevel(), 0.0D, 0.0D, 0.0D);
+		helper.assertTrue(Math.abs(DroneSettings.DEFAULTS.arrowBaseDamage() - normal.getBaseDamage() / 2.0D) < 1.0E-9,
+			"es la mitad del daño base de una flecha normal");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesElPaqueteDeLaManzanaViajaIntacto(GameTestHelper helper) {
+		for (int ticks : new int[] {DroneAppleSyncPacket.NONE, 0, 1, 3600, 1728000}) {
+			FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+			DroneAppleSyncPacket.encode(new DroneAppleSyncPacket(ticks), buffer);
+			helper.assertTrue(DroneAppleSyncPacket.decode(buffer).remainingTicks() == ticks, "el paquete devuelve " + ticks);
+		}
 		helper.succeed();
 	}
 }
