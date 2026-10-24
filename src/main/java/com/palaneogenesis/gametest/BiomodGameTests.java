@@ -5,9 +5,12 @@ import com.palaneogenesis.biomod.ability.AbilityId;
 import com.palaneogenesis.biomod.ability.AbilityState;
 import com.palaneogenesis.biomod.ability.AbilityTimers;
 import com.palaneogenesis.biomod.ability.CooldownManager;
+import com.palaneogenesis.biomod.ability.charge.ChargeAbility;
 import com.palaneogenesis.biomod.ability.charge.ChargeEffect;
 import com.palaneogenesis.biomod.ability.charge.ChargeSession;
 import com.palaneogenesis.biomod.ability.charge.ChargeSettings;
+import com.palaneogenesis.biomod.ability.drones.DroneLoadout;
+import com.palaneogenesis.biomod.ability.drones.DroneTargetMemory;
 import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
 import com.palaneogenesis.biomod.ability.megajump.FlightPhase;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpEffect;
@@ -31,6 +34,7 @@ import com.palaneogenesis.util.LevitationState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Wolf;
@@ -685,6 +689,80 @@ public class BiomodGameTests {
 		// Teletransporte: la velocidad medida se descarta.
 		corriendo.resetSpeed();
 		helper.assertTrue(corriendo.speedBlocksPerSecond() == 0.0D, "resetSpeed deja la velocidad en 0");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void embestidaNoRecibeDanoFisicoPeroSiElResto(GameTestHelper helper) {
+		DamageSources fuentes = helper.getLevel().damageSources();
+		Zombie zombi = helper.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
+		// Físico: el golpe de un mob (el zombi que embestís), el de un jugador y los proyectiles.
+		helper.assertTrue(ChargeAbility.isPhysicalDamage(fuentes.mobAttack(zombi)), "el golpe de un zombi es físico");
+		helper.assertTrue(ChargeAbility.isPhysicalDamage(fuentes.mobProjectile(zombi, zombi)), "un proyectil de mob es físico");
+		// No físico: sigue haciendo daño durante la Embestida.
+		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.magic()), "la magia no es física");
+		helper.assertTrue(!ChargeAbility.isPhysicalDamage(fuentes.onFire()) && !ChargeAbility.isPhysicalDamage(fuentes.fall()),
+			"el fuego y la caída no son físicos");
+		// La velocidad base sube 40 % (Velocidad II) y no es un efecto de poción.
+		helper.assertTrue(Math.abs(ChargeEffect.BASE_SPEED_BOOST - 0.4D) < 1.0E-9, "aumento de velocidad base: 40 %");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesCadaCantidadTraeLoSuyo(GameTestHelper helper) {
+		helper.assertTrue(!new DroneLoadout(0).hasSupport() && new DroneLoadout(0).attackDrones() == 0, "sin drones no hay nada");
+		DroneLoadout uno = new DroneLoadout(1);
+		helper.assertTrue(uno.hasSupport() && uno.attackDrones() == 0 && !uno.slowsTargets() && !uno.givesEnchantedApple(),
+			"1 dron: solo soporte");
+		DroneLoadout tres = new DroneLoadout(3);
+		helper.assertTrue(tres.attackDrones() == 2 && !tres.slowsTargets(), "3 drones: 2 de ataque, flecha sin Lentitud");
+		DroneLoadout cuatro = new DroneLoadout(4);
+		helper.assertTrue(cuatro.attackDrones() == 3 && cuatro.slowsTargets() && !cuatro.givesEnchantedApple(),
+			"4 drones: 3 de ataque, la flecha deja Lentitud");
+		DroneLoadout cinco = new DroneLoadout(5);
+		helper.assertTrue(cinco.attackDrones() == 4 && cinco.slowsTargets() && cinco.givesEnchantedApple(),
+			"5 drones: 4 de ataque, Lentitud y Manzana Dorada Encantada");
+		helper.assertTrue(new DroneLoadout(9).units() == 5 && new DroneLoadout(-2).units() == 0, "se recorta entre 0 y 5");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesDisparanEscalonados(GameTestHelper helper) {
+		// 4 drones de ataque, una flecha cada 60 ticks por dron: en 60 ticks salen 4, nunca dos en el mismo tick.
+		int[] porDron = new int[4];
+		for (long t = 0; t < 60; t++) {
+			int enEsteTick = 0;
+			for (int k = 0; k < 4; k++) {
+				if (DroneLoadout.shouldFire(t, k, 4, 60)) {
+					porDron[k]++;
+					enEsteTick++;
+				}
+			}
+			helper.assertTrue(enEsteTick <= 1, "tick " + t + ": no disparan dos drones juntos");
+		}
+		for (int k = 0; k < 4; k++) {
+			helper.assertTrue(porDron[k] == 1, "el dron " + k + " dispara exactamente una vez por intervalo");
+		}
+		// Valores fuera de rango no disparan.
+		helper.assertTrue(!DroneLoadout.shouldFire(0, 0, 0, 60) && !DroneLoadout.shouldFire(0, 4, 4, 60)
+			&& !DroneLoadout.shouldFire(0, 0, 4, 0), "sin drones, índice inválido o intervalo 0: no dispara");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesLaMarcaDelObjetivoSeOlvidaYSeReemplaza(GameTestHelper helper) {
+		DroneTargetMemory memoria = new DroneTargetMemory();
+		UUID a = UUID.randomUUID();
+		UUID b = UUID.randomUUID();
+		helper.assertTrue(memoria.current(0) == null, "al empezar no hay objetivo");
+		memoria.mark(a, 10, 100);
+		helper.assertTrue(a.equals(memoria.current(109)), "sigue marcado dentro de la memoria");
+		helper.assertTrue(memoria.current(110) == null, "pasada la memoria se olvida");
+		memoria.mark(a, 200, 100);
+		memoria.mark(b, 250, 100);
+		helper.assertTrue(b.equals(memoria.current(251)), "golpear a otro reemplaza la marca");
+		memoria.clear();
+		helper.assertTrue(memoria.current(251) == null, "clear() la borra");
 		helper.succeed();
 	}
 }

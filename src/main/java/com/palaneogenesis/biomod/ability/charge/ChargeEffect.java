@@ -19,6 +19,13 @@ public final class ChargeEffect {
 	public static final double TICKS_PER_SECOND = 20.0D;
 	/** Por debajo de esta velocidad (bloques por segundo) la Embestida no golpea. Caminar es ~4.3. */
 	public static final double MIN_HIT_SPEED = 2.0D;
+	/**
+	 * Aumento de la velocidad BASE del jugador mientras dura la Embestida, como fracción de su velocidad
+	 * base (0.4 = +40 %, lo que da un efecto de Velocidad II). Se aplica como modificador del atributo de
+	 * velocidad de movimiento (no como poción) y se mantiene en todas las fases: corriendo, caminando y
+	 * frenando (la frenada la sigue pisando la Lentitud).
+	 */
+	public static final double BASE_SPEED_BOOST = 0.4D;
 	/** Fuerza del empujón que recibe el golpeado, en la dirección en que corre el jugador. */
 	public static final double KNOCKBACK = 1.0D;
 

@@ -1,6 +1,7 @@
 package com.palaneogenesis.event;
 
 import com.palaneogenesis.Palaneogenesis;
+import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.capability.AncientTransformationProvider;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.network.TransformationEffectsPacket;
@@ -41,13 +42,15 @@ import java.util.UUID;
  * se desconecta transformado puede volver a loguearse ya transformado, y el cliente recién
  * conectado todavía no vio ese estado.
  *
- * A propósito NO hay PlayerEvent.Clone acá (ver capability.IAncientTransformationData): un Player nuevo
+ * PlayerEvent.Clone acá SOLO copia cuando NO fue una muerte (ver #onClone: volver del End). Para la
+ * muerte, a propósito no se copia nada (ver capability.IAncientTransformationData): un Player nuevo
  * recibe un AncientTransformationProvider nuevo con el flag en false por default - así es como la
  * reversión por muerte (Sección 3.5) queda resuelta gratis, sin código explícito de "revertir en
- * el respawn". Agregar un Clone que copie el flag rompería justamente ese mecanismo. Por el mismo
- * motivo, tampoco hace falta sincronizar en el respawn (a diferencia de HeartArrayEvents): el
- * Player nuevo y su LocalPlayer correspondiente arrancan los dos en false por default, ya
- * coinciden sin necesidad de un paquete.
+ * el respawn". Copiar el flag también al morir rompería justamente ese mecanismo. Al volver del
+ * End, en cambio, vanilla conserva los atributos (velocidad, daño y vida máxima de la transformación):
+ * si el flag no se copiara quedaría un jugador con los atributos de Ancient sin estar transformado.
+ * Por eso en ese caso sí se copia (#onClone), y el respawn sincroniza el flag con el dueño
+ * (#onPlayerRespawn).
  *
  * ESO VALE SOLO PARA EL FLAG. El aura y el brillo de ojos viven aparte, en
  * client.TransformationEffectsClientState (un Set de IDs de entidad), y ese set solo se
@@ -107,6 +110,28 @@ public class AncientTransformationEvents {
 	}
 
 	/**
+	 * Volver del End (no una muerte): el jugador conserva la transformación, su castigo por abuso y sus
+	 * corazones, igual que vanilla conserva sus atributos. Una muerte NO copia nada: ahí la reversión
+	 * (Sección 3.5) sale de que el jugador nuevo arranca con todo en su valor por defecto.
+	 */
+	@SubscribeEvent
+	public static void onClone(PlayerEvent.Clone event) {
+		if (event.isWasDeath()) {
+			return;
+		}
+		Player original = event.getOriginal();
+		original.reviveCaps();
+		original.getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA).ifPresent(old ->
+			event.getEntity().getCapability(Capabilities.ANCIENT_TRANSFORMATION_DATA).ifPresent(data -> {
+				data.setTransformed(old.isTransformed());
+				data.setMaxHealthPenaltyHearts(old.getMaxHealthPenaltyHearts());
+			}));
+		original.getCapability(Capabilities.HEART_ARRAY_DATA).ifPresent(old ->
+			event.getEntity().getCapability(Capabilities.HEART_ARRAY_DATA).ifPresent(data -> data.restore(old.snapshot())));
+		original.invalidateCaps();
+	}
+
+	/**
 	 * Al reaparecer (tras morir, o al volver del End) el flag arranca en false (ver la nota de la
 	 * clase), pero los clientes todavía tienen la ID de este jugador en
 	 * client.TransformationEffectsClientState como activa. Se avisa el estado real a todos los que
@@ -116,6 +141,8 @@ public class AncientTransformationEvents {
 	@SubscribeEvent
 	public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
 		if (event.getEntity() instanceof ServerPlayer player) {
+			// Tras volver del End el flag se copió (#onClone) y el cliente nuevo arranca en false: se lo avisa.
+			AncientTransformation.sync(player);
 			AncientTransformation.broadcastEffects(player, AncientTransformation.isTransformed(player));
 		}
 	}

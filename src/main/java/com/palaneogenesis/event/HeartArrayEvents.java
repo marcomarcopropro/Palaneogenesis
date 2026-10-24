@@ -18,8 +18,8 @@ import net.minecraftforge.fml.common.Mod;
  * AncientTransformationEvents a propósito: esa clase sólo se ocupa del flag de transformación (que nunca
  * necesitó llegar al cliente), esta sólo del array de corazones (que sí, ver util.HeartArray).
  *
- * A propósito NO hay PlayerEvent.Clone acá tampoco (mismo motivo documentado en
- * AncientTransformationEvents): un Player nuevo recibe un HeartArrayProvider nuevo, vacío, vía este
+ * A propósito NO hay PlayerEvent.Clone acá para la muerte (mismo motivo documentado en
+ * AncientTransformationEvents, que sí copia el array al volver del End): un Player nuevo recibe un HeartArrayProvider nuevo, vacío, vía este
  * mismo AttachCapabilitiesEvent - y event.HeartEvents#onLivingDeath ya vacía el array
  * explícitamente antes del respawn de todos modos.
  */

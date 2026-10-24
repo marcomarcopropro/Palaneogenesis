@@ -6,7 +6,8 @@ package com.palaneogenesis.capability;
  * leer para gatear sus propios sistemas más adelante, pero esta capability en sí no conoce esos
  * sistemas todavía - no se anticipa nada de eso acá.
  *
- * La reversión por muerte (Sección 3.5) depende de que esto NO se copie en PlayerEvent.Clone -
+ * La reversión por muerte (Sección 3.5) depende de que esto NO se copie en PlayerEvent.Clone cuando
+ * fue una muerte (al volver del End sí se copia) -
  * ver {@link com.palaneogenesis.event.AncientTransformationEvents}. Eso es ausencia de código, no algo
  * que esta interfaz o su implementación necesiten resolver.
  */

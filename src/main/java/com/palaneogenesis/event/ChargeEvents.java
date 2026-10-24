@@ -4,9 +4,11 @@ import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.biomod.ability.charge.ChargeAbility;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -21,6 +23,19 @@ public class ChargeEvents {
 	public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
 		if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer player) {
 			ChargeAbility.tick(player);
+		}
+	}
+
+	/**
+	 * Durante la Embestida el jugador no recibe daño físico (ChargeAbility#isPhysicalDamage). Se cancela el
+	 * ataque entero, así que tampoco hay retroceso ni invulnerabilidad gastada. Prioridad alta para
+	 * decidir antes que los demás handlers (corazones, escudos, etc.).
+	 */
+	@SubscribeEvent(priority = EventPriority.HIGHEST)
+	public static void onLivingAttack(LivingAttackEvent event) {
+		if (event.getEntity() instanceof ServerPlayer player && ChargeAbility.isCharging(player)
+			&& ChargeAbility.isPhysicalDamage(event.getSource())) {
+			event.setCanceled(true);
 		}
 	}
 

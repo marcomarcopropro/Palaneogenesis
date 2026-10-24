@@ -16,9 +16,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
@@ -35,7 +41,9 @@ import java.util.UUID;
  *
  * Volver a apretar la tecla durante el modo lo cancela. El cooldown empieza al terminar o al
  * cancelar (P-7), no al activar: lo lleva AbilityTimers (startActive con el cooldown de después).
- * El jugador conserva el control todo el tiempo.
+ * El jugador conserva el control todo el tiempo. Mientras dura sube su velocidad base (ChargeEffect
+ * #BASE_SPEED_BOOST, en todas las fases) y no recibe daño físico (#isPhysicalDamage, que cancela
+ * event.ChargeEvents).
  *
  * El modo se cierra solo si el jugador muere, cambia de dimensión, se desconecta o se queda sin el
  * módulo equipado; o por tiempo (AbilityEvents / onExpired).
@@ -55,6 +63,8 @@ public final class ChargeAbility implements AbilityHandler {
 	public static final double REACH_MARGIN = 0.4D;
 	/** Amplificador de la Lentitud de la frenada (nivel VII: la velocidad llega a 0, como la parálisis del Pistón). */
 	public static final int BRAKE_AMPLIFIER = 6;
+	/** Id fijo del modificador de velocidad de la Embestida, para poder quitarlo siempre. */
+	private static final UUID SPEED_MODIFIER_ID = UUID.fromString("5b0f6a52-1c3e-4d7a-9a41-0e7c2f9b6d31");
 	/** Un desplazamiento mayor que esto en un tick (bloques) es un teletransporte, no movimiento. */
 	private static final double TELEPORT_DISTANCE = 5.0D;
 
@@ -98,12 +108,14 @@ public final class ChargeAbility implements AbilityHandler {
 		ChargeSettings settings = settings();
 		CooldownManager.startActive(player, AbilityId.CHARGE, settings.durationTicks(), settings.cooldownTicks());
 		RUNS.put(player.getUUID(), new Run(player.level().dimension(), player.getX(), player.getZ()));
+		applySpeed(player);
 		player.level().playSound(null, player.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 0.6F, 1.2F);
 	}
 
 	@Override
 	public void onExpired(ServerPlayer player, ModuleCounts counts) {
 		RUNS.remove(player.getUUID());
+		removeSpeed(player);
 	}
 
 	/** true si el jugador está en modo Embestida. */
@@ -114,6 +126,7 @@ public final class ChargeAbility implements AbilityHandler {
 	/** Cierra la Embestida del jugador (cancelada, muerte, módulo desequipado...) y arranca su cooldown. */
 	public static void end(ServerPlayer player) {
 		RUNS.remove(player.getUUID());
+		removeSpeed(player);
 		// Si no estaba ACTIVA no hace nada, así que sirve también para soltar un estado que quedó sin sesión.
 		CooldownManager.finishActive(player, AbilityId.CHARGE);
 	}
@@ -127,6 +140,7 @@ public final class ChargeAbility implements AbilityHandler {
 		if (CooldownManager.state(player, AbilityId.CHARGE) != AbilityState.ACTIVE) {
 			// Terminó por tiempo, o el estado se reseteó (comando de depuración): ya no hay Embestida.
 			RUNS.remove(player.getUUID());
+			removeSpeed(player);
 			return;
 		}
 		if (!player.isAlive() || player.level().dimension() != run.dimension
@@ -194,6 +208,39 @@ public final class ChargeAbility implements AbilityHandler {
 		session.brake(brakeTicks);
 		player.setSprinting(false);
 		player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, brakeTicks, BRAKE_AMPLIFIER, false, false, false));
+	}
+
+	/**
+	 * Sube la velocidad BASE del jugador durante la Embestida: un modificador transitorio (no se guarda,
+	 * así que no puede quedar pegado tras reiniciar) sobre el atributo de velocidad de movimiento, no una
+	 * poción. MULTIPLY_BASE suma BASE_SPEED_BOOST x la velocidad base, y el sprint y la Lentitud de la
+	 * frenada se componen encima como siempre.
+	 */
+	private static void applySpeed(ServerPlayer player) {
+		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed == null) {
+			return;
+		}
+		speed.removeModifier(SPEED_MODIFIER_ID);
+		speed.addTransientModifier(new AttributeModifier(SPEED_MODIFIER_ID, "Palaneogenesis charge speed",
+			ChargeEffect.BASE_SPEED_BOOST, AttributeModifier.Operation.MULTIPLY_BASE));
+	}
+
+	private static void removeSpeed(ServerPlayer player) {
+		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed != null) {
+			speed.removeModifier(SPEED_MODIFIER_ID);
+		}
+	}
+
+	/**
+	 * Daño físico: el que llega por contacto directo, golpes de mobs y de jugadores, y proyectiles
+	 * (flechas, tridentes, bolas de los mobs). Durante la Embestida el jugador no lo recibe. El fuego, las
+	 * explosiones, la magia, la caída y el vacío NO cuentan como físicos y siguen haciendo daño.
+	 */
+	public static boolean isPhysicalDamage(DamageSource source) {
+		return source.is(DamageTypes.MOB_ATTACK) || source.is(DamageTypes.MOB_ATTACK_NO_AGGRO)
+			|| source.is(DamageTypes.PLAYER_ATTACK) || source.is(DamageTypeTags.IS_PROJECTILE);
 	}
 
 	/** Olvida la Embestida de un jugador que se desconectó. */
