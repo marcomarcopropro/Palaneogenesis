@@ -26,6 +26,7 @@ public class AbilityEvents {
 		if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) {
 			return;
 		}
+		AbilityManager.flushPending(player);
 		int expired = CooldownManager.tick(player);
 		AbilityManager.onActiveExpired(player, expired);
 		// T2.5: un paquete por cambio de estado (no por tick). Varios cambios en el mismo tick

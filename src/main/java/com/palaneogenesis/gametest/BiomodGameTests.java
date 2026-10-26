@@ -18,6 +18,8 @@ import com.palaneogenesis.biomod.ability.megajump.MegaJumpEffect;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpSettings;
 import com.palaneogenesis.biomod.ability.pickaxe.BlockJob;
 import com.palaneogenesis.biomod.ability.pickaxe.PickaxeVolume;
+import com.palaneogenesis.biomod.ability.synergy.PickaxePistonSynergy;
+import com.palaneogenesis.biomod.ability.synergy.SynergyPairing;
 import com.palaneogenesis.biomod.ability.piston.PistonEffect;
 import com.palaneogenesis.biomod.ability.piston.PistonSettings;
 import com.palaneogenesis.biomod.ability.piston.PistonStrike;
@@ -845,6 +847,74 @@ public class BiomodGameTests {
 			DroneAppleSyncPacket.encode(new DroneAppleSyncPacket(ticks), buffer);
 			helper.assertTrue(DroneAppleSyncPacket.decode(buffer).remainingTicks() == ticks, "el paquete devuelve " + ticks);
 		}
+		helper.succeed();
+	}
+
+	// ---- Sinergia Pico + Pistón (megahabilidad, sin Minecraft) ------------------------------------
+
+	@GameTest(template = TEMPLATE)
+	public static void sinergiaPicoPistonEsUnCuadradoDe7x7x1(GameTestHelper helper) {
+		helper.assertTrue(PickaxePistonSynergy.SQUARE_WIDTH == 7 && PickaxePistonSynergy.SQUARE_DEPTH == 1, "7x7 de lado, 1 de espesor");
+		int[] golpe = {10, 64, -5};
+		int[][] direcciones = {{0, 0, 1}, {0, 0, -1}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
+		for (int[] d : direcciones) {
+			List<int[]> bloques = PickaxeVolume.plan(golpe, d[0], d[1], d[2], PickaxePistonSynergy.SQUARE_WIDTH, PickaxePistonSynergy.SQUARE_DEPTH);
+			helper.assertTrue(bloques.size() == 49, "7x7x1 = 49 bloques, no un cubo de 343");
+			Set<String> distintos = new HashSet<>();
+			for (int[] b : bloques) {
+				distintos.add(clave(b));
+				int profundidad = (b[0] - golpe[0]) * d[0] + (b[1] - golpe[1]) * d[1] + (b[2] - golpe[2]) * d[2];
+				helper.assertTrue(profundidad == 0, "todo en la misma capa que el bloque mirado");
+				// Los dos ejes del plano llegan a 3 bloques del centro, y a ningún otro lado.
+				for (int eje = 0; eje < 3; eje++) {
+					int distancia = Math.abs(b[eje] - golpe[eje]);
+					helper.assertTrue(d[eje] != 0 ? distancia == 0 : distancia <= 3, "centrado en el bloque mirado: +-3 en el plano");
+				}
+			}
+			helper.assertTrue(distintos.size() == 49 && distintos.contains(clave(golpe)), "sin repetidos e incluye el bloque mirado");
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void sinergiaEmparejaLasDosTeclasDentroDeLaTolerancia(GameTestHelper helper) {
+		int pico = 3;
+		int piston = 0;
+		int ventana = 5;
+		SynergyPairing a = new SynergyPairing();
+		helper.assertTrue(a.press(piston, 100, ventana) == SynergyPairing.Result.HELD && a.pending() == piston, "la primera tecla queda retenida");
+		helper.assertTrue(a.press(pico, 105, ventana) == SynergyPairing.Result.COMBO && a.pending() == SynergyPairing.NONE, "la otra a 5 ticks es combo y no queda nada retenido");
+		SynergyPairing mismoTick = new SynergyPairing();
+		mismoTick.press(pico, 200, ventana);
+		helper.assertTrue(mismoTick.press(piston, 200, ventana) == SynergyPairing.Result.COMBO, "en el mismo tick también es combo (el orden no importa)");
+		// Apretar la misma tecla dos veces no es combo ni corre el plazo.
+		SynergyPairing misma = new SynergyPairing();
+		misma.press(pico, 300, ventana);
+		helper.assertTrue(misma.press(pico, 303, ventana) == SynergyPairing.Result.HELD, "la misma tecla dos veces no es combo");
+		helper.assertTrue(misma.takeDue(305, ventana) == SynergyPairing.NONE && misma.takeDue(306, ventana) == pico, "el plazo cuenta desde la primera pulsación");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void sinergiaSueltaLaTeclaRetenidaSiLaOtraNoLlega(GameTestHelper helper) {
+		int pico = 3;
+		int piston = 0;
+		int ventana = 5;
+		SynergyPairing p = new SynergyPairing();
+		p.press(piston, 100, ventana);
+		helper.assertTrue(p.takeDue(105, ventana) == SynergyPairing.NONE && p.pending() == piston, "dentro del plazo no se suelta");
+		helper.assertTrue(p.takeDue(106, ventana) == piston && p.pending() == SynergyPairing.NONE, "vencido el plazo se suelta como pulsación suelta");
+		helper.assertTrue(p.takeDue(107, ventana) == SynergyPairing.NONE, "ya no queda nada");
+		// La otra tecla llega tarde: ya no hay nada retenido, queda retenida ella.
+		helper.assertTrue(p.press(pico, 106, ventana) == SynergyPairing.Result.HELD && p.pending() == pico, "una tecla tardía no forma combo");
+		// Una retenida vieja (por ejemplo el jugador murió) se descarta sin ejecutarse.
+		SynergyPairing vieja = new SynergyPairing();
+		vieja.press(piston, 100, ventana);
+		helper.assertTrue(vieja.takeDue(100 + ventana + SynergyPairing.STALE_TICKS + 1, ventana) == SynergyPairing.NONE && vieja.pending() == SynergyPairing.NONE,
+			"una retenida vieja se descarta, no se ejecuta");
+		SynergyPairing cancelada = new SynergyPairing();
+		cancelada.press(pico, 50, ventana);
+		helper.assertTrue(cancelada.cancel() == pico && cancelada.pending() == SynergyPairing.NONE && cancelada.cancel() == SynergyPairing.NONE, "cancel() la saca");
 		helper.succeed();
 	}
 }

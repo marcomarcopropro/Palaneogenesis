@@ -58,29 +58,42 @@ public final class PickaxeAbility implements AbilityHandler {
 
 	@Override
 	public void onPress(ServerPlayer player, ModuleCounts counts, AbilityState state) {
-		if (JOBS.containsKey(player.getUUID())) {
-			return;
-		}
 		BlockHitResult hit = AbilityTargeting.pickBlock(player, REACH);
 		if (hit == null) {
 			return;
 		}
+		if (breakPrism(player, hit.getBlockPos(), hit.getDirection().getOpposite(), PickaxeVolume.WIDTH, PickaxeVolume.DEPTH)) {
+			CooldownManager.startCooldown(player, AbilityId.PICKAXE, Config.COMMON.biomod.pickaxeCooldownTicks.get());
+		}
+	}
+
+	/**
+	 * Rompe un prisma de width x width bloques de sección y depth de profundidad, que arranca en
+	 * {@code origin} y avanza hacia {@code dig} (el sentido contrario a la cara que se miró). Es lo que
+	 * comparten el Pico (3x3x3) y las sinergias (Pico + Pistón: 7x7x1). Rompe con las reglas de la clase:
+	 * el primer lote ya en esta llamada y el resto en los ticks siguientes.
+	 *
+	 * NO toca ningún cooldown: de eso se ocupa quien llama. Devuelve false, sin romper nada, si el jugador
+	 * todavía tiene un trabajo en curso o si no hay nada rompible en el prisma.
+	 */
+	public static boolean breakPrism(ServerPlayer player, BlockPos origin, Direction dig, int width, int depth) {
+		if (JOBS.containsKey(player.getUUID())) {
+			return false;
+		}
 		Level level = player.level();
-		Direction dig = hit.getDirection().getOpposite();
-		BlockPos origin = hit.getBlockPos();
 		List<int[]> volume = PickaxeVolume.plan(new int[] {origin.getX(), origin.getY(), origin.getZ()},
-			dig.getStepX(), dig.getStepY(), dig.getStepZ(), PickaxeVolume.WIDTH, PickaxeVolume.DEPTH);
+			dig.getStepX(), dig.getStepY(), dig.getStepZ(), width, depth);
 		List<int[]> breakable = volume.stream().filter(p -> isBreakable(level, toPos(p))).toList();
 		if (breakable.isEmpty()) {
-			return;
+			return false;
 		}
 		BlockJob job = new BlockJob(breakable);
-		CooldownManager.startCooldown(player, AbilityId.PICKAXE, Config.COMMON.biomod.pickaxeCooldownTicks.get());
 		player.swing(InteractionHand.MAIN_HAND, true);
 		runBatch(player, job);
 		if (!job.isDone()) {
 			JOBS.put(player.getUUID(), new Job(level.dimension(), job));
 		}
+		return true;
 	}
 
 	/** Avanza el trabajo en curso del jugador, si tiene uno (lo llama PickaxeEvents cada tick). */
