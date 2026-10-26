@@ -14,11 +14,14 @@ import com.palaneogenesis.biomod.ability.drones.DroneSettings;
 import com.palaneogenesis.biomod.ability.drones.DroneTargetMemory;
 import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
 import com.palaneogenesis.biomod.ability.megajump.FlightPhase;
+import com.palaneogenesis.biomod.ability.megajump.LiftPhase;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpEffect;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpSettings;
 import com.palaneogenesis.biomod.ability.pickaxe.BlockJob;
 import com.palaneogenesis.biomod.ability.pickaxe.PickaxeVolume;
+import com.palaneogenesis.biomod.ability.synergy.ChargeProbe;
 import com.palaneogenesis.biomod.ability.synergy.PickaxePistonSynergy;
+import com.palaneogenesis.biomod.ability.synergy.Synergies;
 import com.palaneogenesis.biomod.ability.synergy.SynergyPairing;
 import com.palaneogenesis.biomod.ability.piston.PistonEffect;
 import com.palaneogenesis.biomod.ability.piston.PistonSettings;
@@ -850,28 +853,84 @@ public class BiomodGameTests {
 		helper.succeed();
 	}
 
+	// ---- Sinergias Mega Jump + Pistón y Pico + Embestida (lógica pura, sin Minecraft) ----------------
+
+	@GameTest(template = TEMPLATE)
+	public static void sinergiasDecidenQuienSeEmpareja(GameTestHelper helper) {
+		ModuleCounts picoPiston = ModuleCounts.EMPTY.with(BiomodModule.PISTON, 1).with(BiomodModule.PICKAXE, 1);
+		helper.assertTrue(Synergies.enabled(picoPiston, AbilityId.PICKAXE, AbilityId.PISTON)
+			&& Synergies.enabled(picoPiston, AbilityId.PISTON, AbilityId.PICKAXE), "Pico + Pistón: con 1 de cada, en cualquier orden");
+		helper.assertTrue(!Synergies.enabled(ModuleCounts.EMPTY.with(BiomodModule.PISTON, 1), AbilityId.PICKAXE, AbilityId.PISTON), "sin Pico no hay sinergia");
+		ModuleCounts salto3 = ModuleCounts.EMPTY.with(BiomodModule.MEGA_JUMP, 3).with(BiomodModule.PISTON, 1);
+		helper.assertTrue(Synergies.enabled(salto3, AbilityId.MEGA_JUMP, AbilityId.PISTON)
+			&& Synergies.enabled(salto3, AbilityId.PISTON, AbilityId.MEGA_JUMP), "Mega Jump + Pistón: con 3 Mega Jump y 1 Pistón");
+		helper.assertTrue(!Synergies.enabled(ModuleCounts.EMPTY.with(BiomodModule.MEGA_JUMP, 2).with(BiomodModule.PISTON, 1), AbilityId.MEGA_JUMP, AbilityId.PISTON),
+			"con 2 Mega Jump no hay sinergia");
+		helper.assertTrue(!Synergies.enabled(ModuleCounts.EMPTY.with(BiomodModule.MEGA_JUMP, 3), AbilityId.MEGA_JUMP, AbilityId.PISTON), "sin Pistón no hay sinergia");
+		helper.assertTrue(!Synergies.enabled(salto3, AbilityId.MEGA_JUMP, AbilityId.PICKAXE) && !Synergies.enabled(salto3, AbilityId.CHARGE, AbilityId.PISTON),
+			"las combinaciones no listadas no tienen sinergia");
+		helper.assertTrue(Synergies.partners(AbilityId.PISTON).length == 2 && Synergies.partners(AbilityId.MEGA_JUMP).length == 1
+			&& Synergies.partners(AbilityId.PICKAXE).length == 1 && Synergies.partners(AbilityId.CHARGE).length == 0, "parejas de cada tecla");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void enemigoElevadoSeSigueHastaQueCae(GameTestHelper helper) {
+		LiftPhase normal = new LiftPhase();
+		helper.assertTrue(normal.update(true) == LiftPhase.Result.WAITING && !normal.hasBeenAirborne(), "justo tras elevarlo todavía se ve en el suelo: se espera");
+		helper.assertTrue(normal.update(false) == LiftPhase.Result.WAITING && normal.hasBeenAirborne(), "en el aire: sigue");
+		helper.assertTrue(normal.update(false) == LiftPhase.Result.WAITING, "sigue en el aire");
+		helper.assertTrue(normal.update(true) == LiftPhase.Result.LANDED, "al apoyarse tras haber estado en el aire: aterrizó");
+		LiftPhase atrapado = new LiftPhase();
+		LiftPhase.Result ultimo = LiftPhase.Result.WAITING;
+		for (int i = 0; i < LiftPhase.TAKEOFF_TICKS; i++) {
+			ultimo = atrapado.update(true);
+		}
+		helper.assertTrue(ultimo == LiftPhase.Result.EXPIRED, "si nunca despega (techo encima) se descarta sin efecto");
+		LiftPhase volador = new LiftPhase();
+		LiftPhase.Result fin = LiftPhase.Result.WAITING;
+		for (int i = 0; i < LiftPhase.MAX_TICKS; i++) {
+			fin = volador.update(false);
+		}
+		helper.assertTrue(fin == LiftPhase.Result.EXPIRED, "si nunca vuelve a apoyarse se descarta al tope de ticks");
+		// 10 bloques de elevación: la altura que alcanza la velocidad calculada es la pedida.
+		double altura = MegaJumpEffect.apex(MegaJumpEffect.launchVelocity(10.0D));
+		helper.assertTrue(Math.abs(altura - 10.0D) < 0.05D, "la velocidad de elevación alcanza 10 bloques");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void embestidaQueMinaExcavaHaciaDondeCorre(GameTestHelper helper) {
+		helper.assertTrue(java.util.Arrays.equals(ChargeProbe.digStep(1.0D, 0.0D), new int[] {1, 0}), "corre hacia +X");
+		helper.assertTrue(java.util.Arrays.equals(ChargeProbe.digStep(-0.2D, -0.98D), new int[] {0, -1}), "corre casi hacia -Z: gana Z");
+		helper.assertTrue(java.util.Arrays.equals(ChargeProbe.digStep(-0.8D, 0.6D), new int[] {-1, 0}), "gana el eje con más peso");
+		helper.assertTrue(java.util.Arrays.equals(ChargeProbe.digStep(0.0D, 1.0D), new int[] {0, 1}), "corre hacia +Z");
+		helper.assertTrue(PickaxeVolume.WIDTH == 3 && PickaxeVolume.DEPTH == 3, "mina como el Pico Gigante: 3x3x3");
+		helper.succeed();
+	}
+
 	// ---- Sinergia Pico + Pistón (megahabilidad, sin Minecraft) ------------------------------------
 
 	@GameTest(template = TEMPLATE)
-	public static void sinergiaPicoPistonEsUnCuadradoDe7x7x1(GameTestHelper helper) {
-		helper.assertTrue(PickaxePistonSynergy.SQUARE_WIDTH == 7 && PickaxePistonSynergy.SQUARE_DEPTH == 1, "7x7 de lado, 1 de espesor");
+	public static void sinergiaPicoPistonEsUnPrismaDe7x7x3(GameTestHelper helper) {
+		helper.assertTrue(PickaxePistonSynergy.SQUARE_WIDTH == 7 && PickaxePistonSynergy.SQUARE_DEPTH == 3, "7x7 de cara, 3 de espesor");
 		int[] golpe = {10, 64, -5};
 		int[][] direcciones = {{0, 0, 1}, {0, 0, -1}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
 		for (int[] d : direcciones) {
 			List<int[]> bloques = PickaxeVolume.plan(golpe, d[0], d[1], d[2], PickaxePistonSynergy.SQUARE_WIDTH, PickaxePistonSynergy.SQUARE_DEPTH);
-			helper.assertTrue(bloques.size() == 49, "7x7x1 = 49 bloques, no un cubo de 343");
+			helper.assertTrue(bloques.size() == 147, "7x7x3 = 147 bloques, no un cubo de 343");
 			Set<String> distintos = new HashSet<>();
 			for (int[] b : bloques) {
 				distintos.add(clave(b));
 				int profundidad = (b[0] - golpe[0]) * d[0] + (b[1] - golpe[1]) * d[1] + (b[2] - golpe[2]) * d[2];
-				helper.assertTrue(profundidad == 0, "todo en la misma capa que el bloque mirado");
+				helper.assertTrue(profundidad >= 0 && profundidad <= 2, "3 capas: la del bloque mirado y las 2 de adentro");
 				// Los dos ejes del plano llegan a 3 bloques del centro, y a ningún otro lado.
 				for (int eje = 0; eje < 3; eje++) {
 					int distancia = Math.abs(b[eje] - golpe[eje]);
-					helper.assertTrue(d[eje] != 0 ? distancia == 0 : distancia <= 3, "centrado en el bloque mirado: +-3 en el plano");
+					helper.assertTrue(d[eje] != 0 ? distancia <= 2 : distancia <= 3, "centrado en el bloque mirado: +-3 en la cara, hasta 2 de profundidad");
 				}
 			}
-			helper.assertTrue(distintos.size() == 49 && distintos.contains(clave(golpe)), "sin repetidos e incluye el bloque mirado");
+			helper.assertTrue(distintos.size() == 147 && distintos.contains(clave(golpe)), "sin repetidos e incluye el bloque mirado");
 		}
 		helper.succeed();
 	}

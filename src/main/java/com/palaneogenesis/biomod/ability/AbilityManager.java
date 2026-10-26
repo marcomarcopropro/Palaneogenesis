@@ -3,7 +3,10 @@ package com.palaneogenesis.biomod.ability;
 import com.mojang.logging.LogUtils;
 import com.palaneogenesis.biomod.BiomodState;
 import com.palaneogenesis.biomod.module.BiomodModules;
+import com.palaneogenesis.biomod.ability.synergy.MegaJumpPistonSynergy;
+import com.palaneogenesis.biomod.ability.synergy.PickaxeChargeSynergy;
 import com.palaneogenesis.biomod.ability.synergy.PickaxePistonSynergy;
+import com.palaneogenesis.biomod.ability.synergy.Synergies;
 import com.palaneogenesis.biomod.ability.synergy.SynergyPairing;
 import com.palaneogenesis.biomod.module.ModuleCounts;
 import com.palaneogenesis.config.Config;
@@ -27,11 +30,15 @@ import java.util.UUID;
  * habilidades reales (F3 a F5) no hay handlers y la pulsación solo queda registrada en el log, que
  * es el criterio de aceptación de T2.3.
  *
- * Sinergias (megahabilidades): si el jugador tiene LISTAS las dos habilidades de una sinergia (hoy Pico
- * y Pistón, PickaxePistonSynergy), la primera tecla se RETIENE hasta biomod.synergy.windowTicks por si
- * llega la otra (SynergyPairing). Si llega, se activa la sinergia; si no, la retenida se ejecuta como
- * siempre (flushPending, cada tick). Con una de las dos en cooldown o sin su módulo no se retiene nada
- * y cada tecla responde en el acto.
+ * Sinergias (megahabilidades) de dos teclas (Synergies: Pico + Pistón y Mega Jump + Pistón): si el jugador
+ * tiene LISTAS las dos habilidades de una sinergia disponible, la primera tecla se RETIENE hasta
+ * biomod.synergy.windowTicks por si llega la otra (SynergyPairing). Si llega, se activa la sinergia; si no, la
+ * retenida se ejecuta como siempre (flushPending, cada tick). Con una de las dos en cooldown o sin sus
+ * módulos no se retiene nada y cada tecla responde en el acto. Solo se retiene UNA tecla a la vez: si llega otra
+ * que no es su pareja, la retenida se suelta sola primero.
+ *
+ * Pico + Embestida (PickaxeChargeSynergy) no empareja teclas: apretar el Pico con la Embestida ACTIVA la activa
+ * en el acto, antes de mirar el emparejamiento (con la Embestida activa, el combo Pico + Pistón no se hace).
  */
 public final class AbilityManager {
 
@@ -98,15 +105,26 @@ public final class AbilityManager {
 		if (handler == null) {
 			return log(player, id, PressResult.NO_HANDLER, counts);
 		}
-		AbilityId partner = PickaxePistonSynergy.partner(id);
-		if (partner != null) {
+		if (id == AbilityId.PICKAXE && PickaxeChargeSynergy.activate(player, counts)) {
+			return log(player, id, PressResult.SYNERGY, counts);
+		}
+		AbilityId[] partners = Synergies.partners(id);
+		if (partners.length > 0) {
 			SynergyPairing pairing = PAIRINGS.computeIfAbsent(player.getUUID(), uuid -> new SynergyPairing());
 			int window = Config.COMMON.biomod.synergyWindowTicks.get();
-			if (pairing.pending() == partner.ordinal()) {
+			AbilityId partner = heldPartner(pairing, partners);
+			if (partner == null && pairing.pending() != SynergyPairing.NONE && pairing.pending() != id.ordinal()) {
+				// Hay otra tecla retenida que no es pareja de esta: se suelta sola ahora, sin perderla.
+				AbilityId stray = AbilityId.fromOrdinal(pairing.cancel());
+				if (stray != null) {
+					runAlone(player, stray, counts);
+				}
+			}
+			if (partner != null) {
 				if (pairing.press(id.ordinal(), now, window) == SynergyPairing.Result.COMBO) {
 					return synergy(player, partner, id, counts);
 				}
-			} else if (canPair(player, counts, partner)) {
+			} else if (canPair(player, counts, id, partners)) {
 				pairing.press(id.ordinal(), now, window);
 				return log(player, id, PressResult.PENDING, counts);
 			} else if (pairing.pending() == id.ordinal()) {
@@ -119,18 +137,43 @@ public final class AbilityManager {
 		return log(player, id, PressResult.DISPATCHED, counts);
 	}
 
-	/** La otra habilidad de la sinergia puede participar: su módulo está equipado, está LISTA y tiene handler. */
-	private static boolean canPair(ServerPlayer player, ModuleCounts counts, AbilityId partner) {
-		return counts.has(partner.module()) && HANDLERS.containsKey(partner)
-			&& CooldownManager.state(player, partner) == AbilityState.READY;
+	/** La pareja de esta tecla que está retenida esperándola, o null si no hay ninguna. */
+	private static AbilityId heldPartner(SynergyPairing pairing, AbilityId[] partners) {
+		for (AbilityId partner : partners) {
+			if (pairing.pending() == partner.ordinal()) {
+				return partner;
+			}
+		}
+		return null;
 	}
 
 	/**
-	 * Llegaron las dos teclas: se intenta la sinergia. Si no se puede (sin bloque a la vista, nada rompible),
-	 * no se pierde ninguna pulsación: cada tecla hace lo suyo, primero la que estaba retenida.
+	 * Alguna pareja de esta habilidad puede participar: la sinergia está disponible con los módulos equipados
+	 * (Synergies#enabled), la pareja está LISTA y tiene handler.
+	 */
+	private static boolean canPair(ServerPlayer player, ModuleCounts counts, AbilityId id, AbilityId[] partners) {
+		for (AbilityId partner : partners) {
+			if (Synergies.enabled(counts, id, partner) && HANDLERS.containsKey(partner)
+				&& CooldownManager.state(player, partner) == AbilityState.READY) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Llegaron las dos teclas: se intenta la sinergia que les toca (Synergies). Si no se puede (sin bloque a la
+	 * vista, Mega Jump sin suelo...), no se pierde ninguna pulsación: cada tecla hace lo suyo, primero la que
+	 * estaba retenida.
 	 */
 	private static PressResult synergy(ServerPlayer player, AbilityId first, AbilityId second, ModuleCounts counts) {
-		if (PickaxePistonSynergy.activate(player, counts)) {
+		boolean done = false;
+		if (Synergies.isPair(first, second, AbilityId.PISTON, AbilityId.PICKAXE)) {
+			done = PickaxePistonSynergy.activate(player, counts);
+		} else if (Synergies.isPair(first, second, AbilityId.PISTON, AbilityId.MEGA_JUMP)) {
+			done = MegaJumpPistonSynergy.activate(player, counts);
+		}
+		if (done) {
 			return log(player, second, PressResult.SYNERGY, counts);
 		}
 		runAlone(player, first, counts);

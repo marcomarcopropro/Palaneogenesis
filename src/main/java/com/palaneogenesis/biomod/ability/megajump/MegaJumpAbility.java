@@ -88,11 +88,14 @@ public final class MegaJumpAbility implements AbilityHandler {
 		final CeilingJob ceiling;
 		/** Cuándo termina el salto: lleva la cuenta de ticks y de si ya estuvo en el aire. */
 		final FlightPhase phase = new FlightPhase();
+		/** Salto de la sinergia Mega Jump + Pistón: su impacto eleva a los enemigos (LiftedEnemies). */
+		final boolean lift;
 
-		Flight(ResourceKey<Level> dimension, MegaJumpEffect effect, CeilingJob ceiling) {
+		Flight(ResourceKey<Level> dimension, MegaJumpEffect effect, CeilingJob ceiling, boolean lift) {
 			this.dimension = dimension;
 			this.effect = effect;
 			this.ceiling = ceiling;
+			this.lift = lift;
 		}
 	}
 
@@ -118,23 +121,32 @@ public final class MegaJumpAbility implements AbilityHandler {
 
 	@Override
 	public void onPress(ServerPlayer player, ModuleCounts counts, AbilityState state) {
+		launch(player, counts, false);
+	}
+
+	/**
+	 * Arranca el salto. Con {@code lift} es el de la sinergia Mega Jump + Pistón: su impacto además eleva a los
+	 * enemigos (LiftedEnemies). Devuelve false, sin gastar nada, si no puede arrancar; true si despegó y puso el
+	 * cooldown normal (la sinergia lo reemplaza por el Overdrive).
+	 */
+	public static boolean launch(ServerPlayer player, ModuleCounts counts, boolean lift) {
 		if (FLIGHTS.containsKey(player.getUUID())) {
-			return;
+			return false;
 		}
 		if (!player.onGround() || player.isPassenger() || player.isFallFlying()
 			|| player.getAbilities().flying || player.isInWater() || player.isInLava()) {
-			return;
+			return false;
 		}
 		MegaJumpEffect effect = MegaJumpEffect.forUnits(counts.get(BiomodModule.MEGA_JUMP), settings());
 		if (effect.isNone()) {
-			return;
+			return false;
 		}
 		Level level = player.level();
 		int startY = Mth.floor(player.getY() + player.getBbHeight());
 		int endY = Mth.floor(player.getY() + effect.height() + player.getBbHeight()) + 1;
 		Flight flight = new Flight(level.dimension(), effect,
 			new CeilingJob(startY, Math.min(endY, level.getMaxBuildHeight() - 1),
-				effect.ceilingWidth(), effect.maxCeilingBlocks()));
+				effect.ceilingWidth(), effect.maxCeilingBlocks()), lift);
 		FLIGHTS.put(player.getUUID(), flight);
 
 		CooldownManager.startCooldown(player, AbilityId.MEGA_JUMP, effect.cooldownTicks());
@@ -143,6 +155,7 @@ public final class MegaJumpAbility implements AbilityHandler {
 		player.hurtMarked = true;
 		player.resetFallDistance();
 		breakCeiling(player, flight, effect.launchVelocity());
+		return true;
 	}
 
 	/** true mientras el jugador está en un Mega Jump (lo usa MegaJumpEvents si NEGATE_FALL_DAMAGE está activo). */
@@ -212,7 +225,7 @@ public final class MegaJumpAbility implements AbilityHandler {
 			}
 			LOGGER.info("[megajump] {} aterrizó tras {} ticks: salvado = {}", player.getName().getString(),
 				flight.phase.ticks(), flight.phase.isRescued());
-			impact(player, flight.effect);
+			impact(player, flight.effect, flight.lift);
 		}
 	}
 
@@ -264,7 +277,7 @@ public final class MegaJumpAbility implements AbilityHandler {
 
 	// ---- Impacto --------------------------------------------------------------------------
 
-	private static void impact(ServerPlayer player, MegaJumpEffect effect) {
+	private static void impact(ServerPlayer player, MegaJumpEffect effect, boolean lift) {
 		if (!(player.level() instanceof ServerLevel level)) {
 			return;
 		}
@@ -281,6 +294,10 @@ public final class MegaJumpAbility implements AbilityHandler {
 			}
 			// mobAttack (y no playerAttack) para que el pasivo del Pistón no sume su Empuje encima.
 			entity.hurt(player.damageSources().mobAttack(player), (float) effect.impactDamage());
+			// Sinergia Mega Jump + Pistón: lo que sigue vivo tras el impacto sube y después cae con Lentitud.
+			if (lift && entity.isAlive()) {
+				LiftedEnemies.lift(player, entity, Config.COMMON.biomod.synergyLiftNear.get());
+			}
 		}
 		level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.0F);
 		int points = Mth.clamp((int) (radius * 4.0D), 12, 96);

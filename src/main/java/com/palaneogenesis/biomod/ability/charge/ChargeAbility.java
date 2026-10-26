@@ -6,6 +6,7 @@ import com.palaneogenesis.biomod.ability.AbilityState;
 import com.palaneogenesis.biomod.ability.CooldownManager;
 import com.palaneogenesis.biomod.module.BiomodModule;
 import com.palaneogenesis.biomod.module.BiomodModules;
+import com.palaneogenesis.biomod.ability.synergy.PickaxeChargeSynergy;
 import com.palaneogenesis.biomod.module.ModuleCounts;
 import com.palaneogenesis.biomod.target.TargetRules;
 import com.palaneogenesis.config.BiomodConfig;
@@ -74,6 +75,8 @@ public final class ChargeAbility implements AbilityHandler {
 		final ChargeSession session = new ChargeSession();
 		double lastX;
 		double lastZ;
+		/** Sinergia Pico + Embestida activa: choca con bloques y los mina (PickaxeChargeSynergy). Vive y muere con la Run. */
+		boolean mining;
 
 		Run(ResourceKey<Level> dimension, double x, double z) {
 			this.dimension = dimension;
@@ -119,6 +122,19 @@ public final class ChargeAbility implements AbilityHandler {
 		removeSpeed(player);
 	}
 
+	/**
+	 * Pasa la Embestida del jugador a minar lo que choca (sinergia Pico + Embestida). Devuelve false si no tiene
+	 * Embestida en curso o ya mina. Se apaga sola con la Embestida: el estado vive en la Run.
+	 */
+	public static boolean startMining(ServerPlayer player) {
+		Run run = RUNS.get(player.getUUID());
+		if (run == null || run.mining) {
+			return false;
+		}
+		run.mining = true;
+		return true;
+	}
+
 	/** true si el jugador está en modo Embestida. */
 	public static boolean isCharging(ServerPlayer player) {
 		return RUNS.containsKey(player.getUUID());
@@ -161,6 +177,10 @@ public final class ChargeAbility implements AbilityHandler {
 		}
 		run.session.update(dx, dz);
 
+		// Sinergia Pico + Embestida: los bloques se minan aunque no se pueda golpear, pero no mientras frena.
+		if (run.mining && !run.session.isBraking() && !player.isPassenger() && !player.isSpectator()) {
+			PickaxeChargeSynergy.mineAhead(player, run.session);
+		}
 		if (run.session.tickBrake() || player.isPassenger() || player.isSpectator()) {
 			return;
 		}

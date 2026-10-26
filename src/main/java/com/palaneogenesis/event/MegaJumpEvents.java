@@ -2,6 +2,7 @@ package com.palaneogenesis.event;
 
 import com.mojang.logging.LogUtils;
 import com.palaneogenesis.Palaneogenesis;
+import com.palaneogenesis.biomod.ability.megajump.LiftedEnemies;
 import com.palaneogenesis.biomod.ability.megajump.MegaJumpAbility;
 import com.palaneogenesis.util.LevitationState;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,6 +38,7 @@ public class MegaJumpEvents {
 	public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
 		if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer player) {
 			MegaJumpAbility.tick(player);
+			LiftedEnemies.tick(player);
 		}
 	}
 
@@ -94,10 +96,12 @@ public class MegaJumpEvents {
 	@SubscribeEvent
 	public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
 		MegaJumpAbility.forget(event.getEntity().getUUID());
+		LiftedEnemies.forget(event.getEntity().getUUID());
 	}
 
 	@SubscribeEvent
 	public static void onServerStopped(ServerStoppedEvent event) {
 		MegaJumpAbility.clear();
+		LiftedEnemies.clear();
 	}
 }

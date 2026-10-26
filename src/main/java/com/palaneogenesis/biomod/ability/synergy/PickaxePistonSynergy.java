@@ -10,41 +10,30 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.BlockHitResult;
 
-import javax.annotation.Nullable;
-
 /**
  * Sinergia Pico + Pistón (megahabilidad): se aprietan las dos teclas (J y K) con menos de
- * biomod.synergy.windowTicks de diferencia (AbilityManager + SynergyPairing). Rompe un CUADRADO de
- * SQUARE_WIDTH x SQUARE_WIDTH bloques y UN solo bloque de espesor (no un cubo), centrado en el bloque que
- * el jugador mira y de frente a él: contra una pared es una ventana en la pared, mirando al piso es un
- * cuadrado horizontal. Rompe con las mismas reglas que el Pico (PickaxeAbility#breakPrism: drops,
+ * biomod.synergy.windowTicks de diferencia (AbilityManager + SynergyPairing). Rompe un PRISMA de
+ * SQUARE_WIDTH x SQUARE_WIDTH bloques de cara y SQUARE_DEPTH de espesor (7x7x3), centrado en el bloque que
+ * el jugador mira y hacia adentro: contra una pared es una ventana de 7x7 y 3 de profundidad, mirando al piso
+ * es un pozo de 7x7 y 3 de hondo. Rompe con las mismas reglas que el Pico (PickaxeAbility#breakPrism: drops,
  * protecciones de otros mods, bloques que no se rompen).
  *
- * Costo: Overdrive (biomod.synergy.overdriveTicks, 180 s) en las DOS habilidades, en vez de sus cooldowns
+ * Costo: Overdrive (biomod.synergy.overdriveTicks, 10 s) en las DOS habilidades, en vez de sus cooldowns
  * normales. Sin bloque a la vista, o sin nada rompible, no pasa nada y no se gasta nada: las dos
  * pulsaciones se tratan como sueltas (AbilityManager).
  *
- * Diseño dictado por el dueño el 26-oct-2026 (el documento original se perdió): el cuadrado de 7x7x1.
+ * Diseño dictado por el dueño el 26-oct-2026 (el documento original se perdió): primero 7x7x1 y Overdrive de 180 s;
+ * tras probarla, 7x7x3 y Overdrive de 10 s (el de 180 s enfriaba de más).
  * El Pistón en la sinergia no pega a ninguna entidad: es la segunda tecla del combo (decisión mía, cambiable).
  */
 public final class PickaxePistonSynergy {
 
-	/** Lado del cuadrado, en bloques. Es el ÚNICO lugar donde se decide el tamaño de la sinergia. */
+	/** Lado de la cara del prisma, en bloques. Junto con SQUARE_DEPTH es el ÚNICO lugar donde se decide el tamaño de la sinergia. */
 	public static final int SQUARE_WIDTH = 7;
-	/** Espesor del cuadrado, en bloques: 1 = una sola capa, un cuadrado y no un cubo. */
-	public static final int SQUARE_DEPTH = 1;
+	/** Espesor del prisma, en bloques (7x7x3). Con 1 sería una sola capa. */
+	public static final int SQUARE_DEPTH = 3;
 
 	private PickaxePistonSynergy() {
-	}
-
-	/** La otra habilidad de la sinergia, o null si esta habilidad no participa de ninguna. */
-	@Nullable
-	public static AbilityId partner(AbilityId id) {
-		return switch (id) {
-			case PISTON -> AbilityId.PICKAXE;
-			case PICKAXE -> AbilityId.PISTON;
-			default -> null;
-		};
 	}
 
 	/**

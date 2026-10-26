@@ -43,6 +43,8 @@ public class BiomodConfig {
 	public final ForgeConfigSpec.IntValue synergyOverdriveTicks;
 	public final ForgeConfigSpec.DoubleValue synergyLiftNear;
 	public final ForgeConfigSpec.DoubleValue synergyLiftMax;
+	public final ForgeConfigSpec.IntValue synergyLiftSlownessTicks;
+	public final ForgeConfigSpec.IntValue synergyLiftSlownessAmplifier;
 
 	public final ForgeConfigSpec.IntValue dronesRegenAmplifier;
 	public final ForgeConfigSpec.IntValue dronesResistanceAmplifier;
@@ -100,10 +102,12 @@ public class BiomodConfig {
 		b.pop();
 
 		b.push("synergy");
-		synergyWindowTicks = i(b, "Tolerancia entre las dos teclas del combo Pico + Pistón. Default 5 (0,25 s).", "windowTicks", 5, 1, 100);
-		synergyOverdriveTicks = i(b, "Overdrive tras una sinergia, en ambas habilidades. Default 3600 (180 s).", "overdriveTicks", 3600, 1, 1728000);
-		synergyLiftNear = d(b, "Elevación de los enemigos en los tiers 1 y 2 de Mega Jump + Pistón, en bloques. Default 10.", "liftNear", 10.0D, 0.0D, 256.0D);
+		synergyWindowTicks = i(b, "Tolerancia entre las dos teclas de un combo (Pico + Pistón, Mega Jump + Pistón). Default 5 (0,25 s).", "windowTicks", 5, 1, 100);
+		synergyOverdriveTicks = i(b, "Overdrive tras una sinergia, en las habilidades que usa (Pico + Embestida: solo el Pico). Default 200 (10 s).", "overdriveTicks", 200, 1, 1728000);
+		synergyLiftNear = d(b, "Elevación de los enemigos alcanzados por el impacto de Mega Jump + Pistón, en bloques. Default 10.", "liftNear", 10.0D, 0.0D, 256.0D);
 		synergyLiftMax = d(b, "Elevación máxima en los tiers 3 y 4, en bloques. Default 30.", "liftMax", 30.0D, 0.0D, 256.0D);
+		synergyLiftSlownessTicks = i(b, "Duración de la Lentitud de los enemigos elevados por Mega Jump + Pistón al caer, en ticks. Default 100 (5 s).", "liftSlownessTicks", 100, 1, 72000);
+		synergyLiftSlownessAmplifier = i(b, "Amplificador de esa Lentitud (0 = nivel I, 2 = nivel III). Default 2.", "liftSlownessAmplifier", 2, 0, 10);
 		b.pop();
 
 		b.push("drones");
