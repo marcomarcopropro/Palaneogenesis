@@ -16,7 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
  * (MegaJumpAbility#launch con lift = true, LiftedEnemies). No es un nivel nuevo del Mega Jump: el impacto
  * mejora con las mejoras de los otros módulos igual que siempre.
  *
- * Costo: Overdrive (biomod.synergy.overdriveTicks) en las DOS habilidades, en vez de sus cooldowns normales.
+ * Costo: Overdrive (biomod.synergy.megaJumpPistonOverdriveTicks, 20 s) en las DOS habilidades, en vez de sus cooldowns normales.
  * Si el Mega Jump no puede arrancar (no está en el suelo, va montado...) no pasa nada y no se gasta nada: las dos
  * pulsaciones se tratan como sueltas (AbilityManager).
  *
@@ -41,7 +41,7 @@ public final class MegaJumpPistonSynergy {
 		if (!MegaJumpAbility.launch(player, counts, true)) {
 			return false;
 		}
-		int overdrive = Config.COMMON.biomod.synergyOverdriveTicks.get();
+		int overdrive = Config.COMMON.biomod.synergyMegaJumpPistonOverdriveTicks.get();
 		CooldownManager.startCooldown(player, AbilityId.MEGA_JUMP, overdrive);
 		CooldownManager.startCooldown(player, AbilityId.PISTON, overdrive);
 		return true;

@@ -77,6 +77,8 @@ public final class ChargeAbility implements AbilityHandler {
 		double lastZ;
 		/** Sinergia Pico + Embestida activa: choca con bloques y los mina (PickaxeChargeSynergy). Vive y muere con la Run. */
 		boolean mining;
+		/** Tick de juego desde el que la Embestida que mina puede volver a sonar (PickaxeChargeSynergy#SOUND_INTERVAL_TICKS). */
+		long nextMineSoundTick;
 
 		Run(ResourceKey<Level> dimension, double x, double z) {
 			this.dimension = dimension;
@@ -179,7 +181,10 @@ public final class ChargeAbility implements AbilityHandler {
 
 		// Sinergia Pico + Embestida: los bloques se minan aunque no se pueda golpear, pero no mientras frena.
 		if (run.mining && !run.session.isBraking() && !player.isPassenger() && !player.isSpectator()) {
-			PickaxeChargeSynergy.mineAhead(player, run.session);
+			long now = player.level().getGameTime();
+			if (PickaxeChargeSynergy.mineAhead(player, run.session, now >= run.nextMineSoundTick)) {
+				run.nextMineSoundTick = now + PickaxeChargeSynergy.SOUND_INTERVAL_TICKS;
+			}
 		}
 		if (run.session.tickBrake() || player.isPassenger() || player.isSpectator()) {
 			return;

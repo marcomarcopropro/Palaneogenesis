@@ -18,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.level.BlockEvent;
@@ -50,7 +51,7 @@ public final class PickaxeAbility implements AbilityHandler {
 	/** Alcance para elegir el bloque, en bloques. No está en la Sección 9: constante provisional. */
 	public static final double REACH = 6.0D;
 
-	private record Job(ResourceKey<Level> dimension, BlockJob blocks) {
+	private record Job(ResourceKey<Level> dimension, BlockJob blocks, boolean quiet) {
 	}
 
 	/** Trabajos en curso por jugador: solo los que no terminaron en el tick de la pulsación. */
@@ -77,6 +78,15 @@ public final class PickaxeAbility implements AbilityHandler {
 	 * todavía tiene un trabajo en curso o si no hay nada rompible en el prisma.
 	 */
 	public static boolean breakPrism(ServerPlayer player, BlockPos origin, Direction dig, int width, int depth) {
+		return breakPrism(player, origin, dig, width, depth, false);
+	}
+
+	/**
+	 * Igual que el otro breakPrism. Con {@code quiet} los bloques se rompen SIN el efecto de ruptura de vanilla (el
+	 * sonido y las partículas del nivel 2001, que suenan una vez por bloque y saturan el audio cuando se rompen decenas
+	 * por tick): quien llama decide si suena algo. Todo lo demás (drops, eventos de protección, game event) es igual.
+	 */
+	public static boolean breakPrism(ServerPlayer player, BlockPos origin, Direction dig, int width, int depth, boolean quiet) {
 		if (JOBS.containsKey(player.getUUID())) {
 			return false;
 		}
@@ -89,9 +99,9 @@ public final class PickaxeAbility implements AbilityHandler {
 		}
 		BlockJob job = new BlockJob(breakable);
 		player.swing(InteractionHand.MAIN_HAND, true);
-		runBatch(player, job);
+		runBatch(player, job, quiet);
 		if (!job.isDone()) {
-			JOBS.put(player.getUUID(), new Job(level.dimension(), job));
+			JOBS.put(player.getUUID(), new Job(level.dimension(), job, quiet));
 		}
 		return true;
 	}
@@ -106,7 +116,7 @@ public final class PickaxeAbility implements AbilityHandler {
 			JOBS.remove(player.getUUID());
 			return;
 		}
-		runBatch(player, job.blocks());
+		runBatch(player, job.blocks(), job.quiet());
 		if (job.blocks().isDone()) {
 			JOBS.remove(player.getUUID());
 		}
@@ -122,10 +132,10 @@ public final class PickaxeAbility implements AbilityHandler {
 		JOBS.clear();
 	}
 
-	private static void runBatch(ServerPlayer player, BlockJob job) {
+	private static void runBatch(ServerPlayer player, BlockJob job, boolean quiet) {
 		ItemStack virtualPickaxe = new ItemStack(Items.NETHERITE_PICKAXE);
 		job.run(Config.COMMON.biomod.pickaxeMaxBlocksPerTick.get(),
-			p -> breakBlock(player, toPos(p), virtualPickaxe));
+			p -> breakBlock(player, toPos(p), virtualPickaxe, quiet));
 	}
 
 	private static BlockPos toPos(int[] p) {
@@ -143,7 +153,7 @@ public final class PickaxeAbility implements AbilityHandler {
 			&& level.getBlockEntity(pos) == null;
 	}
 
-	private static boolean breakBlock(ServerPlayer player, BlockPos pos, ItemStack virtualPickaxe) {
+	private static boolean breakBlock(ServerPlayer player, BlockPos pos, ItemStack virtualPickaxe, boolean quiet) {
 		Level level = player.level();
 		if (!isBreakable(level, pos)
 			|| player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())) {
@@ -156,6 +166,15 @@ public final class PickaxeAbility implements AbilityHandler {
 		if (!player.isCreative()) {
 			Block.dropResources(state, level, pos, null, player, virtualPickaxe);
 		}
-		return level.destroyBlock(pos, false, player);
+		if (!quiet) {
+			return level.destroyBlock(pos, false, player);
+		}
+		// Lo mismo que Level#destroyBlock(pos, false, player) menos el levelEvent 2001 (sonido y partículas):
+		// el bloque pasa a su fluido (o aire) y se avisa el game event de destrucción.
+		boolean removed = level.setBlock(pos, level.getFluidState(pos).createLegacyBlock(), 3);
+		if (removed) {
+			level.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
+		}
+		return removed;
 	}
 }

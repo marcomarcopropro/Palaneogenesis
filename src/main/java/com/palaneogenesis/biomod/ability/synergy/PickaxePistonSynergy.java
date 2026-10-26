@@ -18,7 +18,7 @@ import net.minecraft.world.phys.BlockHitResult;
  * es un pozo de 7x7 y 3 de hondo. Rompe con las mismas reglas que el Pico (PickaxeAbility#breakPrism: drops,
  * protecciones de otros mods, bloques que no se rompen).
  *
- * Costo: Overdrive (biomod.synergy.overdriveTicks, 10 s) en las DOS habilidades, en vez de sus cooldowns
+ * Costo: Overdrive (biomod.synergy.pickaxePistonOverdriveTicks, 10 s) en las DOS habilidades, en vez de sus cooldowns
  * normales. Sin bloque a la vista, o sin nada rompible, no pasa nada y no se gasta nada: las dos
  * pulsaciones se tratan como sueltas (AbilityManager).
  *
@@ -54,7 +54,7 @@ public final class PickaxePistonSynergy {
 		if (!PickaxeAbility.breakPrism(player, hit.getBlockPos(), dig, SQUARE_WIDTH, SQUARE_DEPTH)) {
 			return false;
 		}
-		int overdrive = Config.COMMON.biomod.synergyOverdriveTicks.get();
+		int overdrive = Config.COMMON.biomod.synergyPickaxePistonOverdriveTicks.get();
 		CooldownManager.startCooldown(player, AbilityId.PISTON, overdrive);
 		CooldownManager.startCooldown(player, AbilityId.PICKAXE, overdrive);
 		return true;
