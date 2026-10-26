@@ -2,11 +2,15 @@ package com.palaneogenesis;
 
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.NetworkHandler;
+import com.palaneogenesis.registry.ModBlockEntities;
+import com.palaneogenesis.registry.ModBlocks;
 import com.palaneogenesis.registry.ModCreativeTabs;
 import com.palaneogenesis.registry.ModEntityTypes;
 import com.palaneogenesis.registry.ModItems;
+import com.palaneogenesis.registry.ModMenuTypes;
 import com.palaneogenesis.registry.ModParticleTypes;
 import com.palaneogenesis.registry.ModRecipeSerializers;
+import com.palaneogenesis.registry.ModRecipeTypes;
 import com.palaneogenesis.registry.ModSounds;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -20,6 +24,12 @@ public class Palaneogenesis {
 
     public Palaneogenesis() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        // Estación Bio-Tech: bloque, BlockEntity, menú y tipo de receta (ver paquete biotech). Los
+        // bloques van antes que los ítems porque el BlockItem de la estación los referencia.
+        ModBlocks.register(modEventBus);
+        ModBlockEntities.register(modEventBus);
+        ModMenuTypes.register(modEventBus);
+        ModRecipeTypes.register(modEventBus);
         ModItems.register(modEventBus);
         ModRecipeSerializers.register(modEventBus);
         ModEntityTypes.register(modEventBus);

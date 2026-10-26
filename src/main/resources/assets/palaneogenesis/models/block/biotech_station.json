@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "palaneogenesis:block/biotech_station_side",
+    "down": "palaneogenesis:block/biotech_station_bottom",
+    "up": "palaneogenesis:block/biotech_station_top",
+    "north": "palaneogenesis:block/biotech_station_side",
+    "east": "palaneogenesis:block/biotech_station_side",
+    "south": "palaneogenesis:block/biotech_station_side",
+    "west": "palaneogenesis:block/biotech_station_side"
+  }
+}

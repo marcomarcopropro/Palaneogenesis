@@ -43,12 +43,14 @@ public class Config {
 		public final ForgeConfigSpec.DoubleValue invertedHeartDamage;
 
 		public final BiomodConfig biomod;
+		public final BiotechConfig biotech;
 
 		public final ForgeConfigSpec.IntValue ancientTransformationAbuseToggleThreshold;
 		public final ForgeConfigSpec.IntValue ancientTransformationAbuseWindowTicks;
 
 		Common(ForgeConfigSpec.Builder builder) {
 			biomod = new BiomodConfig(builder);
+			biotech = new BiotechConfig(builder);
 
 			builder.comment("Káak Tun (entity) settings").push("kaak_tun");
 

@@ -4,7 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.palaneogenesis.Palaneogenesis;
 import com.palaneogenesis.registry.ModEntityTypes;
 import com.palaneogenesis.registry.ModParticleTypes;
+import com.palaneogenesis.registry.ModMenuTypes;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -15,6 +17,7 @@ import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 /** Client-only wiring: model layer + entity renderer registration for the Káak Tun, la Blue Heart
  * HUD overlay, y el keybinding del rayo del jugador (Sección 3.4). */
@@ -28,6 +31,12 @@ public class ClientModEvents {
 	public static final KeyMapping BEAM_KEY = new KeyMapping(
 		"key.palaneogenesis.beam", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
 		InputConstants.KEY_H, "key.categories.palaneogenesis");
+
+	/** Pantalla de la Estación Bio-Tech (biotech.BiotechStationScreen) para su menú. */
+	@SubscribeEvent
+	public static void onClientSetup(FMLClientSetupEvent event) {
+		event.enqueueWork(() -> MenuScreens.register(ModMenuTypes.BIOTECH_STATION.get(), BiotechStationScreen::new));
+	}
 
 	@SubscribeEvent
 	public static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {

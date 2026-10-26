@@ -69,6 +69,8 @@ public class ModCreativeTabs {
 				output.accept(ModItems.PICKAXE_MODULE.get());
 				output.accept(ModItems.DRONE_MODULE.get());
 				output.accept(ModItems.BIOMOD_TEST.get());
+				output.accept(ModItems.WRENCH.get());
+				output.accept(ModItems.BIOTECH_STATION.get());
 			})
 			.build()
 	);

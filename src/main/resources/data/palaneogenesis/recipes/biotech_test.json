@@ -1,0 +1,12 @@
+{
+  "type": "palaneogenesis:biotech_assembly",
+  "ingredients": [
+    { "item": "minecraft:cobblestone" },
+    null,
+    { "item": "minecraft:sand" }
+  ],
+  "result": {
+    "item": "minecraft:glass",
+    "count": 1
+  }
+}

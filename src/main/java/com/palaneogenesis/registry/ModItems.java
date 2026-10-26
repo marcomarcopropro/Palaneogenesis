@@ -3,6 +3,7 @@ package com.palaneogenesis.registry;
 import com.palaneogenesis.item.AncientExtractSyringeItem;
 import com.palaneogenesis.item.BlueHeartItem;
 import com.palaneogenesis.item.BrokenSyringeItem;
+import com.palaneogenesis.item.WrenchItem;
 import com.palaneogenesis.item.EmptySyringeItem;
 import com.palaneogenesis.item.ExplosiveHeartItem;
 import com.palaneogenesis.item.InvertedHeartItem;
@@ -12,6 +13,7 @@ import com.palaneogenesis.item.biomod.BiomodModuleItem;
 import com.palaneogenesis.item.biomod.BiomodTestItem;
 import com.palaneogenesis.item.biomod.NanobotInjectorItem;
 import com.palaneogenesis.item.biomod.SurgicalTweezersItem;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -89,6 +91,14 @@ public class ModItems {
 
 	public static final RegistryObject<Item> INVERTED_HEART =
 		ITEMS.register("inverted_heart", () -> new InvertedHeartItem(new Item.Properties().stacksTo(64)));
+
+	/** Llave Inglesa: 2 usos, convierte una mesa de crafteo en Estación Bio-Tech (ver item.WrenchItem). */
+	public static final RegistryObject<Item> WRENCH =
+		ITEMS.register("wrench", () -> new WrenchItem(new Item.Properties().stacksTo(1)));
+
+	/** Ítem de la Estación Bio-Tech (para poder soltarla/moverla; se obtiene transformando una mesa o por creativo). */
+	public static final RegistryObject<Item> BIOTECH_STATION =
+		ITEMS.register("biotech_station", () -> new BlockItem(ModBlocks.BIOTECH_STATION.get(), new Item.Properties()));
 
 	/**
 	 * Huevo de spawn del Káak Tun. Usa ForgeSpawnEggItem (no el SpawnEggItem vanilla, deprecado

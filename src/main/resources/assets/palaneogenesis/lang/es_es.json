@@ -112,5 +112,12 @@
     "command.palaneogenesis.biomod.targets.removed": "Las habilidades ahora pueden golpear a %s.",
     "command.palaneogenesis.biomod.targets.not_listed": "%s no estaba en tu lista.",
     "command.palaneogenesis.biomod.targets.still_forced": "El servidor sigue protegiendo a %s: no se puede desproteger.",
-    "command.palaneogenesis.biomod.targets.unknown": "Tipo de entidad desconocido: %s"
+    "command.palaneogenesis.biomod.targets.unknown": "Tipo de entidad desconocido: %s",
+    "item.palaneogenesis.wrench": "Llave Inglesa",
+    "item.palaneogenesis.wrench.hint": "Shift + clic derecho sobre una mesa de crafteo para transformarla en una Estación Bio-Tech.",
+    "item.palaneogenesis.wrench.uses": "Usos restantes: %s/%s",
+    "block.palaneogenesis.biotech_station": "Estación de Trabajo Bio-Tech",
+    "container.palaneogenesis.biotech_station": "Estación de Trabajo Bio-Tech",
+    "gui.palaneogenesis.biotech.progress": "Progreso: %s%%",
+    "gui.palaneogenesis.biotech.heat": "Calor: %s%%"
 }

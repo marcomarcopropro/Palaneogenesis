@@ -130,5 +130,12 @@
     "command.palaneogenesis.biomod.targets.removed": "Abilities can now hit %s.",
     "command.palaneogenesis.biomod.targets.not_listed": "%s was not on your list.",
     "command.palaneogenesis.biomod.targets.still_forced": "The server still protects %s: it cannot be unprotected.",
-    "command.palaneogenesis.biomod.targets.unknown": "Unknown entity type: %s"
+    "command.palaneogenesis.biomod.targets.unknown": "Unknown entity type: %s",
+    "item.palaneogenesis.wrench": "Wrench",
+    "item.palaneogenesis.wrench.hint": "Shift + right-click a crafting table to turn it into a Bio-Tech Station.",
+    "item.palaneogenesis.wrench.uses": "Uses left: %s/%s",
+    "block.palaneogenesis.biotech_station": "Bio-Tech Workstation",
+    "container.palaneogenesis.biotech_station": "Bio-Tech Workstation",
+    "gui.palaneogenesis.biotech.progress": "Progress: %s%%",
+    "gui.palaneogenesis.biotech.heat": "Heat: %s%%"
 }
