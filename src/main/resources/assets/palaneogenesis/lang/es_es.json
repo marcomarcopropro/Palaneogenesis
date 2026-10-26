@@ -119,5 +119,7 @@
     "block.palaneogenesis.biotech_station": "Estación de Trabajo Bio-Tech",
     "container.palaneogenesis.biotech_station": "Estación de Trabajo Bio-Tech",
     "gui.palaneogenesis.biotech.progress": "Progreso: %s%%",
-    "gui.palaneogenesis.biotech.heat": "Calor: %s%%"
+    "gui.palaneogenesis.biotech.heat": "Calor: %s%%",
+    "gui.palaneogenesis.biotech.boost": "x2",
+    "gui.palaneogenesis.biotech.boost.tooltip": "Doble velocidad, doble de lava"
 }

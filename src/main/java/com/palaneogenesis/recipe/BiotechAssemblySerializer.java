@@ -18,9 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * JSON de una receta de la Estación Bio-Tech. "ingredients" va en orden, de la ranura 1 a la 9; un
- * {@code null} es un lugar en blanco (la ranura tiene que quedar vacía). Máximo 9 entradas, al menos
- * una que no sea null. Cada ingrediente puede traer un "count" (1 a 64, por defecto 1): la cantidad
+ * JSON de una receta de la Estación Bio-Tech. "ingredients" es la lista de ingredientes (máximo 9, al
+ * menos uno); el ORDEN NO IMPORTA, en el juego pueden ir en cualquier ranura. Un {@code null} se ignora. Cada ingrediente puede traer un "count" (1 a 64, por defecto 1): la cantidad
  * que pide esa ranura y que se gasta al craftear. Para comparar NBT (ej. una poción concreta) se usa
  * el ingrediente de Forge {"type": "forge:nbt", "item": ..., "nbt": ...}.
  *
@@ -40,8 +39,6 @@ public class BiotechAssemblySerializer implements RecipeSerializer<BiotechAssemb
 		int nonBlank = 0;
 		for (JsonElement element : array) {
 			if (element == null || element.isJsonNull()) {
-				pattern.add(Ingredient.EMPTY);
-				counts.add(1);
 				continue;
 			}
 			int count = 1;

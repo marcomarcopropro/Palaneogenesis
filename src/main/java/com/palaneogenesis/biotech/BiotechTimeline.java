@@ -19,6 +19,18 @@ public final class BiotechTimeline {
 		return (int) Math.min(BiotechSettings.LINE_SLOTS - 1, block);
 	}
 
+	/**
+	 * Cuántos bloques ya TERMINARON (de 0 a 9): el ingrediente de la ranura i está fundido cuando
+	 * i < completedBlocks. Es lo que decide cuándo la ranura se pone en blanco y negro.
+	 */
+	public static int completedBlocks(int progress, int workTicks) {
+		if (progress <= 0 || workTicks <= 0) {
+			return 0;
+		}
+		long blocks = (long) progress * BiotechSettings.LINE_SLOTS / workTicks;
+		return (int) Math.min(BiotechSettings.LINE_SLOTS, blocks);
+	}
+
 	/** Cuántos engranajes (de izquierda a derecha) están encendidos: 0 si no hay progreso. */
 	public static int activeGears(int progress, int workTicks) {
 		if (progress <= 0) {

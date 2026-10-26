@@ -16,6 +16,8 @@ package com.palaneogenesis.biotech;
  *  - PAUSA (progreso se conserva): sin calor, o con el resultado lleno (ocupado por otro objeto o sin lugar).
  *  - REINICIO (progreso vuelve a 0): si ya no hay receta válida (se sacó/cambió un ingrediente) o si la
  *    receta que coincide es otra distinta de la que venía avanzando. El calor sobrante queda en la barra.
+ *  - MODO x2: el progreso suma BOOST_SPEED por tick y el calor baja BOOST_HEAT_PER_TICK por tick: el
+ *    crafteo tarda la mitad y gasta el doble de lava en total.
  *  - FIN: al sumar workTicks de progreso se entrega el producto y el progreso vuelve a 0.
  */
 public final class BiotechProcess {
@@ -38,6 +40,11 @@ public final class BiotechProcess {
 	 * @param fuelAvailable true si la ranura de combustible tiene un cubo de lava.
 	 */
 	public Step tick(BiotechSettings settings, String recipeId, boolean outputFree, boolean fuelAvailable) {
+		return tick(settings, recipeId, outputFree, fuelAvailable, false);
+	}
+
+	/** Igual que el tick normal, pero con el modo x2 (doble velocidad, doble de lava) si boost es true. */
+	public Step tick(BiotechSettings settings, String recipeId, boolean outputFree, boolean fuelAvailable, boolean boost) {
 		boolean consumedFuel = false;
 		if (heat <= 0 && fuelAvailable) {
 			heat = settings.heatPerBucketTicks();
@@ -59,8 +66,8 @@ public final class BiotechProcess {
 			return new Step(consumedFuel, false);
 		}
 
-		progress++;
-		heat--;
+		progress += boost ? BiotechSettings.BOOST_SPEED : 1;
+		heat = Math.max(0, heat - (boost ? BiotechSettings.BOOST_HEAT_PER_TICK : 1));
 		working = true;
 		if (progress >= settings.workTicks()) {
 			progress = 0;

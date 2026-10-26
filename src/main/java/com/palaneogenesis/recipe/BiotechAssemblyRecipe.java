@@ -20,10 +20,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Receta de la Estación Bio-Tech: una secuencia ORDENADA de 1 a 9 ingredientes, uno por ranura de la
- * línea (de izquierda a derecha). Un lugar en blanco (Ingredient.EMPTY) exige la ranura vacía, y las
- * ranuras que la receta no nombra también tienen que estar vacías. La regla de emparejamiento vive
- * en biotech.AssemblyLine (sin dependencias de Minecraft, probada aparte).
+ * Receta de la Estación Bio-Tech: de 1 a 9 ingredientes, uno por ranura ocupada de la línea. El ORDEN
+ * NO IMPORTA: los ingredientes pueden estar en cualquier ranura, siempre que sean exactamente los de la
+ * receta (ni uno más, ni uno menos). La regla de emparejamiento vive en biotech.AssemblyLine (sin
+ * dependencias de Minecraft, probada aparte).
  *
  * Cada ranura pide además una CANTIDAD (por defecto 1): la ranura tiene que tener al menos esa
  * cantidad, y al completarse el crafteo se gasta exactamente esa cantidad de cada ranura ocupada (la
@@ -36,7 +36,7 @@ public class BiotechAssemblyRecipe implements Recipe<RecipeWrapper> {
 	private final List<Entry> entries;
 	private final ItemStack result;
 
-	/** Un lugar de la receta: el ingrediente y cuántas unidades pide la ranura. */
+	/** Un lugar de la receta: el ingrediente y cuántas unidades pide. */
 	public record Entry(Ingredient ingredient, int count) {
 	}
 
@@ -60,14 +60,42 @@ public class BiotechAssemblyRecipe implements Recipe<RecipeWrapper> {
 		this.entries = List.copyOf(built);
 	}
 
-	@Override
-	public boolean matches(RecipeWrapper container, Level level) {
+	private List<ItemStack> lineOf(RecipeWrapper container) {
 		List<ItemStack> line = new ArrayList<>(BiotechSettings.LINE_SLOTS);
 		for (int i = 0; i < BiotechSettings.LINE_SLOTS; i++) {
 			line.add(container.getItem(i));
 		}
-		return AssemblyLine.matches(line, this.entries, ItemStack::isEmpty, entry -> entry.ingredient().isEmpty(),
+		return line;
+	}
+
+	private int[] assignment(RecipeWrapper container) {
+		return AssemblyLine.assign(lineOf(container), this.entries, ItemStack::isEmpty,
+			entry -> entry.ingredient().isEmpty(),
 			(entry, stack) -> entry.ingredient().test(stack) && AssemblyLine.hasEnough(stack.getCount(), entry.count()));
+	}
+
+	@Override
+	public boolean matches(RecipeWrapper container, Level level) {
+		return assignment(container) != null;
+	}
+
+	/**
+	 * Cuánto hay que gastar de cada ranura de la línea (índice = ranura, 0 si no se toca), o null si la
+	 * línea no coincide con la receta. Como el orden no importa, depende de cómo se reparten los
+	 * ingredientes entre las ranuras.
+	 */
+	public int[] consumption(RecipeWrapper container) {
+		int[] assignment = assignment(container);
+		if (assignment == null) {
+			return null;
+		}
+		int[] cost = new int[BiotechSettings.LINE_SLOTS];
+		for (int i = 0; i < assignment.length; i++) {
+			if (assignment[i] >= 0) {
+				cost[assignment[i]] = this.entries.get(i).count();
+			}
+		}
+		return cost;
 	}
 
 	@Override
@@ -120,9 +148,9 @@ public class BiotechAssemblyRecipe implements Recipe<RecipeWrapper> {
 		return this.counts;
 	}
 
-	/** Unidades que pide la ranura i (1 si la receta no llega a esa ranura). */
-	public int countAt(int slot) {
-		return slot >= 0 && slot < this.counts.size() ? this.counts.get(slot) : 1;
+	/** Unidades que pide el ingrediente i de la receta (1 si no existe). */
+	public int countAt(int index) {
+		return index >= 0 && index < this.counts.size() ? this.counts.get(index) : 1;
 	}
 
 	public ItemStack getResult() {

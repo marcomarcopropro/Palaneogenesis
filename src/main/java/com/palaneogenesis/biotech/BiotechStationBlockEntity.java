@@ -33,15 +33,18 @@ import java.util.Optional;
 public class BiotechStationBlockEntity extends BlockEntity implements MenuProvider {
 
 	/** Cantidad de datos que el menú sincroniza con el cliente (ver BiotechStationMenu). */
-	public static final int DATA_COUNT = 5;
+	public static final int DATA_COUNT = 6;
 	public static final int DATA_PROGRESS = 0;
 	public static final int DATA_WORK_TICKS = 1;
 	public static final int DATA_HEAT = 2;
 	public static final int DATA_HEAT_MAX = 3;
 	public static final int DATA_WORKING = 4;
+	public static final int DATA_BOOST = 5;
 
-	private final BiotechInventory inventory = new BiotechInventory(this::setChanged);
 	private final BiotechProcess process = new BiotechProcess();
+	/** Modo x2 (doble velocidad, doble de lava): se prende y se apaga con el botón del menú, se puede cambiar en cualquier momento. */
+	private boolean boost;
+	private final BiotechInventory inventory = new BiotechInventory(this::setChanged, this::lineLocked);
 
 	private final ContainerData data = new ContainerData() {
 		@Override
@@ -52,6 +55,7 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 				case DATA_HEAT -> process.heat();
 				case DATA_HEAT_MAX -> settings().heatPerBucketTicks();
 				case DATA_WORKING -> process.working() ? 1 : 0;
+				case DATA_BOOST -> boost ? 1 : 0;
 				default -> 0;
 			};
 		}
@@ -78,6 +82,21 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 			Config.COMMON.biotech.heatPerBucketTicks.get());
 	}
 
+	public boolean boost() {
+		return this.boost;
+	}
+
+	/** Prende o apaga el modo x2 (lo llama el botón del menú, en el servidor). */
+	public void toggleBoost() {
+		this.boost = !this.boost;
+		this.setChanged();
+	}
+
+	/** true mientras la máquina funde (progreso en curso): la línea no se puede tocar. */
+	public boolean lineLocked() {
+		return this.process.progress() > 0 || this.process.working();
+	}
+
 	public BiotechInventory inventory() {
 		return this.inventory;
 	}
@@ -101,7 +120,7 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 		boolean fuelAvailable = this.inventory.getStackInSlot(BiotechSettings.SLOT_FUEL).is(Items.LAVA_BUCKET);
 		boolean wasBusy = this.process.working() || this.process.progress() > 0;
 
-		BiotechProcess.Step step = this.process.tick(settings(), recipeId, outputFree, fuelAvailable);
+		BiotechProcess.Step step = this.process.tick(settings(), recipeId, outputFree, fuelAvailable, this.boost);
 
 		if (step.consumedFuel()) {
 			// La máquina se bebe la lava y devuelve el cubo vacío en la misma ranura (como un horno).
@@ -130,9 +149,14 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 		return existing.getCount() + result.getCount() <= existing.getMaxStackSize();
 	}
 
-	/** Entrega el producto y gasta de cada ranura ocupada la cantidad que pide la receta (dejando el envase si lo tiene, ej. cubos). */
+	/**
+	 * Entrega el producto y gasta de cada ranura ocupada la cantidad que le toca según la receta (el
+	 * orden no importa, así que el reparto se calcula acá), dejando el envase si lo tiene (ej. cubos).
+	 */
 	private void craft(BiotechAssemblyRecipe recipe, Level level) {
-		ItemStack result = recipe.assemble(new RecipeWrapper(this.inventory), level.registryAccess());
+		RecipeWrapper wrapper = new RecipeWrapper(this.inventory);
+		int[] cost = recipe.consumption(wrapper);
+		ItemStack result = recipe.assemble(wrapper, level.registryAccess());
 		ItemStack existing = this.inventory.getStackInSlot(BiotechSettings.SLOT_RESULT);
 		if (existing.isEmpty()) {
 			this.inventory.setStackInSlot(BiotechSettings.SLOT_RESULT, result);
@@ -146,7 +170,7 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 			if (stack.isEmpty()) {
 				continue;
 			}
-			int need = recipe.countAt(i);
+			int need = cost == null ? 1 : Math.max(1, cost[i]);
 			if (stack.getCount() > need) {
 				stack.shrink(need);
 				this.inventory.setStackInSlot(i, stack);
@@ -186,6 +210,7 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 		tag.putInt("Progress", this.process.progress());
 		tag.putInt("Heat", this.process.heat());
 		tag.putString("ActiveRecipe", this.process.activeRecipe());
+		tag.putBoolean("Boost", this.boost);
 	}
 
 	@Override
@@ -193,5 +218,6 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 		super.load(tag);
 		this.inventory.deserializeNBT(tag.getCompound("Inventory"));
 		this.process.restore(settings(), tag.getInt("Progress"), tag.getInt("Heat"), tag.getString("ActiveRecipe"));
+		this.boost = tag.getBoolean("Boost");
 	}
 }

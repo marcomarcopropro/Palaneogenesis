@@ -25,6 +25,14 @@ public record BiotechSettings(int workTicks, int heatPerBucketTicks) {
 	/** Usos totales de una Llave Inglesa: transforma como mucho 2 mesas y se rompe. */
 	public static final int WRENCH_USES = 2;
 
+	/**
+	 * Modo x2 ("doble velocidad, doble de lava"): el progreso avanza el doble por tick, y cada crafteo
+	 * gasta el doble de calor. Como tarda la mitad de ticks, el calor por tick es velocidad x costo = 4.
+	 */
+	public static final int BOOST_SPEED = 2;
+	public static final int BOOST_HEAT_MULTIPLIER = 2;
+	public static final int BOOST_HEAT_PER_TICK = BOOST_SPEED * BOOST_HEAT_MULTIPLIER;
+
 	/** Tope de los tiempos configurables (límite del short con que el menú los sincroniza). */
 	public static final int MAX_TICKS = 32000;
 

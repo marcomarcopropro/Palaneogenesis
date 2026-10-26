@@ -161,24 +161,56 @@ public class BiotechGameTests {
 	}
 
 	@GameTest(template = TEMPLATE)
-	public static void biotechLineaExigeOrdenYPosicion(GameTestHelper helper) {
+	public static void biotechLineaNoImportaElOrden(GameTestHelper helper) {
 		List<String> receta = List.of("A", "B", "C");
 		helper.assertTrue(line(slots("A", "B", "C"), receta), "en orden coincide");
-		helper.assertTrue(!line(slots("C", "B", "A"), receta), "al revés no");
-		helper.assertTrue(!line(slots("", "A", "B", "C"), receta), "corrida una ranura no");
+		helper.assertTrue(line(slots("C", "B", "A"), receta), "al revés coincide");
+		helper.assertTrue(line(slots("B", "C", "A"), receta), "mezclado coincide");
+		helper.assertTrue(line(slots("", "A", "B", "C"), receta), "corrido una ranura coincide");
+		helper.assertTrue(line(slots("A", "", "C", "", "B"), receta), "con huecos entre medio coincide");
 		helper.assertTrue(!line(slots("A", "B"), receta), "faltando uno no");
+		helper.assertTrue(!line(slots("A", "B", "X"), receta), "uno equivocado no");
 		helper.succeed();
 	}
 
 	@GameTest(template = TEMPLATE)
-	public static void biotechLineaNoAceptaSobrantesYRespetaBlancos(GameTestHelper helper) {
-		List<String> conBlanco = List.of("A", "", "C");
-		helper.assertTrue(line(slots("A", "", "C"), conBlanco), "con un blanco en el medio coincide");
-		helper.assertTrue(!line(slots("A", "X", "C"), conBlanco), "algo en el blanco no");
-		helper.assertTrue(!line(slots("A", "", "C", "D"), conBlanco), "sobrante a la derecha no");
-		helper.assertTrue(!line(slots("A", "", "C", "", "", "", "", "", "Z"), conBlanco), "sobrante lejos no");
+	public static void biotechLineaNoAceptaSobrantesNiRepetidosDeMenos(GameTestHelper helper) {
+		List<String> receta = List.of("A", "B", "C");
+		helper.assertTrue(!line(slots("A", "B", "C", "D"), receta), "sobrante no");
+		helper.assertTrue(!line(slots("A", "", "C", "", "", "", "", "", "Z"), List.of("A", "C")), "sobrante lejos no");
+		helper.assertTrue(line(slots("A", "", "C"), List.of("A", "", "C")), "los blancos de la receta se ignoran");
+		List<String> repetida = List.of("A", "A", "B");
+		helper.assertTrue(line(slots("A", "B", "A"), repetida), "ingrediente repetido en cualquier orden");
+		helper.assertTrue(!line(slots("A", "B", "B"), repetida), "repetido de menos no");
 		helper.assertTrue(line(slots("A", "B", "C", "D", "E", "F", "G", "H", "I"),
-			List.of("A", "B", "C", "D", "E", "F", "G", "H", "I")), "9 de 9 coincide");
+			List.of("I", "H", "G", "F", "E", "D", "C", "B", "A")), "9 de 9 en cualquier orden coincide");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void biotechLineaReparteLasRanurasConBacktracking(GameTestHelper helper) {
+		// "x" acepta cualquier cosa que empiece con x; "xy" solo xy. Si "x" se queda con la primera
+		// ranura (xy), "xy" no tiene dónde ir: hay que probar el otro reparto.
+		int[] reparto = AssemblyLine.assign(slots("xy", "xz"), List.of("x", "xy"), String::isEmpty, String::isEmpty,
+			(wanted, slot) -> slot.startsWith(wanted));
+		helper.assertTrue(reparto != null, "tiene que encontrar el reparto");
+		helper.assertTrue(reparto[0] == 1 && reparto[1] == 0, "x se queda con xz y xy con xy");
+		// Muchas repetidas y una imposible: tiene que fallar rápido, no probar todas las permutaciones.
+		helper.assertTrue(!line(slots("A", "A", "A", "A", "A", "A", "A", "A", "A"),
+			List.of("A", "A", "A", "A", "A", "A", "A", "A", "B")), "con una imposible no coincide");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void biotechCantidadPorRanuraSeValida(GameTestHelper helper) {
+		helper.assertTrue(AssemblyLine.validateCount(1) == null, "1 vale");
+		helper.assertTrue(AssemblyLine.validateCount(32) == null, "32 vale");
+		helper.assertTrue(AssemblyLine.validateCount(64) == null, "64 vale");
+		helper.assertTrue(AssemblyLine.validateCount(0) != null, "0 no");
+		helper.assertTrue(AssemblyLine.validateCount(65) != null, "65 no");
+		helper.assertTrue(AssemblyLine.hasEnough(32, 32), "justo alcanza");
+		helper.assertTrue(AssemblyLine.hasEnough(40, 32), "de más alcanza");
+		helper.assertTrue(!AssemblyLine.hasEnough(31, 32), "de menos no");
 		helper.succeed();
 	}
 
@@ -193,15 +225,50 @@ public class BiotechGameTests {
 	}
 
 	@GameTest(template = TEMPLATE)
-	public static void biotechCantidadPorRanuraSeValida(GameTestHelper helper) {
-		helper.assertTrue(AssemblyLine.validateCount(1) == null, "1 vale");
-		helper.assertTrue(AssemblyLine.validateCount(32) == null, "32 vale");
-		helper.assertTrue(AssemblyLine.validateCount(64) == null, "64 vale");
-		helper.assertTrue(AssemblyLine.validateCount(0) != null, "0 no");
-		helper.assertTrue(AssemblyLine.validateCount(65) != null, "65 no");
-		helper.assertTrue(AssemblyLine.hasEnough(32, 32), "justo alcanza");
-		helper.assertTrue(AssemblyLine.hasEnough(40, 32), "de más alcanza");
-		helper.assertTrue(!AssemblyLine.hasEnough(31, 32), "de menos no");
+	public static void biotechModoX2EsLaMitadDeTiempoYElDobleDeLava(GameTestHelper helper) {
+		int[] normal = runUntilCrafted(false);
+		int[] doble = runUntilCrafted(true);
+		helper.assertTrue(normal[0] == 1200 && normal[1] == 1, "normal: 1200 ticks y 1 cubo (" + normal[0] + " / " + normal[1] + ")");
+		helper.assertTrue(doble[0] == 600 && doble[1] == 2, "x2: 600 ticks y 2 cubos (" + doble[0] + " / " + doble[1] + ")");
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void biotechModoX2SePuedeApagarAMitad(GameTestHelper helper) {
+		BiotechProcess p = new BiotechProcess();
+		p.tick(S, RECIPE, true, true, true);
+		helper.assertTrue(p.progress() == 2 && p.heat() == 1196, "con x2: +2 de progreso y -4 de calor");
+		p.tick(S, RECIPE, true, false, false);
+		helper.assertTrue(p.progress() == 3 && p.heat() == 1195, "apagado: vuelve a +1 y -1, sin perder lo avanzado");
+		helper.succeed();
+	}
+
+	/** Corre un crafteo completo con un cubo siempre disponible: {ticks, cubos gastados}. */
+	private static int[] runUntilCrafted(boolean boost) {
+		BiotechProcess p = new BiotechProcess();
+		int ticks = 0;
+		int buckets = 0;
+		for (; ticks < 10000; ) {
+			BiotechProcess.Step step = p.tick(S, RECIPE, true, true, boost);
+			ticks++;
+			if (step.consumedFuel()) {
+				buckets++;
+			}
+			if (step.crafted()) {
+				break;
+			}
+		}
+		return new int[] { ticks, buckets };
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void biotechLaRanuraSeVaAGrisCuandoTerminaSuBloque(GameTestHelper helper) {
+		helper.assertTrue(BiotechTimeline.completedBlocks(0, 1200) == 0, "sin progreso, ninguna");
+		helper.assertTrue(BiotechTimeline.completedBlocks(1, 1200) == 0, "recién arranca el primero: todavía no");
+		helper.assertTrue(BiotechTimeline.completedBlocks(133, 1200) == 0, "a un tick de terminar el primero");
+		helper.assertTrue(BiotechTimeline.completedBlocks(134, 1200) == 1, "terminó el primero: la ranura 0 se va a gris");
+		helper.assertTrue(BiotechTimeline.completedBlocks(1199, 1200) == 8, "la última recién se va a gris al craftear");
+		helper.assertTrue(BiotechTimeline.completedBlocks(1200, 1200) == 9, "completo");
 		helper.succeed();
 	}
 

@@ -1,6 +1,10 @@
 package com.palaneogenesis.biotech;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
@@ -8,41 +12,80 @@ import java.util.function.Predicate;
  * Regla de emparejamiento de la línea de ensamblaje 9 x 1. Sin dependencias de Minecraft (genérica en
  * el tipo de ranura y de ingrediente) para probarla fuera del juego.
  *
- * La línea es ORDENADA: el ingrediente i de la receta tiene que estar en la ranura i (de izquierda a
- * derecha). Un lugar en blanco de la receta exige la ranura VACÍA, y todas las ranuras que la receta
- * no nombra (las que quedan a su derecha) también tienen que estar vacías: no se aceptan sobrantes.
+ * El ORDEN NO IMPORTA: una receta coincide si las ranuras ocupadas se pueden repartir una a una entre
+ * los ingredientes de la receta (cada ranura a un ingrediente que la acepte, cada ingrediente a una
+ * ranura), sin importar en qué lugar de la línea estén. No se aceptan sobrantes: tiene que haber
+ * exactamente tantas ranuras ocupadas como ingredientes. Los lugares en blanco de una receta se ignoran.
  */
 public final class AssemblyLine {
 
 	private AssemblyLine() {
 	}
 
-	/**
-	 * @param line         contenido de las ranuras 0..8 (en orden).
-	 * @param pattern      ingredientes de la receta, de 1 a 9; los lugares en blanco son "en blanco" según patternBlank.
-	 * @param slotEmpty    si una ranura está vacía.
-	 * @param patternBlank si un lugar de la receta es un blanco (exige ranura vacía).
-	 * @param accepts      si el ingrediente acepta el contenido de la ranura.
-	 */
+	/** true si la línea coincide con la receta (ver {@link #assign}). */
 	public static <S, P> boolean matches(List<S> line, List<P> pattern, Predicate<S> slotEmpty,
 			Predicate<P> patternBlank, BiPredicate<P, S> accepts) {
-		if (pattern.size() > line.size()) {
-			return false;
-		}
-		for (int i = 0; i < line.size(); i++) {
-			S slot = line.get(i);
-			boolean empty = slotEmpty.test(slot);
-			P wanted = i < pattern.size() ? pattern.get(i) : null;
-			boolean blank = wanted == null || patternBlank.test(wanted);
-			if (blank) {
-				if (!empty) {
-					return false;
-				}
-			} else if (empty || !accepts.test(wanted, slot)) {
-				return false;
+		return assign(line, pattern, slotEmpty, patternBlank, accepts) != null;
+	}
+
+	/**
+	 * Reparte las ranuras ocupadas entre los ingredientes de la receta.
+	 *
+	 * @param line         contenido de las ranuras 0..8.
+	 * @param pattern      ingredientes de la receta; los blancos (según patternBlank) se ignoran.
+	 * @param slotEmpty    si una ranura está vacía.
+	 * @param patternBlank si un lugar de la receta es un blanco.
+	 * @param accepts      si el ingrediente acepta el contenido de la ranura (tipo y cantidad).
+	 * @return un arreglo del largo de la receta con, para cada ingrediente, la ranura que le toca (-1 si
+	 *         es un blanco), o null si no hay forma de repartirlas.
+	 */
+	public static <S, P> int[] assign(List<S> line, List<P> pattern, Predicate<S> slotEmpty,
+			Predicate<P> patternBlank, BiPredicate<P, S> accepts) {
+		List<Integer> real = new ArrayList<>();
+		for (int i = 0; i < pattern.size(); i++) {
+			if (!patternBlank.test(pattern.get(i))) {
+				real.add(i);
 			}
 		}
-		return true;
+		int occupied = 0;
+		for (S slot : line) {
+			if (!slotEmpty.test(slot)) {
+				occupied++;
+			}
+		}
+		if (real.isEmpty() || real.size() != occupied || line.size() > 30) {
+			return null;
+		}
+		int[] result = new int[pattern.size()];
+		Arrays.fill(result, -1);
+		// Estados (conjuntos de ranuras ya usadas) que se sabe que no llevan a ninguna solución: evita
+		// probar todas las permutaciones cuando hay ingredientes repetidos.
+		Set<Integer> dead = new HashSet<>();
+		return place(0, 0, real, line, pattern, slotEmpty, accepts, result, dead) ? result : null;
+	}
+
+	private static <S, P> boolean place(int k, int usedMask, List<Integer> real, List<S> line, List<P> pattern,
+			Predicate<S> slotEmpty, BiPredicate<P, S> accepts, int[] result, Set<Integer> dead) {
+		if (k == real.size()) {
+			return true;
+		}
+		if (dead.contains(usedMask)) {
+			return false;
+		}
+		int entry = real.get(k);
+		for (int slot = 0; slot < line.size(); slot++) {
+			if ((usedMask & (1 << slot)) != 0 || slotEmpty.test(line.get(slot))
+					|| !accepts.test(pattern.get(entry), line.get(slot))) {
+				continue;
+			}
+			result[entry] = slot;
+			if (place(k + 1, usedMask | (1 << slot), real, line, pattern, slotEmpty, accepts, result, dead)) {
+				return true;
+			}
+			result[entry] = -1;
+		}
+		dead.add(usedMask);
+		return false;
 	}
 
 	/** Cantidad máxima que una receta puede pedir en una ranura (tamaño de pila estándar). */
