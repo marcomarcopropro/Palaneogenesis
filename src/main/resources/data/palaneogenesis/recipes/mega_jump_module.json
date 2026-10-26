@@ -1,0 +1,40 @@
+{
+  "type": "palaneogenesis:biotech_assembly",
+  "ingredients": [
+    {
+      "item": "minecraft:feather",
+      "count": 5
+    },
+    {
+      "item": "minecraft:cobblestone"
+    },
+    {
+      "item": "minecraft:stone"
+    },
+    {
+      "item": "minecraft:gold_block"
+    },
+    {
+      "item": "minecraft:dirt",
+      "count": 32
+    },
+    {
+      "item": "minecraft:phantom_membrane"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:gravel",
+      "count": 5
+    },
+    {
+      "item": "minecraft:sand",
+      "count": 5
+    }
+  ],
+  "result": {
+    "item": "palaneogenesis:mega_jump_module",
+    "count": 1
+  }
+}

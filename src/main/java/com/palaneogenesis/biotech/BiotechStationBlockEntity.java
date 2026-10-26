@@ -130,7 +130,7 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 		return existing.getCount() + result.getCount() <= existing.getMaxStackSize();
 	}
 
-	/** Entrega el producto y gasta 1 unidad de cada ranura ocupada (dejando el envase si lo tiene, ej. cubos). */
+	/** Entrega el producto y gasta de cada ranura ocupada la cantidad que pide la receta (dejando el envase si lo tiene, ej. cubos). */
 	private void craft(BiotechAssemblyRecipe recipe, Level level) {
 		ItemStack result = recipe.assemble(new RecipeWrapper(this.inventory), level.registryAccess());
 		ItemStack existing = this.inventory.getStackInSlot(BiotechSettings.SLOT_RESULT);
@@ -146,8 +146,9 @@ public class BiotechStationBlockEntity extends BlockEntity implements MenuProvid
 			if (stack.isEmpty()) {
 				continue;
 			}
-			if (stack.getCount() > 1) {
-				stack.shrink(1);
+			int need = recipe.countAt(i);
+			if (stack.getCount() > need) {
+				stack.shrink(need);
 				this.inventory.setStackInSlot(i, stack);
 			} else {
 				this.inventory.setStackInSlot(i, stack.getCraftingRemainingItem());

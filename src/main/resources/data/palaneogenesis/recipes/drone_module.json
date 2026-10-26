@@ -1,0 +1,41 @@
+{
+  "type": "palaneogenesis:biotech_assembly",
+  "ingredients": [
+    {
+      "item": "minecraft:bow"
+    },
+    {
+      "item": "minecraft:crossbow"
+    },
+    {
+      "item": "minecraft:gold_ingot",
+      "count": 16
+    },
+    {
+      "item": "minecraft:iron_ingot",
+      "count": 10
+    },
+    {
+      "item": "minecraft:copper_block",
+      "count": 8
+    },
+    {
+      "item": "minecraft:golden_apple"
+    },
+    {
+      "item": "minecraft:feather",
+      "count": 5
+    },
+    {
+      "item": "minecraft:stick",
+      "count": 32
+    },
+    {
+      "item": "minecraft:blaze_rod"
+    }
+  ],
+  "result": {
+    "item": "palaneogenesis:drone_module",
+    "count": 1
+  }
+}

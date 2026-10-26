@@ -45,6 +45,22 @@ public final class AssemblyLine {
 		return true;
 	}
 
+	/** Cantidad máxima que una receta puede pedir en una ranura (tamaño de pila estándar). */
+	public static final int MAX_SLOT_COUNT = 64;
+
+	/** true si la ranura tiene al menos la cantidad que pide la receta. */
+	public static boolean hasEnough(int have, int need) {
+		return have >= need;
+	}
+
+	/** Valida la cantidad pedida en una ranura: null si está bien, o el motivo del error. */
+	public static String validateCount(int count) {
+		if (count < 1 || count > MAX_SLOT_COUNT) {
+			return "La cantidad por ranura tiene que estar entre 1 y " + MAX_SLOT_COUNT + " (es " + count + ")";
+		}
+		return null;
+	}
+
 	/** Valida la forma de una receta: null si está bien, o el motivo del error. */
 	public static String validate(int patternSize, int nonBlank) {
 		if (patternSize < 1 || patternSize > BiotechSettings.LINE_SLOTS) {

@@ -16,6 +16,7 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.items.wrapper.RecipeWrapper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -24,18 +25,39 @@ import java.util.List;
  * ranuras que la receta no nombra también tienen que estar vacías. La regla de emparejamiento vive
  * en biotech.AssemblyLine (sin dependencias de Minecraft, probada aparte).
  *
- * Al completarse el crafteo se gasta 1 unidad de cada ranura ocupada (la estación lo hace, ver
- * BiotechStationBlockEntity#craft) y se entrega el resultado.
+ * Cada ranura pide además una CANTIDAD (por defecto 1): la ranura tiene que tener al menos esa
+ * cantidad, y al completarse el crafteo se gasta exactamente esa cantidad de cada ranura ocupada (la
+ * estación lo hace, ver BiotechStationBlockEntity#craft) y se entrega el resultado.
  */
 public class BiotechAssemblyRecipe implements Recipe<RecipeWrapper> {
 	private final ResourceLocation id;
 	private final NonNullList<Ingredient> pattern;
+	private final List<Integer> counts;
+	private final List<Entry> entries;
 	private final ItemStack result;
 
+	/** Un lugar de la receta: el ingrediente y cuántas unidades pide la ranura. */
+	public record Entry(Ingredient ingredient, int count) {
+	}
+
+	/** Receta con 1 unidad por ranura (compatibilidad con las recetas sin cantidades). */
 	public BiotechAssemblyRecipe(ResourceLocation id, NonNullList<Ingredient> pattern, ItemStack result) {
+		this(id, pattern, Collections.nCopies(pattern.size(), 1), result);
+	}
+
+	public BiotechAssemblyRecipe(ResourceLocation id, NonNullList<Ingredient> pattern, List<Integer> counts, ItemStack result) {
+		if (counts.size() != pattern.size()) {
+			throw new IllegalArgumentException("Cantidades y patrón de distinto largo en la receta " + id);
+		}
 		this.id = id;
 		this.pattern = pattern;
+		this.counts = List.copyOf(counts);
 		this.result = result;
+		List<Entry> built = new ArrayList<>(pattern.size());
+		for (int i = 0; i < pattern.size(); i++) {
+			built.add(new Entry(pattern.get(i), this.counts.get(i)));
+		}
+		this.entries = List.copyOf(built);
 	}
 
 	@Override
@@ -44,7 +66,8 @@ public class BiotechAssemblyRecipe implements Recipe<RecipeWrapper> {
 		for (int i = 0; i < BiotechSettings.LINE_SLOTS; i++) {
 			line.add(container.getItem(i));
 		}
-		return AssemblyLine.matches(line, this.pattern, ItemStack::isEmpty, Ingredient::isEmpty, Ingredient::test);
+		return AssemblyLine.matches(line, this.entries, ItemStack::isEmpty, entry -> entry.ingredient().isEmpty(),
+			(entry, stack) -> entry.ingredient().test(stack) && AssemblyLine.hasEnough(stack.getCount(), entry.count()));
 	}
 
 	@Override
@@ -90,6 +113,16 @@ public class BiotechAssemblyRecipe implements Recipe<RecipeWrapper> {
 
 	public NonNullList<Ingredient> getPattern() {
 		return this.pattern;
+	}
+
+	/** Cantidades pedidas por ranura, en el mismo orden que el patrón. */
+	public List<Integer> getCounts() {
+		return this.counts;
+	}
+
+	/** Unidades que pide la ranura i (1 si la receta no llega a esa ranura). */
+	public int countAt(int slot) {
+		return slot >= 0 && slot < this.counts.size() ? this.counts.get(slot) : 1;
 	}
 
 	public ItemStack getResult() {

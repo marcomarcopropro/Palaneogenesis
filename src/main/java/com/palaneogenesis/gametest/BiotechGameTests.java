@@ -192,6 +192,19 @@ public class BiotechGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(template = TEMPLATE)
+	public static void biotechCantidadPorRanuraSeValida(GameTestHelper helper) {
+		helper.assertTrue(AssemblyLine.validateCount(1) == null, "1 vale");
+		helper.assertTrue(AssemblyLine.validateCount(32) == null, "32 vale");
+		helper.assertTrue(AssemblyLine.validateCount(64) == null, "64 vale");
+		helper.assertTrue(AssemblyLine.validateCount(0) != null, "0 no");
+		helper.assertTrue(AssemblyLine.validateCount(65) != null, "65 no");
+		helper.assertTrue(AssemblyLine.hasEnough(32, 32), "justo alcanza");
+		helper.assertTrue(AssemblyLine.hasEnough(40, 32), "de más alcanza");
+		helper.assertTrue(!AssemblyLine.hasEnough(31, 32), "de menos no");
+		helper.succeed();
+	}
+
 	// ---- BiotechTimeline y WrenchUses --------------------------------------------------------
 
 	@GameTest(template = TEMPLATE)
