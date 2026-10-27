@@ -15,8 +15,9 @@ public final class NetworkHandler {
 	 * "5": F6 agrega DroneAppleSyncPacket (temporizador de la Manzana del último dron en el HUD).
 	 * "6": modelo de los drones agrega DroneVisualPacket (cantidad de drones y disparos, para dibujarlos).
 	 * "7": pantalla propia de Biomod agregó OpenBiomodPacket (abrir el inventario de los módulos).
-	 * "8": se quita OpenBiomodPacket: la pantalla de Biomod solo la abren las Pinzas, desde el servidor. */
-	private static final String PROTOCOL_VERSION = "8";
+	 * "8": se quita OpenBiomodPacket: la pantalla de Biomod solo la abren las Pinzas, desde el servidor.
+	 * "9": el impacto del Mega Jump agrega MegaJumpWavePacket (bloques que se levantan, solo visual). */
+	private static final String PROTOCOL_VERSION = "9";
 
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 		new ResourceLocation(Palaneogenesis.MOD_ID, "main"),
@@ -77,5 +78,9 @@ public final class NetworkHandler {
 		// biomod.ability.drones.DroneSystem y client.DroneRenderEvents. También al final.
 		CHANNEL.registerMessage(id(), DroneVisualPacket.class,
 			DroneVisualPacket::encode, DroneVisualPacket::decode, DroneVisualPacket::handle);
+		// Mega Jump, impacto: server -> jugadores cerca, bloques del suelo que se levantan, ver
+		// biomod.ability.megajump.ImpactWave y client.ClientBlockWaves. También al final.
+		CHANNEL.registerMessage(id(), MegaJumpWavePacket.class,
+			MegaJumpWavePacket::encode, MegaJumpWavePacket::decode, MegaJumpWavePacket::handle);
 	}
 }

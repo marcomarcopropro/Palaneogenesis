@@ -112,6 +112,10 @@ public class ClientModEvents {
 		// pantalla (ver client.BiomodCooldownHudOverlay). Se ancla a la hotbar sin relación funcional
 		// con ella: solo es un punto de orden de registro ya probado en este archivo.
 		event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "biomod_cooldowns", BiomodCooldownHudOverlay.HUD);
+
+		// Borde rojo mientras la Embestida está activa (ver client.ChargeEdgeOverlay). Mismo anclaje por orden de
+		// registro que los parpadeos rojos de arriba (PLAYER_HEALTH), sin relación funcional con él.
+		event.registerAbove(VanillaGuiOverlay.PLAYER_HEALTH.id(), "charge_edge", ChargeEdgeOverlay.HUD);
 	}
 
 	@SubscribeEvent

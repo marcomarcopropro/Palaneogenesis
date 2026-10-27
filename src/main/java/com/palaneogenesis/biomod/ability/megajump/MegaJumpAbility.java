@@ -10,8 +10,9 @@ import com.palaneogenesis.biomod.module.ModuleCounts;
 import com.palaneogenesis.biomod.target.TargetRules;
 import com.palaneogenesis.config.BiomodConfig;
 import com.palaneogenesis.config.Config;
+import com.palaneogenesis.network.MegaJumpWavePacket;
+import com.palaneogenesis.network.NetworkHandler;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +27,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -79,6 +81,8 @@ public final class MegaJumpAbility implements AbilityHandler {
 	 */
 	public static final int LANDING_SHIELD_TICKS = 5;
 	private static final Logger LOGGER = LogUtils.getLogger();
+	/** Bloques extra, más allá del radio del impacto, hasta donde se avisa del efecto visual del impacto. */
+	private static final double WAVE_VIEW_MARGIN = 64.0D;
 	/** Si el hueco del techo suelta los drops de los bloques. */
 	public static final boolean CEILING_DROPS = false;
 
@@ -300,11 +304,11 @@ public final class MegaJumpAbility implements AbilityHandler {
 			}
 		}
 		level.playSound(null, player.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.0F);
-		int points = Mth.clamp((int) (radius * 4.0D), 12, 96);
-		for (int i = 0; i < points; i++) {
-			double angle = (Math.PI * 2.0D) * i / points;
-			level.sendParticles(ParticleTypes.CLOUD, cx + Math.cos(angle) * radius, player.getY() + 0.1D,
-				cz + Math.sin(angle) * radius, 1, 0.0D, 0.05D, 0.0D, 0.02D);
-		}
+		// Efecto visual: el suelo del círculo del impacto se levanta (leve en el Mega Jump solo, el bloque entero y en
+		// ola con la sinergia Mega Jump + Pistón). Es solo visual: cada cliente cercano lo dibuja, el mundo no cambia.
+		// Cuánto y cuándo sube cada bloque: ImpactWave.
+		NetworkHandler.CHANNEL.send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(cx,
+				player.getY(), cz, radius + WAVE_VIEW_MARGIN, level.dimension())),
+			new MegaJumpWavePacket(cx, cz, Mth.floor(player.getY()) - 1, (float) radius, lift));
 	}
 }
