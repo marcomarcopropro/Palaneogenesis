@@ -63,6 +63,25 @@ public record DroneLoadout(int units) {
 		return units - 1;
 	}
 
+	/** Qué hace un dron. El cliente lo usa para saber qué animación y qué color de lente le toca a cada uno. */
+	public enum Role {
+		SUPPORT, ATTACK, APPLE
+	}
+
+	/**
+	 * El rol del dron en la posición {@code slot} (0 a units - 1) de la órbita, con el orden de arriba: soporte
+	 * primero (si hay), ataque después, Manzana al final (si hay). Es la misma cuenta que attackSlot y appleSlot.
+	 */
+	public Role role(int slot) {
+		if (hasSupport() && slot == 0) {
+			return Role.SUPPORT;
+		}
+		if (hasEnchantedApple() && slot == appleSlot()) {
+			return Role.APPLE;
+		}
+		return Role.ATTACK;
+	}
+
 	/**
 	 * true si el dron de ataque {@code attackIndex} (0 a attackDrones - 1) dispara en este tick de juego.
 	 * Cada uno dispara una vez cada {@code interval} ticks, con el disparo desfasado interval / attackDrones

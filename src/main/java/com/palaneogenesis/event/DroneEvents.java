@@ -72,6 +72,25 @@ public class DroneEvents {
 		}
 	}
 
+	/**
+	 * Un jugador empieza a ver a otro (entra en su rango, cambia de dimensión...): se le cuenta cuántos drones
+	 * tiene, porque el cambio de cantidad ya se había avisado antes de que lo viera.
+	 */
+	@SubscribeEvent
+	public static void onStartTracking(PlayerEvent.StartTracking event) {
+		if (event.getTarget() instanceof ServerPlayer target && event.getEntity() instanceof ServerPlayer viewer) {
+			DroneSystem.sendVisualTo(viewer, target);
+		}
+	}
+
+	/** Cambió de dimensión: su cliente descartó los drones del mundo anterior, hay que mandárselos de nuevo. */
+	@SubscribeEvent
+	public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+		if (event.getEntity() instanceof ServerPlayer player) {
+			DroneSystem.resendVisual(player);
+		}
+	}
+
 	@SubscribeEvent
 	public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
 		DroneSystem.forget(event.getEntity().getUUID());

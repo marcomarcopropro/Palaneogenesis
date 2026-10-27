@@ -14,7 +14,8 @@ final class DronePosition {
 
 	/** Posición del dron {@code slot} (0 a total - 1) en el tick de juego {@code gameTime}. */
 	static Vec3 at(Player player, int slot, int total, long gameTime, double radius, double height, double speed) {
-		double angle = gameTime * speed + slot * (Math.PI * 2.0D) / Math.max(1, total);
+		// La fórmula del ángulo vive en DroneOrbit: el cliente la usa igual para dibujar el modelo.
+		double angle = DroneOrbit.angle(slot, total, gameTime, speed);
 		return new Vec3(
 			player.getX() + Math.cos(angle) * radius,
 			player.getY() + player.getBbHeight() + height,

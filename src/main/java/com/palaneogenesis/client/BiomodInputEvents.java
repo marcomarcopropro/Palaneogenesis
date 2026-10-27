@@ -28,6 +28,7 @@ public class BiomodInputEvents {
 		if (minecraft.player == null) {
 			ClientBiomodSync.reset();
 			ClientDroneSync.reset();
+			ClientDroneVisuals.reset();
 			return;
 		}
 		// T2.5: descuenta los cooldowns de la copia local (no mientras el juego está en pausa).

@@ -7,9 +7,9 @@ import com.palaneogenesis.biomod.target.TargetRules;
 import com.palaneogenesis.config.BiomodConfig;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.DroneAppleSyncPacket;
+import com.palaneogenesis.network.DroneVisualPacket;
 import com.palaneogenesis.network.NetworkHandler;
 import com.palaneogenesis.util.AncientTransformation;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -40,9 +40,10 @@ import java.util.UUID;
  *   se manda al HUD del dueño (DroneAppleSyncPacket); si el dron deja de estar equipado, el reloj se borra y
  *   al volver a equiparlo cuenta un intervalo completo.
  *
- * Los drones no son entidades: orbitan al jugador como puntos calculados en cada tick (DronePosition) y se
- * dibujan con partículas; las flechas nacen en esos puntos. Un modelo propio queda para cuando exista el
- * arte. Las flechas llevan la etiqueta ARROW_TAG para que event.DroneEvents deje pasar de largo lo que
+ * Los drones no son entidades: orbitan al jugador como puntos calculados en cada tick (DronePosition, con la
+ * órbita de DroneOrbit) y las flechas nacen en esos puntos. El modelo (GeckoLib) lo dibuja el cliente en
+ * client.DroneRenderEvents; para eso el servidor le manda al dueño y a quienes lo rodean cuántos drones tiene
+ * y cuándo dispara cada uno (DroneVisualPacket). Las flechas llevan la etiqueta ARROW_TAG para que event.DroneEvents deje pasar de largo lo que
  * TargetRules no acepta (mascotas, protegidos, etc.) y para que su golpe no vuelva a marcar al objetivo.
  *
  * El estado vive en memoria y no se guarda: al reconectar los drones arrancan de cero.
@@ -56,13 +57,6 @@ public final class DroneSystem {
 	/** Velocidad de la flecha (una flecha de arco normal sale a 3.0 con carga completa). */
 	private static final float ARROW_SPEED = 3.0F;
 	private static final float ARROW_INACCURACY = 0.5F;
-	/** Radio de la órbita de los drones, en bloques, y altura sobre la cabeza del jugador. */
-	private static final double ORBIT_RADIUS = 1.3D;
-	private static final double ORBIT_HEIGHT = 0.5D;
-	/** Radianes por tick que giran los drones alrededor del jugador. */
-	private static final double ORBIT_SPEED = 0.08D;
-	/** Cada cuántos ticks se dibujan las partículas de los drones. */
-	private static final int PARTICLE_INTERVAL_TICKS = 5;
 	/** Duración de los efectos de soporte: algo más que el intervalo de renovación (20) para que no parpadeen. */
 	private static final int SUPPORT_EFFECT_TICKS = 60;
 	/** Cada cuántos ticks se le vuelve a mandar al HUD lo que falta para la Manzana, por si el cliente se desfasó. */
@@ -71,6 +65,8 @@ public final class DroneSystem {
 	private static final Map<UUID, DroneTargetMemory> MARKS = new HashMap<>();
 	/** Tick de juego en que el dron 5 da su próxima Manzana Dorada Encantada. */
 	private static final Map<UUID, Long> NEXT_APPLE = new HashMap<>();
+	/** Cuántos drones se le avisó a los clientes que tiene cada jugador (no figura si tiene 0). */
+	private static final Map<UUID, Integer> VISUAL_UNITS = new HashMap<>();
 
 	private DroneSystem() {
 	}
@@ -108,6 +104,7 @@ public final class DroneSystem {
 	/** Avanza los drones del jugador un tick (lo llama event.DroneEvents). */
 	public static void tick(ServerPlayer player) {
 		DroneLoadout loadout = new DroneLoadout(units(player));
+		syncVisual(player, loadout.units());
 		if (!loadout.hasEnchantedApple()) {
 			dropApple(player);
 		}
@@ -126,12 +123,6 @@ public final class DroneSystem {
 		}
 		if (loadout.hasEnchantedApple()) {
 			enchantedApple(player, settings, now);
-		}
-		if (now % PARTICLE_INTERVAL_TICKS == 0) {
-			for (int slot = 0; slot < loadout.units(); slot++) {
-				Vec3 pos = DronePosition.at(player, slot, loadout.units(), now, ORBIT_RADIUS, ORBIT_HEIGHT, ORBIT_SPEED);
-				level.sendParticles(ParticleTypes.END_ROD, pos.x, pos.y, pos.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-			}
 		}
 		if (loadout.attackDrones() > 0) {
 			attack(player, level, loadout, settings, now);
@@ -195,8 +186,10 @@ public final class DroneSystem {
 		memory.keep(now, settings.targetMemoryTicks());
 		for (int k = 0; k < loadout.attackDrones(); k++) {
 			if (DroneLoadout.shouldFire(now, k, loadout.attackDrones(), settings.fireIntervalTicks())) {
-				Vec3 from = DronePosition.at(player, loadout.attackSlot(k), loadout.units(), now, ORBIT_RADIUS, ORBIT_HEIGHT, ORBIT_SPEED);
+				Vec3 from = DronePosition.at(player, loadout.attackSlot(k), loadout.units(), now, DroneOrbit.RADIUS, DroneOrbit.HEIGHT, DroneOrbit.SPEED);
 				fire(player, level, target, from, loadout.slowsTargets(), settings);
+				// El modelo de ese dron reproduce su animación de ataque y pone el lente en rojo.
+				sendVisual(player, loadout.units(), loadout.attackSlot(k));
 			}
 		}
 	}
@@ -219,6 +212,48 @@ public final class DroneSystem {
 		level.playSound(null, from.x, from.y, from.z, SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 0.5F, 1.4F);
 	}
 
+	/**
+	 * Le avisa al dueño y a quienes lo rodean cuántos drones tiene, solo cuando el número cambia: de él depende
+	 * qué drones se dibujan y qué rol tiene cada uno (soporte, ataque o Manzana).
+	 */
+	private static void syncVisual(ServerPlayer player, int units) {
+		int last = VISUAL_UNITS.getOrDefault(player.getUUID(), 0);
+		if (last == units) {
+			return;
+		}
+		if (units == 0) {
+			VISUAL_UNITS.remove(player.getUUID());
+		} else {
+			VISUAL_UNITS.put(player.getUUID(), units);
+		}
+		sendVisual(player, units, DroneVisualPacket.NO_SHOT);
+	}
+
+	/**
+	 * Un jugador empezó a ver a {@code target} (event.DroneEvents): se le cuenta cuántos drones tiene, porque
+	 * el aviso del cambio de cantidad ya se había mandado antes de que lo viera.
+	 */
+	public static void sendVisualTo(ServerPlayer viewer, ServerPlayer target) {
+		int units = VISUAL_UNITS.getOrDefault(target.getUUID(), 0);
+		if (units > 0) {
+			NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> viewer),
+				new DroneVisualPacket(target.getUUID(), units, DroneVisualPacket.NO_SHOT));
+		}
+	}
+
+	/**
+	 * El jugador cambió de dimensión (event.DroneEvents): su cliente tiró los drones del mundo anterior, así que
+	 * se olvida lo avisado y el próximo tick vuelve a mandar la cantidad.
+	 */
+	public static void resendVisual(ServerPlayer player) {
+		VISUAL_UNITS.remove(player.getUUID());
+	}
+
+	private static void sendVisual(ServerPlayer player, int units, int shotSlot) {
+		NetworkHandler.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+			new DroneVisualPacket(player.getUUID(), units, shotSlot));
+	}
+
 	/** El dron de la Manzana ya no está: se borra su reloj y el HUD deja de mostrar el temporizador. */
 	private static void dropApple(ServerPlayer player) {
 		if (NEXT_APPLE.remove(player.getUUID()) != null) {
@@ -233,6 +268,10 @@ public final class DroneSystem {
 	/** El jugador murió: se olvida todo y el HUD borra el temporizador (si el dron sigue equipado, vuelve a contar al reaparecer). */
 	public static void onDeath(ServerPlayer player) {
 		boolean hadApple = NEXT_APPLE.containsKey(player.getUUID());
+		if (VISUAL_UNITS.containsKey(player.getUUID())) {
+			// Los clientes sueltan sus drones; si al reaparecer sigue equipado, el próximo tick los vuelve a mandar.
+			sendVisual(player, 0, DroneVisualPacket.NO_SHOT);
+		}
 		forget(player.getUUID());
 		if (hadApple) {
 			sendApple(player, DroneAppleSyncPacket.NONE);
@@ -243,11 +282,13 @@ public final class DroneSystem {
 	public static void forget(UUID player) {
 		MARKS.remove(player);
 		NEXT_APPLE.remove(player);
+		VISUAL_UNITS.remove(player);
 	}
 
 	/** Olvida todo (al apagar el servidor). */
 	public static void clear() {
 		MARKS.clear();
 		NEXT_APPLE.clear();
+		VISUAL_UNITS.clear();
 	}
 }

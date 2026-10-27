@@ -12,8 +12,9 @@ public final class NetworkHandler {
 	/** "3": F2 agrega AbilityKeyPacket y cambia el formato de BiomodSyncPacket (T2.5).
 	 * "4": F4 agrega MegaJumpRescuePacket (espacio en el aire durante un Mega Jump): un cliente y un
 	 * servidor de versiones distintas ya no se aceptan entre sí.
-	 * "5": F6 agrega DroneAppleSyncPacket (temporizador de la Manzana del último dron en el HUD). */
-	private static final String PROTOCOL_VERSION = "5";
+	 * "5": F6 agrega DroneAppleSyncPacket (temporizador de la Manzana del último dron en el HUD).
+	 * "6": modelo de los drones agrega DroneVisualPacket (cantidad de drones y disparos, para dibujarlos). */
+	private static final String PROTOCOL_VERSION = "6";
 
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 		new ResourceLocation(Palaneogenesis.MOD_ID, "main"),
@@ -70,5 +71,9 @@ public final class NetworkHandler {
 		// biomod.ability.drones.DroneSystem y client.BiomodCooldownHudOverlay. También al final.
 		CHANNEL.registerMessage(id(), DroneAppleSyncPacket.class,
 			DroneAppleSyncPacket::encode, DroneAppleSyncPacket::decode, DroneAppleSyncPacket::handle);
+		// Drones, modelo: server -> el dueño y quienes lo rodean, cantidad de drones y disparos, ver
+		// biomod.ability.drones.DroneSystem y client.DroneRenderEvents. También al final.
+		CHANNEL.registerMessage(id(), DroneVisualPacket.class,
+			DroneVisualPacket::encode, DroneVisualPacket::decode, DroneVisualPacket::handle);
 	}
 }

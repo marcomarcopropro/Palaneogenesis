@@ -10,6 +10,7 @@ import com.palaneogenesis.biomod.ability.charge.ChargeEffect;
 import com.palaneogenesis.biomod.ability.charge.ChargeSession;
 import com.palaneogenesis.biomod.ability.charge.ChargeSettings;
 import com.palaneogenesis.biomod.ability.drones.DroneLoadout;
+import com.palaneogenesis.biomod.ability.drones.DroneOrbit;
 import com.palaneogenesis.biomod.ability.drones.DroneSettings;
 import com.palaneogenesis.biomod.ability.drones.DroneTargetMemory;
 import com.palaneogenesis.biomod.ability.megajump.CeilingJob;
@@ -37,6 +38,7 @@ import com.palaneogenesis.capability.BiomodDataProvider;
 import com.palaneogenesis.capability.Capabilities;
 import com.palaneogenesis.config.Config;
 import com.palaneogenesis.network.DroneAppleSyncPacket;
+import com.palaneogenesis.network.DroneVisualPacket;
 import com.palaneogenesis.util.LevitationState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -849,6 +851,57 @@ public class BiomodGameTests {
 			FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
 			DroneAppleSyncPacket.encode(new DroneAppleSyncPacket(ticks), buffer);
 			helper.assertTrue(DroneAppleSyncPacket.decode(buffer).remainingTicks() == ticks, "el paquete devuelve " + ticks);
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesElPaqueteVisualViajaIntacto(GameTestHelper helper) {
+		UUID dueno = UUID.randomUUID();
+		for (int[] caso : new int[][] {{0, DroneVisualPacket.NO_SHOT}, {1, DroneVisualPacket.NO_SHOT}, {5, DroneVisualPacket.NO_SHOT}, {5, 3}, {2, 0}}) {
+			FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+			DroneVisualPacket.encode(new DroneVisualPacket(dueno, caso[0], caso[1]), buffer);
+			DroneVisualPacket vuelta = DroneVisualPacket.decode(buffer);
+			helper.assertTrue(vuelta.owner().equals(dueno) && vuelta.units() == caso[0] && vuelta.shotSlot() == caso[1],
+				"el paquete devuelve " + caso[0] + " drones y el disparo " + caso[1]);
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesCadaPosicionTieneSuRolSegunLaCantidad(GameTestHelper helper) {
+		// Mismo reparto que DroneLoadout: 1 = soporte; 2 = 2 de ataque; 3 = soporte + 2 de ataque; 4 = 4 de ataque; 5 = 4 de ataque + Manzana.
+		DroneLoadout.Role s = DroneLoadout.Role.SUPPORT;
+		DroneLoadout.Role a = DroneLoadout.Role.ATTACK;
+		DroneLoadout.Role m = DroneLoadout.Role.APPLE;
+		DroneLoadout.Role[][] esperado = {{s}, {a, a}, {s, a, a}, {a, a, a, a}, {a, a, a, a, m}};
+		for (int units = 1; units <= 5; units++) {
+			DroneLoadout loadout = new DroneLoadout(units);
+			for (int slot = 0; slot < units; slot++) {
+				helper.assertTrue(loadout.role(slot) == esperado[units - 1][slot], "con " + units + " drones, la posición " + slot + " es " + esperado[units - 1][slot]);
+			}
+			// El rol y las posiciones de ataque y de la Manzana cuentan lo mismo.
+			for (int k = 0; k < loadout.attackDrones(); k++) {
+				helper.assertTrue(loadout.role(loadout.attackSlot(k)) == a, "attackSlot(" + k + ") con " + units + " drones es de ataque");
+			}
+			if (loadout.hasEnchantedApple()) {
+				helper.assertTrue(loadout.role(loadout.appleSlot()) == m, "appleSlot con 5 drones es la Manzana");
+			}
+		}
+		helper.succeed();
+	}
+
+	@GameTest(template = TEMPLATE)
+	public static void dronesLaOrbitaDelClienteYDelServidorCoinciden(GameTestHelper helper) {
+		// DronePosition (servidor, de donde nace la flecha) y DroneOrbit.angle (cliente, donde se dibuja) usan la misma fórmula,
+		// que es la de antes de que existiera DroneOrbit.
+		for (int total = 1; total <= 5; total++) {
+			for (int slot = 0; slot < total; slot++) {
+				for (long tick : new long[] {0L, 1L, 79L, 123456L}) {
+					double vieja = tick * 0.08D + slot * (Math.PI * 2.0D) / Math.max(1, total);
+					helper.assertTrue(DroneOrbit.angle(slot, total, tick, DroneOrbit.SPEED) == vieja, "el ángulo del dron " + slot + "/" + total + " en el tick " + tick);
+				}
+			}
 		}
 		helper.succeed();
 	}
