@@ -60,6 +60,12 @@ public class EmptySyringeItem extends Item {
 		super(properties);
 	}
 
+	/**
+	 * Si al destransformarse en creativo también se entrega la Broken Syringe (la jeringa vacía igual no se gasta).
+	 * false = en creativo no pasa nada con los ítems, como antes de la Beta-4.3.10.
+	 */
+	public static final boolean CREATIVE_GIVES_BROKEN_SYRINGE = true;
+
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
@@ -86,7 +92,11 @@ public class EmptySyringeItem extends Item {
 
 		player.awardStat(Stats.ITEM_USED.get(this));
 
-		if (player.getAbilities().instabuild) {
+		// En creativo la jeringa vacía no se gasta (como cualquier ítem en creativo), pero la Broken Syringe sí se
+		// entrega: es lo que se ve al destransformar y, si no saliera, en creativo no habría forma de comprobarla
+		// (bug reportado: "no aparece cuando se usa la vacía para destransformar"). Ver CREATIVE_GIVES_BROKEN_SYRINGE.
+		boolean creative = player.getAbilities().instabuild;
+		if (creative && !CREATIVE_GIVES_BROKEN_SYRINGE) {
 			return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 		}
 
@@ -113,7 +123,9 @@ public class EmptySyringeItem extends Item {
 			player.drop(brokenSyringe, false);
 		}
 
-		stack.shrink(1);
+		if (!creative) {
+			stack.shrink(1);
+		}
 		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
 	}
 

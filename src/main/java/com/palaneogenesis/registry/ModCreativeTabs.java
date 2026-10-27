@@ -60,6 +60,7 @@ public class ModCreativeTabs {
 				output.accept(ModItems.INVERTED_HEART.get());
 				output.accept(ModItems.EMPTY_SYRINGE.get());
 				output.accept(ModItems.ANCIENT_EXTRACT_SYRINGE.get());
+				output.accept(ModItems.BROKEN_SYRINGE.get());
 				output.accept(ModItems.KAAK_TUN_SPAWN_EGG.get());
 				output.accept(ModItems.NANOBOT_INJECTOR.get());
 				output.accept(ModItems.SURGICAL_TWEEZERS.get());
