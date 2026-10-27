@@ -1,6 +1,7 @@
 package com.palaneogenesis.item.biomod;
 
 import com.palaneogenesis.biomod.BiomodState;
+import com.palaneogenesis.biomod.gui.BiomodMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -9,17 +10,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.NetworkHooks;
-import top.theillusivec4.curios.common.inventory.container.CuriosContainerProvider;
 
 /**
- * Pinzas Quirúrgicas (Sección 3): sin durabilidad. Clic derecho abre la pestaña de Curios y empieza
- * la sesión de modificación, que termina al cerrar esa pantalla (ver event.BiomodEvents).
- * Sin Inyector muestra el mensaje de Acceso Denegado.
+ * Pinzas Quirúrgicas (Sección 3): sin durabilidad. Clic derecho abre la pantalla propia de Biomod
+ * (biomod.gui.BiomodMenu, exclusiva del mod y separada de Curios) y empieza la sesión de modificación, que termina al
+ * cerrar esa pantalla (ver event.BiomodEvents). Sin Inyector muestra el mensaje de Acceso Denegado.
  *
- * ATENCIÓN: CuriosContainerProvider es una clase interna de Curios (no está en el jar "api"). Es lo
- * que usa el propio Curios para abrir su pantalla (CPacketOpenCurios), pero puede cambiar de lugar
- * entre versiones de Curios. Resultado del spike T0.4.
+ * Antes abrían la pantalla general de Curios; el slot biomod ya no se muestra ahí (use_native_gui false).
  */
 public class SurgicalTweezersItem extends Item {
 
@@ -37,7 +34,7 @@ public class SurgicalTweezersItem extends Item {
 			serverPlayer.displayClientMessage(Component.translatable("message.palaneogenesis.biomod.access_denied"), true);
 			return InteractionResultHolder.fail(stack);
 		}
-		NetworkHooks.openScreen(serverPlayer, new CuriosContainerProvider());
+		BiomodMenu.open(serverPlayer);
 		BiomodState.startSession(serverPlayer, serverPlayer.containerMenu.containerId);
 		return InteractionResultHolder.sidedSuccess(stack, false);
 	}

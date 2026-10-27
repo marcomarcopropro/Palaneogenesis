@@ -1,18 +1,18 @@
 package com.palaneogenesis.biomod.gui;
 
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
+import net.minecraftforge.network.NetworkHooks;
 import top.theillusivec4.curios.api.CuriosApi;
 
 /**
@@ -20,14 +20,16 @@ import top.theillusivec4.curios.api.CuriosApi;
  * los curios) y debajo el inventario del jugador. Los slots leen y escriben el MISMO inventario que usa
  * Curios, así que todo lo que ya existe (equipar, unidades, drones, no desmontar al morir) sigue igual.
  *
- * Qué ítems entran lo decide la etiqueta {@code curios:biomod} (data/curios/tags/items/biomod.json), la misma
- * que usa Curios para ese slot. Distribución igual a la de un cofre de una fila (el ancho máximo es 9 slots).
+ * Las reglas de equipar y quitar son LAS DE CURIOS, no unas propias: el slot deja que sea el inventario de
+ * Curios quien decida (isItemValid / extractItem). Ahí se aplican la etiqueta {@code curios:biomod}, el límite de
+ * unidades de BiomodModuleItem#canEquip y el candado del Inyector y las Pinzas de BiomodEvents (CurioEquipEvent y
+ * CurioUnequipEvent). Si esas reglas cambian, esta pantalla las sigue sin tocarse. Solo se abre con las Pinzas,
+ * así que siempre hay sesión de modificación mientras está abierta. Distribución igual a la de un cofre de una fila (ancho máximo 9 slots).
  */
 public class BiomodMenu extends AbstractContainerMenu {
 
 	/** Identificador del slot de Curios (data/palaneogenesis/curios/slots/biomod.json). */
 	public static final String SLOT_ID = "biomod";
-	public static final TagKey<Item> ALLOWED = TagKey.create(Registries.ITEM, new ResourceLocation("curios", "biomod"));
 	private static final int COLUMNS = 9;
 
 	/** Lo pone BiomodMenuTypes al registrarse. */
@@ -56,6 +58,12 @@ public class BiomodMenu extends AbstractContainerMenu {
 		for (int col = 0; col < 9; col++) {
 			addSlot(new Slot(playerInventory, col, 8 + col * 18, invY + 58));
 		}
+	}
+
+	/** Abre la pantalla de Biomod a un jugador. Solo la llaman las Pinzas (item.biomod.SurgicalTweezersItem). */
+	public static void open(ServerPlayer player) {
+		NetworkHooks.openScreen(player,
+			new SimpleMenuProvider((id, inventory, p) -> new BiomodMenu(id, inventory), Component.literal("Biomod")));
 	}
 
 	/** Filas de slots de módulos (mínimo 1) para {@code count} slots. */
@@ -102,16 +110,14 @@ public class BiomodMenu extends AbstractContainerMenu {
 		return true;
 	}
 
-	/** Slot de un módulo: solo entran ítems de la etiqueta curios:biomod y de a uno por slot. */
+	/**
+	 * Slot de un módulo. No redefine mayPlace ni mayPickup: SlotItemHandler ya le pregunta al inventario de Curios
+	 * (isItemValid y extractItem), que es donde viven todas las reglas. De a uno por slot.
+	 */
 	private static final class ModuleSlot extends SlotItemHandler {
 
 		ModuleSlot(IItemHandlerModifiable handler, int index, int x, int y) {
 			super(handler, index, x, y);
-		}
-
-		@Override
-		public boolean mayPlace(ItemStack stack) {
-			return !stack.isEmpty() && stack.is(ALLOWED);
 		}
 
 		@Override
