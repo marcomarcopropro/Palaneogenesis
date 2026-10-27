@@ -17,8 +17,8 @@ package com.palaneogenesis.biomod.ability.drones;
  * sí (con 2 drones: 1, 2, 1, 2). Con 4 o más drones la flecha deja Lentitud. El dron de la Manzana da el efecto
  * de la Manzana Dorada Encantada cada enchantedAppleIntervalTicks.
  *
- * Orden de las posiciones en la órbita: primero el de soporte (si hay), después los de ataque, y al final el
- * de la Manzana (si hay).
+ * Orden de los puestos (slot): primero el de soporte (si hay), después los de ataque, y al final el de la
+ * Manzana (si hay). Qué puesto físico detrás del jugador es cada slot lo decide DroneFormation.
  */
 public record DroneLoadout(int units) {
 

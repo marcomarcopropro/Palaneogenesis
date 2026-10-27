@@ -3,7 +3,7 @@ package com.palaneogenesis.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.palaneogenesis.Palaneogenesis;
-import com.palaneogenesis.biomod.ability.drones.DroneOrbit;
+import com.palaneogenesis.biomod.ability.drones.DroneFormation;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -26,12 +26,13 @@ import java.util.UUID;
 /**
  * Dibuja los modelos de los drones de todos los jugadores (el propio y los que se ven alrededor), una vez por
  * frame, en espacio de mundo y sin importar la cámara: así el dueño también los ve en primera persona, igual
- * que el rayo (PlayerBeamRenderEvents). Los drones no son entidades: su posición es la órbita de
- * biomod.ability.drones.DroneOrbit, la misma de la que nacen las flechas en el servidor, calculada acá con el
- * tiempo del cliente más la fracción del frame y la posición suavizada del jugador.
+ * que el rayo (PlayerBeamRenderEvents). Los drones no son entidades: su posición es su puesto de la formación
+ * fija de biomod.ability.drones.DroneFormation, la misma de la que nacen las flechas en el servidor, calculada
+ * acá con el giro del cuerpo y la posición suavizados con la fracción del frame.
  *
- * Decisión mía, cambiable: el modelo mira hacia afuera de la órbita (no apunta al objetivo: el cliente no lo
- * sabe). El centro del modelo es el punto de la órbita (DroneRenderer#preRender) y su tamaño, MODEL_SCALE.
+ * Decisión mía, cambiable: el modelo mira hacia donde mira el cuerpo del jugador (no apunta al objetivo: el
+ * cliente no lo sabe). El centro del modelo es el puesto de la formación (DroneRenderer#preRender) y su
+ * tamaño, MODEL_SCALE.
  */
 @Mod.EventBusSubscriber(modid = Palaneogenesis.MOD_ID, value = Dist.CLIENT)
 public class DroneRenderEvents {
@@ -60,7 +61,6 @@ public class DroneRenderEvents {
 		Vec3 camPos = camera.getPosition();
 		float partialTick = event.getPartialTick();
 		long gameTime = level.getGameTime();
-		double time = gameTime + partialTick;
 
 		PoseStack poseStack = event.getPoseStack();
 		MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
@@ -82,17 +82,20 @@ public class DroneRenderEvents {
 			double ownerX = Mth.lerp((double) partialTick, owner.xo, owner.getX());
 			double ownerY = Mth.lerp((double) partialTick, owner.yo, owner.getY());
 			double ownerZ = Mth.lerp((double) partialTick, owner.zo, owner.getZ());
-			double orbitY = ownerY + owner.getBbHeight() + DroneOrbit.HEIGHT;
+			if (drones.length < 1 || drones.length > DroneFormation.MAX_DRONES) {
+				continue;
+			}
+			// El mismo giro del cuerpo que usa el servidor (DronePosition), suavizado entre ticks.
+			float bodyYaw = Mth.rotLerp(partialTick, owner.yBodyRotO, owner.yBodyRot);
 
 			for (int slot = 0; slot < drones.length; slot++) {
-				double angle = DroneOrbit.angle(slot, drones.length, time, DroneOrbit.SPEED);
-				double cos = Math.cos(angle);
-				double sin = Math.sin(angle);
-				double x = ownerX + cos * DroneOrbit.RADIUS;
-				double z = ownerZ + sin * DroneOrbit.RADIUS;
-				// El frente del modelo es -Z. Para que mire hacia (cos, sin) en el mundo hace falta el giro
-				// 180 - yaw, con yaw de Minecraft (0 = +Z, 90 = -X) = atan2(-dx, dz).
-				float rotation = (float) (180.0D - Math.toDegrees(Math.atan2(-cos, sin)));
+				double[] offset = DroneFormation.offset(DroneFormation.spot(slot, drones.length), bodyYaw);
+				double x = ownerX + offset[0];
+				double orbitY = ownerY + DroneFormation.HEAD_HEIGHT + offset[1];
+				double z = ownerZ + offset[2];
+				// El frente del modelo es -Z. Para que mire hacia donde mira el cuerpo (yaw de Minecraft:
+				// 0 = +Z, 90 = -X) hace falta el giro 180 - yaw.
+				float rotation = 180.0F - bodyYaw;
 				int light = LevelRenderer.getLightColor(level, BlockPos.containing(x, orbitY, z));
 
 				poseStack.pushPose();

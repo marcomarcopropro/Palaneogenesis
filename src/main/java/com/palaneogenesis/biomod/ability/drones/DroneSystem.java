@@ -40,8 +40,8 @@ import java.util.UUID;
  *   se manda al HUD del dueño (DroneAppleSyncPacket); si el dron deja de estar equipado, el reloj se borra y
  *   al volver a equiparlo cuenta un intervalo completo.
  *
- * Los drones no son entidades: orbitan al jugador como puntos calculados en cada tick (DronePosition, con la
- * órbita de DroneOrbit) y las flechas nacen en esos puntos. El modelo (GeckoLib) lo dibuja el cliente en
+ * Los drones no son entidades: quedan fijos detrás del jugador como puntos calculados en cada tick (DronePosition,
+ * con la formación de DroneFormation) y las flechas nacen en esos puntos. El modelo (GeckoLib) lo dibuja el cliente en
  * client.DroneRenderEvents; para eso el servidor le manda al dueño y a quienes lo rodean cuántos drones tiene
  * y cuándo dispara cada uno (DroneVisualPacket). Las flechas llevan la etiqueta ARROW_TAG para que event.DroneEvents deje pasar de largo lo que
  * TargetRules no acepta (mascotas, protegidos, etc.) y para que su golpe no vuelva a marcar al objetivo.
@@ -186,7 +186,7 @@ public final class DroneSystem {
 		memory.keep(now, settings.targetMemoryTicks());
 		for (int k = 0; k < loadout.attackDrones(); k++) {
 			if (DroneLoadout.shouldFire(now, k, loadout.attackDrones(), settings.fireIntervalTicks())) {
-				Vec3 from = DronePosition.at(player, loadout.attackSlot(k), loadout.units(), now, DroneOrbit.RADIUS, DroneOrbit.HEIGHT, DroneOrbit.SPEED);
+				Vec3 from = DronePosition.at(player, loadout.attackSlot(k), loadout.units());
 				fire(player, level, target, from, loadout.slowsTargets(), settings);
 				// El modelo de ese dron reproduce su animación de ataque y pone el lente en rojo.
 				sendVisual(player, loadout.units(), loadout.attackSlot(k));
