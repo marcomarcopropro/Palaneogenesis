@@ -1,5 +1,6 @@
 {
   "size": 5,
   "order": 100,
-  "icon": "curios:slot/empty_curio_slot"
+  "icon": "curios:slot/empty_curio_slot",
+  "use_native_gui": false
 }

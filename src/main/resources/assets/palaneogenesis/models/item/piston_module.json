@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:block/piston_top"
+    "layer0": "palaneogenesis:item/bio_piston"
   }
 }

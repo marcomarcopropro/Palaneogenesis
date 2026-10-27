@@ -13,8 +13,9 @@ public final class NetworkHandler {
 	 * "4": F4 agrega MegaJumpRescuePacket (espacio en el aire durante un Mega Jump): un cliente y un
 	 * servidor de versiones distintas ya no se aceptan entre sí.
 	 * "5": F6 agrega DroneAppleSyncPacket (temporizador de la Manzana del último dron en el HUD).
-	 * "6": modelo de los drones agrega DroneVisualPacket (cantidad de drones y disparos, para dibujarlos). */
-	private static final String PROTOCOL_VERSION = "6";
+	 * "6": modelo de los drones agrega DroneVisualPacket (cantidad de drones y disparos, para dibujarlos).
+	 * "7": pantalla propia de Biomod agrega OpenBiomodPacket (abrir el inventario de los módulos). */
+	private static final String PROTOCOL_VERSION = "7";
 
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 		new ResourceLocation(Palaneogenesis.MOD_ID, "main"),
@@ -75,5 +76,9 @@ public final class NetworkHandler {
 		// biomod.ability.drones.DroneSystem y client.DroneRenderEvents. También al final.
 		CHANNEL.registerMessage(id(), DroneVisualPacket.class,
 			DroneVisualPacket::encode, DroneVisualPacket::decode, DroneVisualPacket::handle);
+		// Pantalla de Biomod: cliente -> servidor, botón del inventario, ver biomod.gui.BiomodMenu y
+		// client.BiomodScreenEvents. También al final.
+		CHANNEL.registerMessage(id(), OpenBiomodPacket.class,
+			OpenBiomodPacket::encode, OpenBiomodPacket::decode, OpenBiomodPacket::handle);
 	}
 }
