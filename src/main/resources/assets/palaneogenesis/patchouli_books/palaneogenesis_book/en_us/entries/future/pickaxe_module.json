@@ -1,0 +1,21 @@
+{
+    "name": "item.palaneogenesis.pickaxe_module",
+    "icon": "palaneogenesis:pickaxe_module",
+    "category": "palaneogenesis:future",
+    "sortnum": 6,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.pickaxe_module.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.pickaxe_module.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.pickaxe_module.recipe",
+            "title": "book.palaneogenesis.entry.future.pickaxe_module.recipe_title"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "name": "book.palaneogenesis.entry.future.synergies.name",
+    "icon": "palaneogenesis:pickaxe_module",
+    "category": "palaneogenesis:future",
+    "sortnum": 8,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.synergies.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.synergies.pickaxe_piston",
+            "title": "book.palaneogenesis.entry.future.synergies.pickaxe_piston_title"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.synergies.mega_jump_piston",
+            "title": "book.palaneogenesis.entry.future.synergies.mega_jump_piston_title"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.synergies.pickaxe_charge",
+            "title": "book.palaneogenesis.entry.future.synergies.pickaxe_charge_title"
+        }
+    ]
+}

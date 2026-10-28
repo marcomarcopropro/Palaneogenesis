@@ -1,0 +1,25 @@
+{
+    "name": "item.palaneogenesis.charge_module",
+    "icon": "palaneogenesis:charge_module",
+    "category": "palaneogenesis:future",
+    "sortnum": 5,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.charge_module.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.charge_module.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.charge_module.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.charge_module.recipe",
+            "title": "book.palaneogenesis.entry.future.charge_module.recipe_title"
+        }
+    ]
+}

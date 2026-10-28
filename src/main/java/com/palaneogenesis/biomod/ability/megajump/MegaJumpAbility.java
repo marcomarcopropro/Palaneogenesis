@@ -20,9 +20,12 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
@@ -60,6 +63,8 @@ import java.util.UUID;
  *   pedida dice "antes de llegar al suelo" y no fija una ventana. Si se quiere acotar (por ejemplo
  *   solo la caída), se cambia en {@link #rescue}.
  * - El hueco del techo NO suelta drops (CEILING_DROPS): son hasta maxCeilingBlocks bloques.
+ * - El hueco del techo se abre sin sonido ni partículas de ruptura (CEILING_QUIET): son hasta maxCeilingBlocks
+ *   bloques en pocos ticks y un sonido por bloque saturaba el audio.
  * - Respeta protección de otros mods (BlockEvent.BreakEvent) y no rompe bloques con block entity.
  * - Si el jugador cae al agua, muere, cambia de dimensión o se desconecta, el salto se cierra sin impacto.
  * - El aterrizaje solo cuenta si el jugador antes estuvo en el aire (FlightPhase): el servidor se entera
@@ -85,6 +90,13 @@ public final class MegaJumpAbility implements AbilityHandler {
 	private static final double WAVE_VIEW_MARGIN = 64.0D;
 	/** Si el hueco del techo suelta los drops de los bloques. */
 	public static final boolean CEILING_DROPS = false;
+	/**
+	 * true = el hueco del techo se abre SIN el efecto de ruptura de vanilla (sin sonido ni partículas de ruptura).
+	 * Level#destroyBlock manda un levelEvent 2001 por bloque y el hueco rompe hasta maxCeilingBlocks (800), muchos
+	 * en el mismo tick: sonaban todos juntos como un ruido horrible. false = como antes de la Beta-4.3.11.
+	 * El sonido y las partículas de ruptura son un solo evento de vanilla: no se puede quitar uno y dejar el otro.
+	 */
+	public static final boolean CEILING_QUIET = true;
 
 	private static final class Flight {
 		final ResourceKey<Level> dimension;
@@ -276,7 +288,21 @@ public final class MegaJumpAbility implements AbilityHandler {
 		if (MinecraftForge.EVENT_BUS.post(new BlockEvent.BreakEvent(level, pos, state, player))) {
 			return false;
 		}
-		return level.destroyBlock(pos, CEILING_DROPS && !player.isCreative(), player);
+		boolean drops = CEILING_DROPS && !player.isCreative();
+		if (!CEILING_QUIET) {
+			return level.destroyBlock(pos, drops, player);
+		}
+		// Lo mismo que Level#destroyBlock(pos, drops, player) menos el levelEvent 2001 (sonido y partículas de
+		// ruptura): se sueltan los drops si corresponde, el bloque pasa a su fluido (o aire) y se avisa el game event
+		// de destrucción. Misma técnica que PickaxeAbility#breakBlock con quiet.
+		if (drops) {
+			Block.dropResources(state, level, pos, null, player, ItemStack.EMPTY);
+		}
+		boolean removed = level.setBlock(pos, level.getFluidState(pos).createLegacyBlock(), 3);
+		if (removed) {
+			level.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
+		}
+		return removed;
 	}
 
 	// ---- Impacto --------------------------------------------------------------------------

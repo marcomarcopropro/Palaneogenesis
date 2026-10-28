@@ -1,0 +1,34 @@
+{
+    "name": "item.palaneogenesis.drone_module",
+    "icon": "palaneogenesis:drone_module",
+    "category": "palaneogenesis:future",
+    "sortnum": 7,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.drone_module.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.drone_module.table",
+            "title": "book.palaneogenesis.entry.future.drone_module.table_title"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.drone_module.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.drone_module.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.drone_module.p4"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.drone_module.recipe",
+            "title": "book.palaneogenesis.entry.future.drone_module.recipe_title"
+        }
+    ]
+}

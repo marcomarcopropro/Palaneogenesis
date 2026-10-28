@@ -2,5 +2,6 @@
     "name": "book.palaneogenesis.category.items.name",
     "description": "book.palaneogenesis.category.items.description",
     "icon": "palaneogenesis:empty_syringe",
-    "sortnum": 1
+    "sortnum": 1,
+    "parent": "palaneogenesis:ancient"
 }

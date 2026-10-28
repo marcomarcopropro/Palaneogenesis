@@ -1,0 +1,25 @@
+{
+    "name": "block.palaneogenesis.biotech_station",
+    "icon": "palaneogenesis:biotech_station",
+    "category": "palaneogenesis:future",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.biotech_station.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.biotech_station.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.biotech_station.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.biotech_station.values",
+            "title": "book.palaneogenesis.entry.future.biotech_station.values_title"
+        }
+    ]
+}

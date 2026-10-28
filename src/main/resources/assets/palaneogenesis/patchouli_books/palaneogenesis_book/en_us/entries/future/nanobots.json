@@ -1,0 +1,25 @@
+{
+    "name": "book.palaneogenesis.entry.future.nanobots.name",
+    "icon": "palaneogenesis:nanobot_injector",
+    "category": "palaneogenesis:future",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.nanobots.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.nanobots.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.nanobots.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.nanobots.values",
+            "title": "book.palaneogenesis.entry.future.nanobots.values_title"
+        }
+    ]
+}

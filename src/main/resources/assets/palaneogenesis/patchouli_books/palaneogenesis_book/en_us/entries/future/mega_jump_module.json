@@ -1,0 +1,30 @@
+{
+    "name": "item.palaneogenesis.mega_jump_module",
+    "icon": "palaneogenesis:mega_jump_module",
+    "category": "palaneogenesis:future",
+    "sortnum": 4,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.mega_jump_module.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.mega_jump_module.p2"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.mega_jump_module.p3"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.mega_jump_module.values",
+            "title": "book.palaneogenesis.entry.future.mega_jump_module.values_title"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.mega_jump_module.recipe",
+            "title": "book.palaneogenesis.entry.future.mega_jump_module.recipe_title"
+        }
+    ]
+}

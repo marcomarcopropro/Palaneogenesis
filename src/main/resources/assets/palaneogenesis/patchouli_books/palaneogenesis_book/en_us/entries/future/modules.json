@@ -1,0 +1,26 @@
+{
+    "name": "book.palaneogenesis.entry.future.modules.name",
+    "icon": "palaneogenesis:piston_module",
+    "category": "palaneogenesis:future",
+    "sortnum": 2,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.modules.p1"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.modules.units",
+            "title": "book.palaneogenesis.entry.future.modules.units_title"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.modules.keys",
+            "title": "book.palaneogenesis.entry.future.modules.keys_title"
+        },
+        {
+            "type": "patchouli:text",
+            "text": "book.palaneogenesis.entry.future.modules.p2"
+        }
+    ]
+}
