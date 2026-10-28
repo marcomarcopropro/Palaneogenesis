@@ -10,7 +10,6 @@ import com.palaneogenesis.item.InvertedHeartItem;
 import com.palaneogenesis.item.ResistanceHeartItem;
 import com.palaneogenesis.biomod.module.BiomodModule;
 import com.palaneogenesis.item.biomod.BiomodModuleItem;
-import com.palaneogenesis.item.biomod.BiomodTestItem;
 import com.palaneogenesis.item.biomod.NanobotInjectorItem;
 import com.palaneogenesis.item.biomod.SurgicalTweezersItem;
 import net.minecraft.world.item.BlockItem;
@@ -62,10 +61,6 @@ public class ModItems {
 			case DRONES -> DRONE_MODULE;
 		};
 	}
-
-	/** Ítem de prueba del spike de Curios (Fase 0 / T0.4). Se borra al terminar el spike. */
-	public static final RegistryObject<Item> BIOMOD_TEST =
-		ITEMS.register("biomod_test", () -> new BiomodTestItem(new Item.Properties().stacksTo(1)));
 
 	public static final RegistryObject<Item> BLUE_HEART =
 		ITEMS.register("blue_heart", () -> new BlueHeartItem(new Item.Properties().stacksTo(64)));

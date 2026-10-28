@@ -39,7 +39,6 @@ import java.util.Arrays;
  *   /biomod cooldown <habilidad> <ticks> pone la habilidad en ENFRIANDO por esos ticks
  *   /biomod cooldown clear [habilidad]   deja una o todas las habilidades en LISTA
  *   /biomod target <entidad>             dice si las habilidades afectarían a esa entidad y por qué
- *   /biomod spike equip|unequip <bool>   spike de Curios (T0.4), se borra con el spike
  *
  * Módulos: piston, mega_jump, charge, pickaxe, drones. Habilidades: piston, mega_jump, charge, pickaxe.
  */
@@ -135,20 +134,7 @@ public class BiomodCommands {
 					var verdict = TargetRules.evaluate(player, target);
 					return ok(ctx, "biomod: " + target.getName().getString() + " -> " + verdict
 						+ (verdict.isValid() ? " (las habilidades la afectan)" : " (las habilidades NO la afectan)"));
-				})))
-			.then(Commands.literal("spike")
-				.then(Commands.literal("equip")
-					.then(Commands.argument("allow", BoolArgumentType.bool()).executes(ctx -> {
-						BiomodSpikeState.allowEquip = BoolArgumentType.getBool(ctx, "allow");
-						ctx.getSource().sendSuccess(() -> Component.literal("biomod spike: allowEquip = " + BiomodSpikeState.allowEquip), true);
-						return 1;
-					})))
-				.then(Commands.literal("unequip")
-					.then(Commands.argument("allow", BoolArgumentType.bool()).executes(ctx -> {
-						BiomodSpikeState.allowUnequip = BoolArgumentType.getBool(ctx, "allow");
-						ctx.getSource().sendSuccess(() -> Component.literal("biomod spike: allowUnequip = " + BiomodSpikeState.allowUnequip), true);
-						return 1;
-					})))));
+				}))));
 	}
 
 	private static int ok(CommandContext<CommandSourceStack> ctx, String message) {

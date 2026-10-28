@@ -5,7 +5,6 @@
     "palaneogenesis:mega_jump_module",
     "palaneogenesis:charge_module",
     "palaneogenesis:pickaxe_module",
-    "palaneogenesis:drone_module",
-    "palaneogenesis:biomod_test"
+    "palaneogenesis:drone_module"
   ]
 }
